@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react'
 import { Check, Copy, ExternalLink, Handshake, Link2 } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
+import PartnerPixForm from './PartnerPixForm'
 import { isAvailable } from '../../../supabase/functions/_shared/partnerCommission'
 import type { PartnerDashboard } from '@/lib/partners'
 
@@ -17,6 +18,7 @@ export default function PartnerDashboardClient({ dashboard }: { dashboard: Partn
   const { t } = useI18n()
   const [tab, setTab] = useState<Tab>('commissions')
   const [copied, setCopied] = useState(false)
+  const [changingPix, setChangingPix] = useState(false)
 
   const link = useMemo(() => (typeof window !== 'undefined' && dashboard?.partner ? `${window.location.origin}/?ref=${encodeURIComponent(dashboard.partner.code)}` : ''), [dashboard?.partner])
 
@@ -68,7 +70,17 @@ export default function PartnerDashboardClient({ dashboard }: { dashboard: Partn
       </div>
 
       {p.status === 'suspended' && <p className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-700 dark:border-amber-900 dark:bg-amber-950/30">{t(P + 'suspended')}</p>}
-      {!p.hasPixKey && <p className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-700 dark:border-amber-900 dark:bg-amber-950/30">{t(P + 'no_pix')}</p>}
+      {!p.hasPixKey && !p.pixPending && <p className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-700 dark:border-amber-900 dark:bg-amber-950/30">{t(P + 'no_pix')}</p>}
+      {p.pixPending && !changingPix && (
+        <div className="rounded-2xl border border-sky-300 bg-sky-50 p-4 dark:border-sky-900 dark:bg-sky-950/30">
+          <p className="text-sm font-black text-sky-800 dark:text-sky-300">{t(P + 'pix_pending_title')}</p>
+          <p className="mt-1 text-xs text-sky-800/80 dark:text-sky-300/80">{t(P + 'pix_pending_desc')}</p>
+        </div>
+      )}
+      {((!p.hasPixKey && !p.pixPending) || changingPix) && <PartnerPixForm onCancel={p.hasPixKey || p.pixPending ? () => setChangingPix(false) : undefined} />}
+      {(p.hasPixKey || p.pixPending) && !changingPix && (
+        <button type="button" onClick={() => setChangingPix(true)} className="text-xs font-black text-indigo-600 hover:underline">{t(P + 'pix_change')}</button>
+      )}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {cards.map(c => (

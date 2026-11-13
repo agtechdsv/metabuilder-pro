@@ -6,8 +6,10 @@ import {
   isPixKeyType, isValidCnpj, isValidCpf, maskEmail, resolvePercent, summarizeCommissions, validatePixKey,
 } from '../../../supabase/functions/_shared/partnerCommission'
 import {
-  DEFAULT_PARTNER_SETTINGS, type PartnerDashboard, type PartnerErrorCode, type PartnerInput, type PartnerRow, type PartnerSettings, type PayoutRow,
+  DEFAULT_PARTNER_SETTINGS, type PartnerDashboard, type PartnerErrorCode, type PartnerInput, type PartnerRow, type PartnerSettings, type PayoutRow, type PixSubmitInput,
 } from '@/lib/partners'
+import { sendTeamNotice } from '@/lib/security/securityMail'
+import { partnerPixPendingMail } from '@/lib/security/partnerMailText'
 
 type Ok<T = unknown> = { success: true } & T
 type Fail = { success: false; code: PartnerErrorCode; error?: string }
@@ -114,6 +116,7 @@ export async function listPartners(): Promise<Ok<{ partners: PartnerRow[] }> | F
         referrals: refs.length,
         subscribed: refs.filter((r: any) => r.status === 'subscribed').length,
         summary: summarizeCommissions((commissions || []).filter((c: any) => c.partner_id === p.id)),
+        pendingPix: p.pix_pending_key ? { type: p.pix_pending_type, key: p.pix_pending_key, document: p.pix_pending_document || '', at: p.pix_pending_at } : null,
         hasHistory: refs.length > 0 || (commissions || []).some((c: any) => c.partner_id === p.id) || (payoutItems || []).some((i: any) => i.partner_id === p.id),
       }
     })
@@ -343,6 +346,67 @@ async function findOrClaimPartner(
   return claimed || null
 }
 
+/**
+ * O parceiro envia, no painel dele, a chave Pix para receber os pagamentos. A chave NÃO vale na hora: fica pendente (pix_pending_*) até o
+ * SuperAdmin conferir e aceitar, e só a chave ativa entra em lote. Assim uma conta invadida não desvia o dinheiro trocando a chave. Quem
+ * é o parceiro vem da sessão. A chave e o documento são validados aqui; o SuperAdmin é avisado por e-mail (chave mascarada).
+ */
+export async function submitMyPixKey(input: PixSubmitInput): Promise<Ok | Fail> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return fail('not_authorized')
+    const admin = createAdminClient()
+    const partner = await findOrClaimPartner(admin, user, 'id, name')
+    if (!partner) return fail('not_found')
+
+    if (input.declaration !== true) return fail('declaration_required')
+    if (!isPixKeyType(input.pixKeyType)) return fail('pix_invalid')
+    const v = validatePixKey(input.pixKeyType, input.pixKey)
+    if (!v.ok) return fail('pix_invalid')
+    const doc = (input.document || '').replace(/\D/g, '')
+    if (!isValidCpf(doc) && !isValidCnpj(doc)) return fail('document_invalid')
+
+    const { error } = await admin.from('partners').update({
+      pix_pending_key: v.key, pix_pending_type: input.pixKeyType, pix_pending_document: doc, pix_pending_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    }).eq('id', partner.id)
+    if (error) return fail('unknown', error.message)
+
+    // aviso ao SuperAdmin: se o e-mail falhar, o pedido já está salvo e aparece na aba Parceiros
+    const { data: notifyRow } = await admin.from('platform_settings').select('value').eq('key', 'partner_notify_email').maybeSingle()
+    const to = typeof (notifyRow?.value as { email?: unknown } | null)?.email === 'string' ? String((notifyRow!.value as { email: string }).email) : null
+    const base = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://metabuilderpro.com').replace(/\/+$/, '')
+    const mail = partnerPixPendingMail({ partnerName: partner.name, partnerEmail: user.email || '', type: input.pixKeyType, keyMasked: `•••${v.key.slice(-3)}` }, `${base}/admin/platform`)
+    await sendTeamNotice(mail.subject, mail.text, mail.html, to)
+    revalidatePath('/parceiro')
+    return { success: true }
+  } catch (e) { return fail(codeOf(e)) }
+}
+
+/** SuperAdmin aceita (a chave pendente vira a ativa, junto com o documento do titular) ou recusa (o pedido é descartado) a chave enviada pelo parceiro. */
+export async function resolvePartnerPix(partnerId: string, accept: boolean): Promise<Ok | Fail> {
+  try {
+    const { admin } = await requireSuperAdmin()
+    const { data: p } = await admin.from('partners').select('id, pix_pending_key, pix_pending_type, pix_pending_document').eq('id', partnerId).maybeSingle()
+    if (!p || !p.pix_pending_key) return fail('not_found')
+    const clear = { pix_pending_key: null, pix_pending_type: null, pix_pending_document: null, pix_pending_at: null }
+    if (accept) {
+      // confere de novo antes de ativar (a chave só entra em lote se for válida)
+      if (!isPixKeyType(p.pix_pending_type) || !validatePixKey(p.pix_pending_type, p.pix_pending_key).ok) return fail('pix_invalid')
+      const { error } = await admin.from('partners').update({
+        pix_key: p.pix_pending_key, pix_key_type: p.pix_pending_type, document: p.pix_pending_document || null, ...clear, updated_at: new Date().toISOString(),
+      }).eq('id', partnerId)
+      if (error) return fail('unknown', error.message)
+    } else {
+      const { error } = await admin.from('partners').update({ ...clear, updated_at: new Date().toISOString() }).eq('id', partnerId)
+      if (error) return fail('unknown', error.message)
+    }
+    revalidatePath('/admin/platform')
+    revalidatePath('/parceiro')
+    return { success: true }
+  } catch (e) { return fail(codeOf(e)) }
+}
+
 /** Só diz se a pessoa logada é parceira (para mostrar o atalho do painel no menu). Quem é vem da sessão; o primeiro acesso com o e-mail aprovado já vincula a conta. */
 export async function isCurrentUserPartner(): Promise<boolean> {
   try {
@@ -390,6 +454,7 @@ export async function getMyPartnerDashboard(): Promise<Ok<{ dashboard: PartnerDa
           percent: resolvePercent(partner.commission_percent != null ? Number(partner.commission_percent) : null, settings.defaultPercent),
           hasPixKey: !!partner.pix_key,
           pixKeyType: partner.pix_key_type,
+          pixPending: !!partner.pix_pending_key,
           // a chave aparece mascarada: só os 3 últimos caracteres (quem muda a chave é o SuperAdmin)
           pixKeyMasked: partner.pix_key ? `${'•'.repeat(Math.max(3, String(partner.pix_key).length - 3))}${String(partner.pix_key).slice(-3)}` : null,
         },

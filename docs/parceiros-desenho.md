@@ -76,6 +76,6 @@ Use uma conta de parceiro de teste (outra conta sua) e um cliente de teste que *
 
 ## Limites e próximos passos
 - **Pagamento automático em data fixa** (o SuperAdmin programa uma data e o sistema envia sozinho): fica para uma segunda etapa, depois que o fluxo manual estiver provado. A base (comissões disponíveis, lotes, validação) já serve a isso.
-- O parceiro **não edita** a chave Pix (só o SuperAdmin), para ninguém desviar pagamentos com uma conta invadida.
+- **Chave Pix do parceiro:** ele a **envia** no painel (tipo, chave, CPF/CNPJ do titular e declaração), mas ela fica **pendente** e **só vale depois que o SuperAdmin aceita** na aba Parceiros (chave atual ao lado da nova). Só a chave ativa entra em lote; uma conta invadida não desvia pagamentos trocando a chave. O SuperAdmin é avisado por e-mail (chave mascarada). Rodar `scripts/parceiros-chave-pix-pendente.sql` antes do deploy.
 - O painel está em `/parceiro` e **ainda não tem atalho no menu** do site.
 - Impostos e nota fiscal da comissão são com o contador.

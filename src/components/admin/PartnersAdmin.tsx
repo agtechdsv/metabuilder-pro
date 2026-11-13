@@ -7,7 +7,7 @@ import {
 } from '@/app/actions/partnerApplications'
 import { suggestPartnerCode, type ActionCode, type ApplicationRow } from '@/lib/partnerApplications'
 import {
-  createPartnerPayout, deletePartner, getPartnerSettings, listPartnerPayouts, listPartners, releaseStuckPayoutItem, savePartner,
+  createPartnerPayout, deletePartner, getPartnerSettings, listPartnerPayouts, listPartners, releaseStuckPayoutItem, resolvePartnerPix, savePartner,
 } from '@/app/actions/partners'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
@@ -105,6 +105,18 @@ export function PartnersAdmin({ onNewApplications, refreshKey = 0 }: { onNewAppl
   const decide = async (id: string, status: 'new') => {
     const r = await decidePartnerApplication(id, status)
     toast(r.success ? k('app_reopened') : errText(r), r.success ? 'success' : 'error')
+    load()
+  }
+  // chave Pix enviada pelo parceiro: aceitar muda para onde os próximos lotes pagam, então pede confirmação; recusar só descarta o pedido
+  const resolvePix = async (p: PartnerRow, accept: boolean) => {
+    if (!p.pendingPix) return
+    if (accept && !(await askDialog(k('pix_accept_confirm', { type: p.pendingPix.type, key: p.pendingPix.key, document: p.pendingPix.document, name: p.name }), { kind: 'warning', okLabel: k('pix_accept'), cancelLabel: k('cancel') }))) return
+    setBusy(true)
+    const r = await resolvePartnerPix(p.id, accept)
+    setBusy(false)
+    if (!r.success) { toast(errText(r), 'error'); load(); return }
+    toast(k(accept ? 'pix_accepted' : 'pix_declined'), 'success')
+    setForm(null); setApprovingId(null)
     load()
   }
   const removePartner = async (p: PartnerRow) => {
@@ -243,6 +255,22 @@ export function PartnersAdmin({ onNewApplications, refreshKey = 0 }: { onNewAppl
             <label className="block md:col-span-2"><span className={labelCls}>{k('f_notes')}</span><input className={inputCls} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label>
             {!form.id && <label className="flex items-center gap-2 text-xs font-bold text-neutral-600 dark:text-neutral-300 md:col-span-3"><input type="checkbox" checked={notifyPartner} onChange={e => setNotifyPartner(e.target.checked)} />{k('notify_candidate')}</label>}
           </div>
+          {form.id && (() => {
+            const cur = partners.find(x => x.id === form.id)
+            if (!cur?.pendingPix) return null
+            const n = cur.pendingPix
+            return (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs dark:border-amber-900 dark:bg-amber-950/30">
+                <p className="font-black text-amber-800 dark:text-amber-300">{k('pix_pending_title')}</p>
+                <p className="mt-1 text-neutral-700 dark:text-neutral-300"><b>{k('pix_pending_new')}:</b> <span className="font-mono">{n.type}: {n.key}</span> · <b>{k('pix_pending_doc')}:</b> <span className="font-mono">{n.document || '-'}</span> · {when(n.at)}</p>
+                <p className="mt-1 text-neutral-700 dark:text-neutral-300"><b>{k('pix_pending_current')}:</b> <span className="font-mono">{cur.pixKey ? `${cur.pixKeyType}: ${cur.pixKey}` : k('pix_pending_none')}</span></p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button type="button" disabled={busy} onClick={() => resolvePix(cur, true)} className="rounded-lg bg-emerald-600 px-3 py-1 font-black text-white hover:bg-emerald-500 disabled:opacity-50">{k('pix_accept')}</button>
+                  <button type="button" disabled={busy} onClick={() => resolvePix(cur, false)} className="rounded-lg border border-neutral-300 px-3 py-1 font-black text-neutral-600 dark:border-neutral-700 dark:text-neutral-300">{k('pix_decline')}</button>
+                </div>
+              </div>
+            )
+          })()}
           <button type="button" disabled={busy} onClick={savePartnerForm} className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-black text-white hover:bg-indigo-500 disabled:opacity-50">{busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}{k('save_partner')}</button>
           {form.id && (() => {
             const current = partners.find(x => x.id === form.id)
@@ -269,7 +297,7 @@ export function PartnersAdmin({ onNewApplications, refreshKey = 0 }: { onNewAppl
             <tbody>{partners.map(p => (
               <tr key={p.id} className="border-t border-neutral-100 dark:border-neutral-800">
                 <td className="px-2 py-2"><input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} aria-label={k('select_aria', { name: p.name })} /></td>
-                <td className="px-2 py-2"><p className="font-bold">{p.name}{p.status === 'suspended' && <span className="ml-2 rounded-full bg-neutral-200 px-2 py-0.5 text-[9px] font-black text-neutral-600">{k('suspended_badge')}</span>}{p.pendingAccount && <span title={k('pending_account_hint')} className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-black text-amber-700">{k('pending_account_badge')}</span>}</p><p className="text-[11px] text-neutral-400">{p.userEmail}</p></td>
+                <td className="px-2 py-2"><p className="font-bold">{p.name}{p.status === 'suspended' && <span className="ml-2 rounded-full bg-neutral-200 px-2 py-0.5 text-[9px] font-black text-neutral-600">{k('suspended_badge')}</span>}{p.pendingPix && <span title={k('pix_pending_hint')} className="ml-2 rounded-full bg-sky-100 px-2 py-0.5 text-[9px] font-black text-sky-700">{k('pix_pending_badge')}</span>}{p.pendingAccount && <span title={k('pending_account_hint')} className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-black text-amber-700">{k('pending_account_badge')}</span>}</p><p className="text-[11px] text-neutral-400">{p.userEmail}</p></td>
                 <td className="px-2 py-2 font-mono text-xs">{p.code}</td>
                 <td className="px-2 py-2">{p.commissionPercent ?? settings.defaultPercent}%{p.commissionPercent == null && <span className="text-[10px] text-neutral-400"> {k('default_tag')}</span>}</td>
                 <td className="px-2 py-2">{p.subscribed}/{p.referrals}</td>

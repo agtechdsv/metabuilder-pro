@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { partnerApplicationMail, slotCodeMail, slotKickedMail } from '../security/securityMailText'
-import { partnerApprovedMail, partnerRejectedMail } from '../security/partnerMailText'
+import { partnerApprovedMail, partnerPixPendingMail, partnerRejectedMail } from '../security/partnerMailText'
 import { APPLICATION_CHANNELS, MIN_FILL_MS, looksLikeBot, suggestPartnerCode, validateApplication, type ApplicationInput } from '../partnerApplications'
 
 const read = (p: string) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n')
@@ -134,6 +134,63 @@ describe('e-mails ao candidato (aprovação e recusa)', () => {
     expect(ui).toContain('const [notifyReject, setNotifyReject] = useState(false)')
     expect(ui).toContain('sendPartnerWelcome(r.id, approvingId)')
     expect(ui).toContain('rejectPartnerApplication(id, notifyReject)')
+  })
+})
+
+describe('chave Pix enviada pelo parceiro (pendente até o SuperAdmin aceitar)', () => {
+  const src = read('src/app/actions/partners.ts')
+  const submit = src.slice(src.indexOf('export async function submitMyPixKey'), src.indexOf('export async function resolvePartnerPix'))
+  const resolve = src.slice(src.indexOf('export async function resolvePartnerPix'), src.indexOf('export async function isCurrentUserPartner'))
+
+  it('o SQL guarda o pedido em colunas separadas, sem abrir a tabela', () => {
+    const sql = read('scripts/parceiros-chave-pix-pendente.sql')
+    for (const c of ['pix_pending_key', 'pix_pending_type', 'pix_pending_document', 'pix_pending_at']) expect(sql, c).toContain(c)
+    expect(sql).not.toMatch(/create policy|grant /i)
+  })
+
+  it('o parceiro só grava na área PENDENTE (nunca na chave ativa), com chave, documento e declaração validados, e quem é vem da sessão', () => {
+    expect(submit).toContain('auth.getUser()')
+    expect(submit).toContain('findOrClaimPartner(admin, user')
+    expect(submit).toContain("fail('declaration_required')")
+    expect(submit).toContain("fail('pix_invalid')")
+    expect(submit).toContain("fail('document_invalid')")
+    expect(submit).toMatch(/pix_pending_key: v\.key/)
+    const update = submit.slice(submit.indexOf(".update({"), submit.indexOf(".eq('id', partner.id)"))
+    expect(update).not.toMatch(/\bpix_key:/)
+    expect(update).not.toMatch(/\bdocument:/)
+    expect(submit).not.toContain('requireSuperAdmin')
+  })
+
+  it('só o SuperAdmin ativa a chave (aceitar move a pendente para a ativa; recusar descarta), e confere de novo antes de ativar', () => {
+    expect(resolve.slice(0, 200)).toContain('requireSuperAdmin()')
+    expect(resolve).toMatch(/pix_key: p\.pix_pending_key, pix_key_type: p\.pix_pending_type/)
+    expect(resolve).toContain('validatePixKey(p.pix_pending_type, p.pix_pending_key)')
+    expect(resolve).toContain('pix_pending_key: null')
+  })
+
+  it('o aviso ao SuperAdmin leva a chave mascarada, o painel mostra o formulário e a tela de Parceiros tem selo, comparativo e botões', () => {
+    expect(submit).toContain('keyMasked:')
+    expect(submit).not.toMatch(/keyMasked: v\.key[,}]/)
+    const mail = partnerPixPendingMail({ partnerName: 'Ana <b>', partnerEmail: 'a@x.com', type: 'CPF', keyMasked: '•••789' }, 'https://s/admin/platform')
+    expect(mail.html).toContain('•••789')
+    expect(mail.html).toContain('Ana &lt;b&gt;')
+    expect(mail.html).not.toContain('<b>')
+    expect(mail.subject).not.toMatch(/[\r\n]/)
+    const panel = read('src/components/partner/PartnerDashboardClient.tsx')
+    expect(panel).toContain('<PartnerPixForm')
+    expect(panel).toContain('p.pixPending')
+    const admin = read('src/components/admin/PartnersAdmin.tsx')
+    for (const s of ['resolvePartnerPix', "k('pix_pending_badge')", "k('pix_accept')", "k('pix_decline')", "k('pix_pending_current')"]) expect(admin, s).toContain(s)
+  })
+
+  it('os textos do formulário do parceiro e da conferência existem nos três idiomas', () => {
+    const form = read('src/components/partner/PartnerPixForm.tsx')
+    const keys = new Set<string>(['pix_err_pix_invalid', 'pix_err_document_invalid', 'pix_err_declaration_required', 'pix_err_unknown', 'pix_pending_title', 'pix_pending_desc', 'pix_change'])
+    for (const m of form.matchAll(/P \+ '([a-z_]+)'/g)) if (!m[1].endsWith('_')) keys.add(m[1]) // 'pix_err_' + código é montado: está listado acima
+    for (const l of LANGS) for (const key of keys) expect(get(json(l), `partner_panel.${key}`), `${l}: partner_panel.${key}`).toBeTruthy()
+    for (const l of LANGS) for (const key of ['pix_pending_badge', 'pix_pending_hint', 'pix_pending_title', 'pix_pending_new', 'pix_pending_doc', 'pix_pending_current', 'pix_pending_none', 'pix_accept', 'pix_decline', 'pix_accept_confirm', 'pix_accepted', 'pix_declined', 'err_declaration_required']) {
+      expect(get(json(l), `admin_partners.${key}`), `${l}: admin_partners.${key}`).toBeTruthy()
+    }
   })
 })
 

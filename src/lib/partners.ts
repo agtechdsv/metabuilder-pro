@@ -47,6 +47,18 @@ export interface PartnerRow {
   summary: CommissionSummary
   /** tem indicados, comissões ou itens de lote: então não pode ser excluído (só suspenso) */
   hasHistory: boolean
+  /** chave Pix enviada pelo próprio parceiro, esperando a conferência do SuperAdmin (a chave ativa só muda quando ele aceita) */
+  pendingPix: { type: PixKeyType; key: string; document: string; at: string } | null
+}
+
+/** O que o parceiro envia no painel para receber os pagamentos. */
+export interface PixSubmitInput {
+  pixKeyType: PixKeyType | ''
+  pixKey: string
+  /** CPF ou CNPJ do titular da chave */
+  document: string
+  /** "a chave é minha, do mesmo titular do documento" */
+  declaration: boolean
 }
 
 export interface PayoutItemRow {
@@ -72,7 +84,7 @@ export interface PayoutRow {
 }
 
 export interface PartnerDashboard {
-  partner: { name: string; code: string; status: 'active' | 'suspended'; percent: number; hasPixKey: boolean; pixKeyType: PixKeyType | null; pixKeyMasked: string | null } | null
+  partner: { name: string; code: string; status: 'active' | 'suspended'; percent: number; hasPixKey: boolean; pixKeyType: PixKeyType | null; pixKeyMasked: string | null; pixPending: boolean } | null
   settings: { graceDays: number; minPayout: number }
   summary: CommissionSummary
   referrals: { id: string; email: string; status: 'registered' | 'subscribed' | 'canceled'; createdAt: string; paidAt: string | null; canceledAt: string | null }[]
@@ -83,4 +95,4 @@ export interface PartnerDashboard {
 /** Erros que as server actions devolvem por código (a tela traduz). */
 export type PartnerErrorCode =
   | 'not_authorized' | 'user_not_found' | 'code_invalid' | 'code_in_use' | 'pix_invalid' | 'document_invalid' | 'percent_invalid'
-  | 'email_invalid' | 'already_partner' | 'nothing_to_pay' | 'payout_cap_exceeded' | 'no_partners' | 'not_found' | 'has_history' | 'unknown'
+  | 'email_invalid' | 'declaration_required' | 'already_partner' | 'nothing_to_pay' | 'payout_cap_exceeded' | 'no_partners' | 'not_found' | 'has_history' | 'unknown'

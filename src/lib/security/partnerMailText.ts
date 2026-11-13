@@ -105,3 +105,14 @@ export function partnerRejectedMail(lang: MailLang, d: { name: string }): MailCo
   const text = [t.rejectedTitle, '', t.rejectedBody(d.name), t.rejectedBye].join('\n')
   return { subject: t.rejectedSubject, html, text }
 }
+
+/** Aviso para a equipe (em português): um parceiro enviou a chave Pix e ela espera conferência. A chave vai mascarada; o valor inteiro está no painel. */
+export function partnerPixPendingMail(d: { partnerName: string; partnerEmail: string; type: string; keyMasked: string }, adminUrl: string): MailContent {
+  const rows: [string, string][] = [['Parceiro', d.partnerName], ['E-mail', d.partnerEmail], ['Tipo da chave', d.type], ['Chave (final)', d.keyMasked]]
+  const intro = `${d.partnerName} enviou a chave Pix para receber os pagamentos. Confira os dados e aceite ou recuse na aba Parceiros do painel. Enquanto não aceitar, a chave não é usada em nenhum lote.`
+  const html = mailShell('Chave Pix para conferir',
+    `<p style="margin:0 0 22px 0;">${esc(intro)}</p>` + infoBox('Pedido do parceiro', rows) + button('Abrir o painel', adminUrl),
+    `© ${new Date().getFullYear()} METABUILDER PRO · Você recebeu este e-mail porque um parceiro enviou uma chave Pix.`)
+  const text = ['Chave Pix para conferir', '', intro, '', ...rows.map(([k, v]) => `${k}: ${v}`), '', `Painel: ${adminUrl}`].join('\n')
+  return { subject: `Chave Pix para conferir: ${d.partnerName}`.replace(/[\r\n]+/g, ' ').slice(0, 200), html, text }
+}
