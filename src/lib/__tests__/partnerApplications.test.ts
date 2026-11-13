@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
+import { partnerApplicationMail, slotCodeMail, slotKickedMail } from '../security/securityMailText'
 import { APPLICATION_CHANNELS, MIN_FILL_MS, looksLikeBot, suggestPartnerCode, validateApplication, type ApplicationInput } from '../partnerApplications'
 
 const read = (p: string) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n')
@@ -59,6 +60,32 @@ describe('candidatura de parceiro: anti-robô', () => {
   })
 })
 
+describe('e-mails com o modelo da marca', () => {
+  const data = { name: 'Ana <b>x</b> & "Cia"', email: 'ana@x.com', phone: null, company: 'Acme', channel: 'consulting', audience: '<script>alert(1)</script>', message: null, lang: 'pt' }
+
+  it('o aviso de candidatura usa o modelo (degradê, título, quadro e botão), escapa o texto de quem se candidata e leva ao painel', () => {
+    const m = partnerApplicationMail(data, 'https://site.exemplo/admin/platform')
+    expect(m.html).toContain('linear-gradient(135deg,#10b981')
+    expect(m.html).toContain('Nova candidatura de parceiro')
+    expect(m.html).toContain('href="https://site.exemplo/admin/platform"')
+    expect(m.html).not.toContain('<script>')
+    expect(m.html).not.toContain('<b>x</b>')
+    expect(m.html).toContain('Ana &lt;b&gt;x&lt;/b&gt; &amp; &quot;Cia&quot;')
+    expect(m.html).toContain('Consultoria ou software house')
+    expect(m.subject).not.toMatch(/[\r\n]/)
+    expect(m.text).toContain('ana@x.com')
+  })
+
+  it('o assunto não aceita quebra de linha vinda do nome', () => {
+    expect(partnerApplicationMail({ ...data, name: 'A\r\nBcc: x@y.com' }, 'https://s/a').subject).not.toMatch(/[\r\n]/)
+  })
+
+  it('os e-mails de segurança das vagas usam o mesmo modelo', () => {
+    expect(slotCodeMail('pt', '123456', 10).html).toContain('linear-gradient(135deg,#10b981')
+    expect(slotKickedMail('en', { kicked: {}, by: {}, at: new Date().toISOString() }).html).toContain('linear-gradient(135deg,#10b981')
+  })
+})
+
 describe('sugestão de código do link', () => {
   it('usa a primeira palavra, sem acento, em maiúsculas, e sempre cabe no formato aceito', () => {
     expect(suggestPartnerCode('João da Silva')).toBe('JOAO')
@@ -91,9 +118,9 @@ describe('candidatura de parceiro: ligação no sistema', () => {
 
   it('o e-mail de aviso escapa o texto de quem se candidata e o destino é o que o SuperAdmin escolhe (só ele muda)', () => {
     const src = read('src/app/actions/partnerApplications.ts')
-    expect(src).toContain('esc(String(val))')
+    expect(src).toContain('partnerApplicationMail(')
     expect(src).toContain("'partner_notify_email'")
-    expect(src).toMatch(/notifyTo,\s*\)/)
+    expect(src).toMatch(/sendTeamNotice\(mail\.subject, mail\.text, mail\.html, notifyTo\)/)
     for (const fn of ['getPartnerNotifyEmail', 'savePartnerNotifyEmail']) {
       expect(src.slice(src.indexOf(`export async function ${fn}`)).slice(0, 300), fn).toContain('requireSuperAdmin()')
     }

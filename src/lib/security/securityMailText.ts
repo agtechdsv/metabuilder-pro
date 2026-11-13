@@ -69,14 +69,55 @@ const TEXTS = {
   },
 } as const
 
-const shell = (title: string, bodyHtml: string, footer: string) => `<!DOCTYPE html>
+/**
+ * Modelo único dos e-mails do MetaBuilder PRO (mesmo visual do e-mail de redefinição de senha): faixa em degradê verde e azul com o nome,
+ * cartão branco com título centralizado, corpo e rodapé. `bodyHtml` já vem escapado por quem monta.
+ */
+export const mailShell = (title: string, bodyHtml: string, footer: string) => `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${esc(title)}</title></head>
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:32px auto;background:#ffffff;border-radius:20px;overflow:hidden;">
-<tr><td style="padding:28px 32px;background:#4f46e5;color:#ffffff;"><div style="font-size:20px;font-weight:800;">MetaBuilder <span style="color:#c7d2fe;">PRO</span></div><div style="margin-top:6px;font-size:15px;">${esc(title)}</div></td></tr>
-<tr><td style="padding:28px 32px;color:#3f3f46;font-size:15px;line-height:23px;">${bodyHtml}</td></tr>
-<tr><td style="padding:16px 32px;background:#fafafa;color:#a1a1aa;font-size:12px;text-align:center;">${esc(footer)}</td></tr>
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:32px auto;background:#ffffff;border-radius:24px;overflow:hidden;">
+<tr><td align="center" bgcolor="#10b981" style="padding:38px 32px;background:#10b981;background-image:linear-gradient(135deg,#10b981 0%,#3b82f6 100%);color:#ffffff;"><div style="font-size:30px;font-weight:800;letter-spacing:-0.5px;">MetaBuilder <span style="color:#a5f3fc;">PRO</span></div></td></tr>
+<tr><td align="center" style="padding:36px 36px 28px 36px;color:#52525b;font-size:15px;line-height:23px;"><h1 style="margin:0 0 18px 0;font-size:24px;line-height:30px;color:#18181b;">${esc(title)}</h1>${bodyHtml}</td></tr>
+<tr><td align="center" style="padding:20px 36px;border-top:1px solid #f4f4f5;color:#a1a1aa;font-size:11px;line-height:17px;">${esc(footer)}</td></tr>
 </table></body></html>`
+const shell = mailShell
+
+/** Quadro de destaque (como "Acesso de segurança" no e-mail de senha): título pequeno em verde e, abaixo, as linhas rótulo/valor. Textos escapados aqui. */
+const infoBox = (label: string, rows: [string, string][]) =>
+  `<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px 0;background:#f8fafc;border-radius:16px;text-align:left;"><tr><td style="padding:18px 22px;">` +
+  `<div style="margin:0 0 10px 0;font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#10b981;">${esc(label)}</div>` +
+  rows.map(([k, v]) => `<div style="margin:0 0 8px 0;font-size:14px;line-height:20px;"><span style="color:#71717a;">${esc(k)}:</span> <b style="color:#18181b;">${esc(v)}</b></div>`).join('') +
+  `</td></tr></table>`
+
+const button = (label: string, url: string) =>
+  `<table cellpadding="0" cellspacing="0" style="margin:6px auto 4px auto;"><tr><td align="center" bgcolor="#10b981" style="border-radius:12px;"><a href="${esc(url)}" style="display:inline-block;padding:14px 30px;font-size:13px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;color:#ffffff;text-decoration:none;">${esc(label)}</a></td></tr></table>`
+
+export interface PartnerApplicationMailData {
+  name: string; email: string; phone?: string | null; company?: string | null; channel: string
+  audience?: string | null; message?: string | null; lang: string
+}
+
+const CHANNEL_PT: Record<string, string> = {
+  consulting: 'Consultoria ou software house', freelancer: 'Desenvolvedor ou freelancer', community: 'Comunidade, conteúdo ou instrutor',
+  integrator: 'Integrador ou profissional de TI', other: 'Outro',
+}
+
+/** Aviso para a equipe (em português) de uma nova candidatura de parceiro. `adminUrl` é o endereço do painel. */
+export function partnerApplicationMail(d: PartnerApplicationMailData, adminUrl: string): MailContent {
+  const dash = (v?: string | null) => (v && v.trim() ? v : '-')
+  const rows: [string, string][] = [
+    ['Nome', d.name], ['E-mail', d.email], ['Telefone', dash(d.phone)], ['Empresa', dash(d.company)], ['Perfil', CHANNEL_PT[d.channel] || d.channel],
+    ['Como pretende divulgar', dash(d.audience)], ['Mensagem', dash(d.message)], ['Idioma', d.lang],
+  ]
+  const intro = `${d.name} quer ser parceiro do MetaBuilder PRO. Confira os dados e decida na aba Parceiros do painel.`
+  const subject = `Nova candidatura de parceiro: ${d.name}`.replace(/[\r\n]+/g, ' ').slice(0, 200)
+  const html = mailShell('Nova candidatura de parceiro',
+    `<p style="margin:0 0 22px 0;">${esc(intro)}</p>` + infoBox('Dados da candidatura', rows) + button('Abrir o painel', adminUrl),
+    `© ${new Date().getFullYear()} METABUILDER PRO · Você recebeu este e-mail porque alguém enviou o formulário em /parceiros.`)
+  const text = ['Nova candidatura de parceiro', '', intro, '', ...rows.map(([k, v]) => `${k}: ${v}`), '', `Painel: ${adminUrl}`].join('\n')
+  return { subject, html, text }
+}
 
 export interface KickedMailData {
   /** a sessão que foi encerrada */
@@ -105,7 +146,7 @@ export function slotKickedMail(lang: MailLang, d: KickedMailData): MailContent {
   const ended = [d.kicked.label, d.kicked.place].filter(Boolean).join(' · ') || t.unknown
   const html = shell(t.kickedTitle,
     `<p style="margin:0 0 16px 0;">${esc(t.kickedIntro)}</p>` +
-    `<table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e4e4e7;border-radius:12px;margin:0 0 16px 0;">` +
+    `<table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e4e4e7;border-radius:12px;margin:0 0 16px 0;text-align:left;">` +
     rows.map(([k, v]) => `<tr><td style="padding:10px 14px;color:#71717a;width:34%;">${esc(k)}</td><td style="padding:10px 14px;font-weight:600;">${esc(v)}</td></tr>`).join('') +
     `<tr><td style="padding:10px 14px;color:#71717a;">${esc(t.ended)}</td><td style="padding:10px 14px;">${esc(ended)}</td></tr></table>` +
     `<p style="margin:0;color:#b45309;">${esc(t.notYou)}</p>`, t.footer)

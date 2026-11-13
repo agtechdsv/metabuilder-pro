@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient, createAdminClient } from '@/utils/supabase/server'
 import { clientIp, hashIp } from '@/lib/sessions/slotCore'
 import { sendTeamNotice } from '@/lib/security/securityMail'
+import { partnerApplicationMail } from '@/lib/security/securityMailText'
 import {
   MAX_PER_IP_PER_HOUR, looksLikeBot, validateApplication,
   type ActionCode, type ActionResult, type ApplicationErrorCode, type ApplicationInput, type ApplicationRow, type ApplicationStatus,
@@ -13,8 +14,6 @@ import {
 /** Chave em platform_settings com o e-mail que recebe o aviso de candidatura (o SuperAdmin escolhe na aba Parceiros). */
 const NOTIFY_KEY = 'partner_notify_email'
 const EMAIL_OK = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]{2,}$/
-
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 /**
  * Formulário público de candidatura a parceiro. Sem login: por isso valida tudo no servidor, barra robô (campo isca e tempo mínimo)
@@ -52,18 +51,11 @@ export async function submitPartnerApplication(input: ApplicationInput): Promise
     if (error) { console.error('[parceiros] falha ao gravar candidatura:', error.message); return { success: false, code: 'unknown' } }
 
     // aviso para a equipe: se o e-mail falhar, a candidatura já está salva e aparece na tela do SuperAdmin
-    const lines = [
-      ['Nome', v.name], ['E-mail', v.email], ['Telefone', v.phone || '-'], ['Empresa', v.company || '-'], ['Perfil', v.channel],
-      ['Como pretende divulgar', v.audience || '-'], ['Mensagem', v.message || '-'], ['Idioma', v.lang],
-    ]
     const { data: notifyRow } = await admin.from('platform_settings').select('value').eq('key', NOTIFY_KEY).maybeSingle()
     const notifyTo = typeof (notifyRow?.value as { email?: unknown } | null)?.email === 'string' ? String((notifyRow!.value as { email: string }).email) : null
-    await sendTeamNotice(
-      `Nova candidatura de parceiro: ${v.name}`,
-      lines.map(([k, val]) => `${k}: ${val}`).join('\n') + '\n\nAprove ou recuse na aba Parceiros do painel.',
-      `<p><b>Nova candidatura de parceiro</b></p><ul>${lines.map(([k, val]) => `<li><b>${esc(k)}:</b> ${esc(String(val))}</li>`).join('')}</ul><p>Aprove ou recuse na aba Parceiros do painel.</p>`,
-      notifyTo,
-    )
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://metabuilderpro.com').replace(/\/+$/, '')
+    const mail = partnerApplicationMail(v, appUrl + '/admin/platform')
+    await sendTeamNotice(mail.subject, mail.text, mail.html, notifyTo)
     return { success: true }
   } catch (e) {
     console.error('[parceiros] candidatura:', (e as Error)?.message)
