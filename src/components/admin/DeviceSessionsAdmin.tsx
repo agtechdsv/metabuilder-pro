@@ -16,7 +16,7 @@ const labelCls = 'mb-1 block text-[10px] font-black uppercase tracking-widest te
 
 const MODES: DeviceSettingsDto['mode'][] = ['off', 'observe', 'enforce']
 
-export function DeviceSessionsAdmin() {
+export function DeviceSessionsAdmin({ refreshKey = 0 }: { refreshKey?: number } = {}) {
   const { toast } = useToast()
   const { t, language } = useI18n()
   const k = (key: string, vars?: Record<string, string | number>) => {
@@ -47,6 +47,8 @@ export function DeviceSessionsAdmin() {
     setLoading(false)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load() }, [load])
+  // botão de atualizar do painel (topo): recarrega esta tela também
+  useEffect(() => { if (refreshKey > 0) load() }, [refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
     if (settings.mode === 'enforce' && overview?.settings.mode !== 'enforce') {

@@ -22,7 +22,7 @@ const labelCls = 'mb-1 block text-[10px] font-black uppercase tracking-widest te
 
 const EMPTY: PartnerInput = { userEmail: '', name: '', document: '', pixKey: '', pixKeyType: 'CPF', code: '', commissionPercent: null, status: 'active', notes: '' }
 
-export function PartnersAdmin({ onNewApplications }: { onNewApplications?: (count: number) => void } = {}) {
+export function PartnersAdmin({ onNewApplications, refreshKey = 0 }: { onNewApplications?: (count: number) => void; refreshKey?: number } = {}) {
   const { toast } = useToast()
   const { t, language } = useI18n()
   /** texto da tela; {chave} no texto é trocado pelos valores */
@@ -75,6 +75,8 @@ export function PartnersAdmin({ onNewApplications }: { onNewApplications?: (coun
     setLoading(false)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load() }, [load])
+  // botão de atualizar do painel (topo): recarrega esta aba também
+  useEffect(() => { if (refreshKey > 0) load() }, [refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const savePartnerForm = async () => {
     if (!form) return

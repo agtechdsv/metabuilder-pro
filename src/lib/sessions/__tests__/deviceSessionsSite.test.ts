@@ -94,7 +94,7 @@ describe('vagas de sessão: ligação no código', () => {
   it('"Meus dispositivos" e a tela do SuperAdmin estão nas telas certas', () => {
     expect(read('src/components/client/ClientDashboardClient.tsx')).toContain('<DeviceSessionsPanel />')
     expect(read('src/components/profile/ProfileDrawer.tsx')).toContain('<DeviceSessionsPanel />')
-    expect(read('src/components/admin/PlatformAdminClient.tsx')).toContain('<DeviceSessionsAdmin />')
+    expect(read('src/components/admin/PlatformAdminClient.tsx')).toContain('<DeviceSessionsAdmin ')
   })
 
   it('só o SuperAdmin muda os ajustes e vê o painel (a ação confere a sessão, não o corpo do pedido)', () => {

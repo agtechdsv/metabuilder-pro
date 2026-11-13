@@ -13,7 +13,7 @@ import { DEFAULT_PARTNER_SETTINGS, type PartnerSettings } from '@/lib/partners'
 const inputCls = 'w-full rounded-xl border border-neutral-200 bg-transparent px-3 py-2 text-sm font-bold dark:border-neutral-700'
 const labelCls = 'mb-1 block text-[10px] font-black uppercase tracking-widest text-neutral-400'
 
-export function PartnerSettingsAdmin({ onOpenPartnersTab }: { onOpenPartnersTab: () => void }) {
+export function PartnerSettingsAdmin({ onOpenPartnersTab, refreshKey = 0 }: { onOpenPartnersTab: () => void; refreshKey?: number }) {
   const { toast } = useToast()
   const { t } = useI18n()
   const k = (key: string) => t(`admin_partners.${key}`)
@@ -27,7 +27,7 @@ export function PartnerSettingsAdmin({ onOpenPartnersTab }: { onOpenPartnersTab:
       else toast(k('err_not_authorized'), 'error')
       setLoading(false)
     })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
     setBusy(true)

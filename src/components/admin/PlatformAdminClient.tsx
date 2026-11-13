@@ -116,8 +116,13 @@ export default function PlatformAdminClient({
   const router = useRouter()
   const [isRefreshing, setIsRefreshing] = useState(false)
 
+  // sobe a cada clique em atualizar: as telas que carregam os próprios dados (Parceiros, Comissão, Sessões) recarregam junto
+  const [refreshCount, setRefreshCount] = useState(0)
+
   const handleRefresh = () => {
     setIsRefreshing(true)
+    setRefreshCount(c => c + 1)
+    listPartnerApplications().then(r => { if (r.success) setNewPartnerApps(r.applications.filter(a => a.status === 'new').length) }).catch(() => {})
     router.refresh()
     setTimeout(() => setIsRefreshing(false), 800)
   }
@@ -352,7 +357,7 @@ export default function PlatformAdminClient({
             <PricingRulesAdmin />
             <CampaignsAdmin />
             <IClubSettingsAdmin />
-            <PartnerSettingsAdmin onOpenPartnersTab={() => openTab('partners')} />
+            <PartnerSettingsAdmin onOpenPartnersTab={() => openTab('partners')} refreshKey={refreshCount} />
           </motion.div>
         )}
 
@@ -365,7 +370,7 @@ export default function PlatformAdminClient({
             transition={{ duration: 0.25 }}
             className="space-y-6"
           >
-            <PartnersAdmin onNewApplications={setNewPartnerApps} />
+            <PartnersAdmin onNewApplications={setNewPartnerApps} refreshKey={refreshCount} />
           </motion.div>
         )}
 
@@ -378,7 +383,7 @@ export default function PlatformAdminClient({
             transition={{ duration: 0.25 }}
             className="space-y-6"
           >
-            <DeviceSessionsAdmin />
+            <DeviceSessionsAdmin refreshKey={refreshCount} />
             <TrashSettingsAdmin />
           </motion.div>
         )}

@@ -137,6 +137,20 @@ describe('e-mails ao candidato (aprovação e recusa)', () => {
   })
 })
 
+describe('botão de atualizar do painel do SuperAdmin', () => {
+  it('recarrega também as telas que buscam os próprios dados (Parceiros, Comissão e Sessões) e o contador da aba', () => {
+    const panel = read('src/components/admin/PlatformAdminClient.tsx')
+    expect(panel).toContain('setRefreshCount(c => c + 1)')
+    for (const c of ['PartnersAdmin', 'PartnerSettingsAdmin', 'DeviceSessionsAdmin']) expect(panel, c).toMatch(new RegExp(`<${c}[^\\n]*refreshKey=\\{refreshCount\\}`))
+    expect(panel.slice(panel.indexOf('const handleRefresh'), panel.indexOf('router.refresh()'))).toContain('listPartnerApplications()')
+    for (const f of ['PartnersAdmin', 'PartnerSettingsAdmin', 'DeviceSessionsAdmin']) {
+      const src = read(`src/components/admin/${f}.tsx`)
+      expect(src, f).toContain('refreshKey')
+      expect(src, f).toMatch(/\[refreshKey\]/)
+    }
+  })
+})
+
 describe('parceiro aprovado antes de criar a conta (vínculo por e-mail)', () => {
   const src = read('src/app/actions/partners.ts')
 
