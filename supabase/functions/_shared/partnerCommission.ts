@@ -40,7 +40,7 @@ export interface CommissionLike {
   clawback_settled?: boolean
 }
 
-const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0)
+const toNumber = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0)
 const ts = (v: string | Date) => new Date(v).getTime()
 
 /** Disponível = pendente com a carência vencida. */
@@ -66,7 +66,7 @@ export interface CommissionSummary {
 export function summarizeCommissions(rows: CommissionLike[], now: Date = new Date()): CommissionSummary {
   const s: CommissionSummary = { waiting: 0, available: 0, inPayout: 0, paid: 0, revoked: 0, clawback: 0, payable: 0 }
   for (const c of rows) {
-    const a = num(c.amount)
+    const a = toNumber(c.amount)
     if (c.clawback && !c.clawback_settled) s.clawback += a
     if (c.status === 'pending') { if (isAvailable(c, now)) s.available += a; else s.waiting += a }
     else if (c.status === 'in_payout') s.inPayout += a
