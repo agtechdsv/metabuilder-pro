@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useToast } from '@/components/ui/Toast'
 import { toggleClientBlock, deleteClientAdmin } from '@/app/actions/admin'
+import { buildOwnerGuestIds } from '@/lib/admin/ownerGuests'
 
 export function useClientsAdmin(
   mappedWorkspaces: any[],
@@ -68,41 +69,24 @@ export function useClientsAdmin(
       }
       
       client.workspaces.push(w)
-      client.guestCount += (w.guestCount || 0)
+      // (os convidados são contados uma vez por dono, mais abaixo: somar por workspace repetia o mesmo convidado)
       if (w.created_at && (!client.created_at || client.created_at === new Date().toISOString())) {
         client.created_at = w.created_at // Use oldest workspace date or profile date
       }
     })
 
     // Now identify guests and nest them under their respective owners
+    // ownerId -> convidados distintos (membros de workspace e convidados do dono, sem repetir pessoa)
+    const ownerToGuestsMap = buildOwnerGuestIds(mappedWorkspaces, workspaceMembers, ownerGuests)
     const guestUserIds = new Set<string>()
-    const ownerToGuestsMap = new Map<string, Set<string>>() // ownerId -> Set of guest userIds
-
-    // Process workspaceMembers
-    workspaceMembers.forEach(m => {
-      const workspace = mappedWorkspaces.find(w => w.id === m.workspace_id)
-      if (workspace && workspace.owner_id !== m.user_id) {
-        guestUserIds.add(m.user_id)
-        if (!ownerToGuestsMap.has(workspace.owner_id)) {
-          ownerToGuestsMap.set(workspace.owner_id, new Set())
-        }
-        ownerToGuestsMap.get(workspace.owner_id)!.add(m.user_id)
-      }
-    })
-
-    // Process ownerGuests
-    ownerGuests.forEach(g => {
-      guestUserIds.add(g.user_id)
-      if (!ownerToGuestsMap.has(g.owner_id)) {
-        ownerToGuestsMap.set(g.owner_id, new Set())
-      }
-      ownerToGuestsMap.get(g.owner_id)!.add(g.user_id)
-    })
+    ownerToGuestsMap.forEach(ids => ids.forEach(id => guestUserIds.add(id)))
 
     // Attach guests to their owners
     clientsMap.forEach(client => {
       client.teamMembers = []
       const guestIds = ownerToGuestsMap.get(client.ownerId)
+      // licenças consumidas = o dono + os convidados DISTINTOS (um convidado em 2 workspaces continua sendo 1)
+      client.guestCount = guestIds ? guestIds.size : 0
       if (guestIds) {
         guestIds.forEach(guestId => {
           const guestProfile = clientsMap.get(guestId)
