@@ -6,7 +6,8 @@ import { APPLICATION_CHANNELS, MIN_FILL_MS, looksLikeBot, suggestPartnerCode, va
 
 const read = (p: string) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n')
 const LANGS = ['pt', 'en', 'es'] as const
-const json = (l: string) => JSON.parse(read(`src/i18n/translations/${l}.json`))
+const jsonCache = new Map<string, any>()
+const json = (l: string) => { if (!jsonCache.has(l)) jsonCache.set(l, JSON.parse(read(`src/i18n/translations/${l}.json`))); return jsonCache.get(l) }
 const get = (obj: any, path: string) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj)
 
 const good: ApplicationInput = {

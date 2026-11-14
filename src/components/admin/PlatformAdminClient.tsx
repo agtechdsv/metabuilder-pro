@@ -28,6 +28,7 @@ import { CampaignsAdmin, IClubSettingsAdmin } from './CampaignsAdmin'
 import { PartnersAdmin } from './PartnersAdmin'
 import { PartnerSettingsAdmin } from './PartnerSettingsAdmin'
 import { DeviceSessionsAdmin } from './DeviceSessionsAdmin'
+import { BillingNoticesAdmin } from './BillingNoticesAdmin'
 import { ReleaseAdminView } from './ReleaseAdminView'
 import { ReleaseCompletionNotifier } from './ReleaseCompletionNotifier'
 
@@ -383,6 +384,7 @@ export default function PlatformAdminClient({
             transition={{ duration: 0.25 }}
             className="space-y-6"
           >
+            <BillingNoticesAdmin refreshKey={refreshCount} />
             <DeviceSessionsAdmin refreshKey={refreshCount} />
             <TrashSettingsAdmin />
           </motion.div>

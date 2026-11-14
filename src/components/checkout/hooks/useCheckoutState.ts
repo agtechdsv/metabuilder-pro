@@ -4,6 +4,7 @@ import { getOrCreateDefaultWorkspace } from '@/app/actions/checkout'
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { getEnabledCycles } from '@/lib/pricing-cycles'
+import { useI18n } from '@/i18n/I18nContext'
 
 export interface CheckoutClientProps {
   rules: any
@@ -17,6 +18,8 @@ export interface CheckoutClientProps {
 
 export function useCheckoutState({ rules, initialLicenses = 1, initialCycle, workspaceSlug, user, profile, mode }: CheckoutClientProps) {
   const isUpgrade = mode === 'upgrade'
+  // idioma do cliente: o checkout o grava no perfil para os avisos de cobrança saírem no idioma dele
+  const { language } = useI18n()
   const [licenses, setLicenses] = useState(isUpgrade && profile?.subscription_licenses ? Math.max(initialLicenses, profile.subscription_licenses) : initialLicenses)
   const [cycle, setCycle] = useState<'monthly' | 'quarterly' | 'semiannual' | 'yearly'>(
     initialCycle && getEnabledCycles(rules, isUpgrade ? profile?.subscription_cycle : null).includes(initialCycle)
@@ -237,7 +240,8 @@ export function useCheckoutState({ rules, initialLicenses = 1, initialCycle, wor
           cardExpiry: paymentMethod === 'card' ? cardExpiry : undefined,
           cardCvv: paymentMethod === 'card' ? cardCvv : undefined,
           workspaceId: workspace.id,
-          isUpgrade: isUpgrade
+          isUpgrade: isUpgrade,
+          language: language
         }
       })
 

@@ -120,7 +120,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   // Buscar perfil do owner separadamente
   const { data: ownerProfile } = await supabase
     .from('profiles')
-    .select('subscription_status, is_blocked, subscription_tier')
+    .select('subscription_status, is_blocked, subscription_tier, subscription_expires_at')
     .eq('id', workspace.owner_id)
     .single()
 
@@ -138,7 +138,11 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
                     ownerProfile.subscription_status === 'blocked' || 
                     (!isFreeTier && (
                       ownerProfile.subscription_status === 'pending' ||
-                      ownerProfile.subscription_status === 'canceled'
+                      // quem cancelou a renovação mantém o app no ar ATÉ o fim do período já pago (a tela de assinatura promete isso);
+                      // depois da data, a rotina diária muda o status para bloqueado e este teste também suspende
+                      (ownerProfile.subscription_status === 'canceled' &&
+                        !!ownerProfile.subscription_expires_at && new Date(ownerProfile.subscription_expires_at).getTime() < Date.now()) ||
+                      (ownerProfile.subscription_status === 'canceled' && !ownerProfile.subscription_expires_at)
                     ))
     }
   }

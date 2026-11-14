@@ -3,6 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
 import { grantVolumeLicenses, processReferralConversion, revokeReferralRewards, syncNextCharge } from "../_shared/iclub.ts";
 import { CYCLE_MONTHS, isCycle } from "../_shared/pricing.ts";
 import { applyTransferEvent, cancelPartnerReferral, recordPartnerCommission, revokePartnerCommissionForPayment } from "../_shared/partners.ts";
+import { billingSettings, pingNotify, queueNotice } from "../_shared/billing.ts";
+import { noticeRef, type NoticeKind } from "../_shared/billingCore.ts";
 
 serve(async (req) => {
   if (req.method !== "POST") {
@@ -39,6 +41,14 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       serviceRoleKey
     );
+
+    // Avisos de cobranca (e-mail e tela) feitos pelo MetaBuilder: desligados por padrao (aí tudo se comporta como antes).
+    // Enfileira o aviso; no fim do webhook o site é chamado para enviar na hora (se não responder, a rotina diária envia).
+    const cfg = await billingSettings(supabase);
+    let queuedAny = false;
+    const notify = async (kind: NoticeKind, userId: string | null, ref: string, payload: Record<string, unknown> = {}) => {
+      if (await queueNotice(supabase, cfg, { kind, userId, ref, payload })) queuedAny = true;
+    };
 
     // -----------------------------------------------------------------------
     // resolveContext: Try 3 strategies to find user_id, plan_id, cycle, etc.
@@ -169,6 +179,8 @@ serve(async (req) => {
 
       if (!ctx?.userId) {
         console.error("[PAYMENT_RECEIVED] Could not resolve payment context. Full body:", JSON.stringify(body));
+        await notify("admin_unresolved", null, noticeRef([payment?.id || "sem-id"]), { event, paymentId: payment?.id, value: payment?.value });
+        if (queuedAny) await pingNotify();
         // Return 200 so Asaas stops retrying — manual review needed
         return new Response(
           JSON.stringify({ success: false, message: "Could not resolve payment context — manual review needed" }),
@@ -187,9 +199,14 @@ serve(async (req) => {
 
       const isUpgradePayment = ctx.externalReference?.includes("_u_");
       
+      // estava suspenso? (o aviso de pagamento recebido diz que o acesso foi restabelecido)
+      const { data: before } = await supabase.from("profiles").select("subscription_status").eq("id", ctx.userId).maybeSingle();
+      const wasSuspended = before?.subscription_status === "blocked";
+
       const updatePayload: Record<string, any> = {
         subscription_status: "active",
         is_blocked: false,
+        overdue_since: null, // pagou: a contagem da carência zera
       };
       
       if (!isUpgradePayment) {
@@ -249,6 +266,14 @@ serve(async (req) => {
           });
           console.log(`[PAYMENT_RECEIVED] Inserted new payment record for ${payment.id}`);
         }
+      }
+
+      // aviso de pagamento recebido (recibo): um por pagamento (o Asaas manda CONFIRMED e RECEIVED)
+      if (payment?.id) {
+        await notify("payment_received", ctx.userId, noticeRef([payment.id]), {
+          paymentId: payment.id, amount: payment.value, billingType: payment.billingType, validUntil: isUpgradePayment ? null : expirationDate.toISOString(),
+          wasSuspended, upgrade: !!isUpgradePayment,
+        });
       }
 
       // =======================================================================
@@ -311,8 +336,49 @@ serve(async (req) => {
       }
     }
 
+    // cobrança nova gerada pelo Asaas (renovação): guarda o vencimento e o link, e avisa o cliente de Pix e boleto (cartão debita sozinho: sem aviso)
+    else if (event === "PAYMENT_CREATED") {
+      const ctx = await resolveContext();
+      if (ctx?.userId && payment?.id) {
+        const { data: existing } = await supabase.from("payments").select("id").eq("asaas_payment_id", payment.id).maybeSingle();
+        const link = payment.invoiceUrl || payment.bankSlipUrl || null;
+        if (existing) {
+          // a primeira cobrança já foi gravada pelo checkout: só completa vencimento e link (o cliente está na tela, sem e-mail)
+          await supabase.from("payments").update({ due_date: payment.dueDate || null, invoice_url: link }).eq("asaas_payment_id", payment.id);
+        } else {
+          const { error: insErr } = await supabase.from("payments").insert({
+            user_id: ctx.userId,
+            cycle: ctx.cycle || "monthly",
+            amount: payment.value || 0,
+            status: "pending",
+            external_reference: ctx.externalReference || `sub_${payment.subscription || payment.id}`,
+            billing_type: payment.billingType || null,
+            invoice_url: link,
+            asaas_payment_id: payment.id,
+            due_date: payment.dueDate || null,
+          });
+          if (insErr) console.error("[PAYMENT_CREATED] erro ao gravar a cobrança:", insErr);
+          else if (payment.billingType === "PIX" || payment.billingType === "BOLETO") {
+            await notify("invoice_created", ctx.userId, noticeRef([payment.id]), { paymentId: payment.id, amount: payment.value, dueDate: payment.dueDate, billingType: payment.billingType, invoiceUrl: link });
+          }
+        }
+      }
+    }
+
+    // cartão recusado na cobrança: avisa o cliente na hora (o atraso e a suspensão seguem o fluxo normal)
+    else if (event === "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED") {
+      const ctx = await resolveContext();
+      if (ctx?.userId && payment?.id) {
+        await notify("card_refused", ctx.userId, noticeRef([payment.id]), { paymentId: payment.id, amount: payment.value, dueDate: payment.dueDate });
+      }
+    }
+
     else if (event === "PAYMENT_REFUNDED" || event === "PAYMENT_CHARGEBACK_REQUESTED") {
       const ctx = await resolveContext();
+      if (payment?.id) {
+        await notify("admin_refund", null, noticeRef([payment.id, event]), { event, paymentId: payment.id, userId: ctx?.userId || null, amount: payment.value });
+        if (ctx?.userId && event === "PAYMENT_REFUNDED") await notify("refunded", ctx.userId, noticeRef([payment.id]), { paymentId: payment.id, amount: payment.value });
+      }
       if (payment?.id) {
         await supabase
           .from("payments")
@@ -337,15 +403,28 @@ serve(async (req) => {
     else if (event === "PAYMENT_OVERDUE") {
       const ctx = await resolveContext();
       if (ctx?.userId) {
-        await supabase
-          .from("profiles")
-          .update({ subscription_status: "blocked", is_blocked: true })
-          .eq("id", ctx.userId);
+        const { data: cur } = await supabase.from("profiles").select("overdue_since").eq("id", ctx.userId).maybeSingle();
+        const overdueSince = cur?.overdue_since || new Date().toISOString();
+        if (!cfg.enabled || cfg.graceDays <= 0) {
+          // sem avisos, ou sem carência: suspende já (como sempre foi)
+          await supabase
+            .from("profiles")
+            .update({ subscription_status: "blocked", is_blocked: true, overdue_since: overdueSince })
+            .eq("id", ctx.userId);
+        } else {
+          // com carência: só marca o início do atraso; a rotina diária suspende quando ela acabar (e avisa antes)
+          await supabase.from("profiles").update({ overdue_since: overdueSince }).eq("id", ctx.userId);
+        }
+        if (payment?.id) {
+          await notify("overdue_1d", ctx.userId, noticeRef([payment.id]), { paymentId: payment.id, amount: payment.value, dueDate: payment.dueDate, invoiceUrl: payment.invoiceUrl || payment.bankSlipUrl || null, overdueSince });
+          await notify("admin_overdue", null, noticeRef([payment.id]), { paymentId: payment.id, userId: ctx.userId, amount: payment.value, dueDate: payment.dueDate });
+        }
       }
       if (payment?.id) {
         await supabase
           .from("payments")
           .update({
+            due_date: payment.dueDate || undefined,
             status: "overdue",
             webhook_payload: body,
             webhook_received_at: new Date().toISOString(),
@@ -355,6 +434,9 @@ serve(async (req) => {
       }
       console.log(`[PAYMENT_OVERDUE] Profile blocked for ${ctx?.userId}`);
     }
+
+    // há aviso novo na fila: pede ao site para enviar já (não trava o webhook; sem resposta, a rotina diária envia)
+    if (queuedAny) await pingNotify();
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

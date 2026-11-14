@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
+import { billingSettings, pingNotify, queueNotice } from "../_shared/billing.ts";
+import { noticeRef } from "../_shared/billingCore.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,7 +70,7 @@ serve(async (req) => {
     // Get the subscription ID from the profile
     const { data: profile } = await supabaseClient
       .from("profiles")
-      .select("asaas_subscription_id")
+      .select("asaas_subscription_id, subscription_expires_at")
       .eq("id", user.id)
       .single();
 
@@ -119,6 +121,13 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // aviso por e-mail: renovação cancelada, acesso até a data (desligado por padrão; nunca atrapalha o cancelamento)
+    try {
+      const cfg = await billingSettings(supabaseClient);
+      const day = (profile?.subscription_expires_at || "").slice(0, 10);
+      if (await queueNotice(supabaseClient, cfg, { kind: "canceled", userId: user.id, ref: noticeRef([user.id, day || "sem-data"]), payload: { expiresAt: profile?.subscription_expires_at || null } })) await pingNotify();
+    } catch (e) { console.error("[avisos] erro ao avisar o cancelamento:", e); }
 
     return new Response(
       JSON.stringify({

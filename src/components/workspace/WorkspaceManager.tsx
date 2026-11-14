@@ -28,6 +28,7 @@ import {
   FolderGit2
 } from 'lucide-react'
 import { AIBuilderSettings } from './AIBuilderSettings'
+import BillingBanner from '@/components/billing/BillingBanner'
 import { usePreview } from '@/contexts/PreviewContext'
 import { useIDE } from '@/contexts/IDESyncContext'
 import Link from 'next/link'
@@ -272,6 +273,9 @@ export function WorkspaceManager({
 
   return (
     <div className="space-y-6">
+
+      {/* Aviso de cobrança (fatura vencendo, vencida ou cartão recusado): só aparece para o dono quando há algo a pagar */}
+      <BillingBanner />
 
       {/* Banner de Boas Vindas */}
       <div data-help-id="portal.ws_banner" className="relative py-6 px-12 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[2.5rem] overflow-hidden group shadow-sm dark:shadow-none">

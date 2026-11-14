@@ -69,7 +69,8 @@ serve(async (req) => {
       cardCvv,
       workspaceId,
       isUpgrade,
-      action
+      action,
+      language
     } = body;
 
     const isQuote = action === "quote";
@@ -233,6 +234,11 @@ serve(async (req) => {
         .eq("id", user.id);
     }
 
+    // idioma do cliente para os avisos de cobrança (pt, en ou es); qualquer outro valor é ignorado
+    if (language === "pt" || language === "en" || language === "es") {
+      await supabaseClient.from("profiles").update({ billing_language: language }).eq("id", user.id);
+    }
+
     // Format Asaas billing type
     let asaasBillingType = "";
     if (paymentMethod === "card") asaasBillingType = "CREDIT_CARD";
@@ -387,7 +393,19 @@ serve(async (req) => {
       }
       
     } else {
-      // Nova assinatura
+      // Nova assinatura. Se o cliente já tinha uma (ex.: foi suspenso e está voltando a pagar), a antiga é cancelada no Asaas ANTES, para não
+      // cobrar duas vezes nem deixar assinatura órfã. O vínculo no perfil é limpo primeiro: assim o evento de exclusão que o Asaas manda
+      // não é atribuído ao cliente (não marca cancelado nem revoga recompensas). Se o cancelamento falhar, segue: o Asaas recusa o que não existe.
+      if (profile?.asaas_subscription_id) {
+        const oldSubscriptionId = profile.asaas_subscription_id;
+        await supabaseClient.from("profiles").update({ asaas_subscription_id: null }).eq("id", user.id);
+        try {
+          const del = await fetch(`${ASAAS_URL}/subscriptions/${oldSubscriptionId}`, { method: "DELETE", headers: { "access_token": ASAAS_API_KEY } });
+          if (!del.ok && del.status !== 404) console.error("[checkout] não foi possível cancelar a assinatura antiga no Asaas:", oldSubscriptionId, del.status);
+        } catch (e) {
+          console.error("[checkout] erro ao cancelar a assinatura antiga:", (e as Error)?.message);
+        }
+      }
       const subscriptionPayload = {
         customer: asaasCustomerId,
         billingType: asaasBillingType,
