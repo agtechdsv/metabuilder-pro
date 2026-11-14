@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
+import { waitForSession } from '@/lib/auth/callbackExchange'
 
 function CallbackHandler() {
   const { t } = useI18n()
@@ -164,10 +165,11 @@ function CallbackHandler() {
       supabase.auth.exchangeCodeForSession(code).then(({ data, error }: any) => {
         if (error) {
           console.error('Erro ao trocar código por sessão:', error)
-          // Apenas mostra erro se realmente falhou e não temos sessão ativa
-          supabase.auth.getSession().then(({ data: currentData }: any) => {
-            if (currentData?.session) {
-              notifyAndClose(currentData.session)
+          // Apenas mostra erro se realmente falhou e não temos sessão ativa. A troca pode ter sido concluída por outro caminho um instante
+          // depois (o código só troca uma vez), então espera a sessão aparecer antes de dar o erro como definitivo.
+          waitForSession(async () => (await supabase.auth.getSession())?.data?.session).then((currentSession: any) => {
+            if (currentSession) {
+              notifyAndClose(currentSession)
             } else {
               setErrorMessage(error.message)
               setStatus('error')

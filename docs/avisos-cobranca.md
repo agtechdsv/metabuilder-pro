@@ -53,7 +53,7 @@ Cobrança vencida, estorno/chargeback, **pagamento que o webhook não conseguiu 
 1. **SQL:** rodar `scripts/avisos-cobranca.sql` no SQL Editor de produção (as Edge Functions passam a gravar `overdue_since`; sem o SQL, o webhook falha ao atualizar o perfil).
 2. **Segredo compartilhado** (um texto longo e aleatório, igual nos dois lugares):
    - Vercel: `BILLING_NOTIFY_SECRET`.
-   - Supabase > Edge Functions > Secrets: `BILLING_NOTIFY_SECRET` (o mesmo) e `BILLING_NOTIFY_URL` = `https://metabuilderpro.com/api/billing/notify`.
+   - Supabase > Edge Functions > Secrets: `BILLING_NOTIFY_SECRET` (o mesmo) e `BILLING_NOTIFY_URL` = `https://www.metabuilderpro.com/api/billing/notify`.
    - Sem eles nada quebra: o webhook só não cutuca o site e os avisos saem na rotina diária (até 24 h de atraso).
 3. **Deploy das Edge Functions:** `supabase functions deploy asaas-webhook asaas-checkout asaas-cancel` (ou `node scripts/bundle-edge-functions.mjs` e colar no painel).
 4. **Deploy do site** (Vercel; o cron novo entra com o `vercel.json`).

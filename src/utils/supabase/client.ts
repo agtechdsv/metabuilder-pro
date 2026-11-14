@@ -1,6 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
 import { patchChannelForRelay, tunnelTopicFor } from '@/lib/tunnel/relayClient'
 import { installDemoGuards } from '@/lib/demo/demoMode'
+import { isAuthCallbackPath } from '@/lib/auth/callbackExchange'
 
 const createDefaultClient = () => createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,8 +24,13 @@ export function createClient(options?: any) {
     }
   }
 
+  // Na página de retorno do login, só ela troca o código PKCE por sessão (a troca consome o verificador: duas trocas = erro na segunda).
+  // O cliente compartilhado criado aqui não pode tentar trocar o mesmo código sozinho ao carregar.
+  const onCallbackPage = typeof window !== 'undefined' && isAuthCallbackPath(window.location.pathname)
+
   const mergedOptions = {
     ...options,
+    ...(onCallbackPage ? { auth: { detectSessionInUrl: false, ...options?.auth } } : {}),
     cookieOptions: {
       domain: cookieDomain,
       path: '/',
