@@ -6044,6 +6044,18 @@
     "err_invalid_settings": "Valores fora do permitido.",
     "err_unknown": "Não foi possível concluir. O script scripts/sessoes-dispositivos.sql já foi rodado?"
   },
+  "admin_clients": {
+    "billing_title": "Cobrança no Asaas",
+    "billing_loading": "Consultando a cobrança no Asaas...",
+    "billing_none": "Sem assinatura nem cobrança aberta no Asaas: nada a cancelar.",
+    "billing_error": "Não foi possível consultar o Asaas: {error}",
+    "billing_sub": "assinatura ativa",
+    "billing_charges": "{n} cobrança(s) aberta(s), {total}",
+    "billing_delete_will": "Será cancelado no Asaas antes de excluir:",
+    "billing_delete_note": "Se o cancelamento falhar, o cliente não é excluído. Cobranças já pagas não são devolvidas (estorno é feito à parte, no Asaas).",
+    "billing_block_label": "Cancelar também as cobranças futuras",
+    "billing_block_hint": "A assinatura é cancelada no Asaas e as cobranças abertas são apagadas. Para voltar a cobrar, o cliente precisa assinar de novo. Sem marcar, o Asaas continua cobrando enquanto o cliente estiver bloqueado."
+  },
   "admin_email": {
     "title": "Gerenciador de e-mails",
     "subtitle": "Escolha, para cada assunto, de qual endereço o e-mail sai, para onde vão as respostas e quem recebe os avisos da equipe.",

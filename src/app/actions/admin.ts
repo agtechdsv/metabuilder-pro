@@ -3,6 +3,7 @@
 import { createClient, createAdminClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { clampTrashHours, MIN_TRASH_HOURS, MAX_TRASH_HOURS } from '@/lib/trash/trash'
+import { billingFunctionUrl, readBillingResponse, type BillingInspection, type BillingPurpose, type BillingResult } from '@/lib/admin/billingCancel'
 
 // Helper to check if the current user is a super admin
 async function checkSuperAdmin() {
@@ -25,6 +26,35 @@ async function checkSuperAdmin() {
 }
 
 // Removidos savePlan e deletePlan legados
+
+/** Pede à Edge Function `admin-cancel-billing` (que guarda a chave do Asaas) para ver ou cancelar a cobrança de um cliente. Usa a sessão do SuperAdmin. */
+async function callBillingFunction(supabase: Awaited<ReturnType<typeof createClient>>, body: { userId: string; mode: 'inspect' | 'cancel'; purpose?: BillingPurpose }): Promise<BillingResult> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) return { ok: false, error: 'Sessão expirada. Entre de novo e repita.' }
+  try {
+    const res = await fetch(billingFunctionUrl(process.env.NEXT_PUBLIC_SUPABASE_URL!), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}`, apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
+      body: JSON.stringify(body),
+      cache: 'no-store',
+    })
+    const json = await res.json().catch(() => ({}))
+    return readBillingResponse(res.status, json)
+  } catch (err: any) {
+    return { ok: false, error: `Não foi possível falar com o Asaas agora: ${err?.message || 'falha de rede'}` }
+  }
+}
+
+/** O que seria cancelado no Asaas para este cliente (assinatura e cobranças abertas), para o modal avisar antes de confirmar. */
+export async function inspectClientBilling(profileId: string): Promise<{ success: boolean; info?: BillingInspection; error?: string }> {
+  try {
+    const { supabase } = await checkSuperAdmin()
+    const r = await callBillingFunction(supabase, { userId: profileId, mode: 'inspect' })
+    return r.ok ? { success: true, info: r.info } : { success: false, error: r.error }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
 
 export async function toggleWorkspaceBlock(workspaceId: string, isBlocked: boolean) {
   try {
@@ -50,9 +80,18 @@ export async function toggleWorkspaceBlock(workspaceId: string, isBlocked: boole
   }
 }
 
-export async function toggleClientBlock(profileId: string, isBlocked: boolean) {
+/**
+ * Bloqueia ou desbloqueia o cliente. `cancelBilling` (só ao bloquear, e só quando o SuperAdmin marcou) cancela antes a assinatura e as cobranças
+ * abertas no Asaas; se o Asaas falhar, NÃO bloqueia (para não parecer bloqueado e continuar cobrando).
+ */
+export async function toggleClientBlock(profileId: string, isBlocked: boolean, cancelBilling = false) {
   try {
-    const { adminSupabase } = await checkSuperAdmin()
+    const { supabase, adminSupabase } = await checkSuperAdmin()
+
+    if (isBlocked && cancelBilling) {
+      const r = await callBillingFunction(supabase, { userId: profileId, mode: 'cancel', purpose: 'block' })
+      if (!r.ok) return { success: false, error: r.error }
+    }
 
     // 1. Block Profile
     const { error: profileError } = await adminSupabase
@@ -247,7 +286,24 @@ export async function deleteSuggestionAdmin(suggestionId: string) {
 
 export async function deleteClientAdmin(profileId: string) {
   try {
-    const { adminSupabase } = await checkSuperAdmin()
+    const { supabase, adminSupabase } = await checkSuperAdmin()
+
+    // 0a. Quem é parceiro não pode ser excluído (o banco recusa): avisa antes de mexer em qualquer coisa
+    // (vale também para os convidados do cliente, que seriam excluídos junto)
+    const { data: guestRows } = await adminSupabase.from('owner_guests').select('user_id').eq('owner_id', profileId)
+    const affectedIds = [profileId, ...(guestRows ?? []).map((g: any) => g.user_id).filter(Boolean)]
+    const { data: asPartner } = await adminSupabase.from('partners').select('code').in('user_id', affectedIds).limit(1).maybeSingle()
+    if (asPartner) {
+      return { success: false, error: `Este cliente (ou um convidado dele) também é parceiro (código ${asPartner.code}). Exclua ou arquive o parceiro antes de excluir o cliente.` }
+    }
+
+    // 0b. Cobrança no Asaas: cancela a assinatura e as cobranças abertas ANTES de apagar. Se o Asaas falhar, não exclui
+    // (excluir primeiro deixaria a assinatura cobrando um cliente que não existe mais).
+    const { data: billing } = await adminSupabase.from('profiles').select('asaas_customer_id, asaas_subscription_id').eq('id', profileId).maybeSingle()
+    if (billing?.asaas_customer_id || billing?.asaas_subscription_id) {
+      const r = await callBillingFunction(supabase, { userId: profileId, mode: 'cancel', purpose: 'delete' })
+      if (!r.ok) return { success: false, error: `Nada foi excluído. ${r.error}` }
+    }
 
     // 0. Encontrar convidados deste owner
     const { data: guests } = await adminSupabase

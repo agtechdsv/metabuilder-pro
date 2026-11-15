@@ -6044,6 +6044,18 @@
     "err_invalid_settings": "Values out of the allowed range.",
     "err_unknown": "Could not complete. Was the scripts/sessoes-dispositivos.sql script already run?"
   },
+  "admin_clients": {
+    "billing_title": "Billing at Asaas",
+    "billing_loading": "Checking the billing at Asaas...",
+    "billing_none": "No subscription or open charge at Asaas: nothing to cancel.",
+    "billing_error": "Could not check Asaas: {error}",
+    "billing_sub": "active subscription",
+    "billing_charges": "{n} open charge(s), {total}",
+    "billing_delete_will": "Will be canceled at Asaas before deleting:",
+    "billing_delete_note": "If the cancellation fails, the customer is not deleted. Charges already paid are not refunded (refunds are done separately, at Asaas).",
+    "billing_block_label": "Also cancel future charges",
+    "billing_block_hint": "The subscription is canceled at Asaas and open charges are deleted. To charge again, the customer must subscribe again. If left unchecked, Asaas keeps charging while the customer is blocked."
+  },
   "admin_email": {
     "title": "E-mail manager",
     "subtitle": "Choose, for each subject, which address the e-mail is sent from, where replies go and who receives the team notices.",

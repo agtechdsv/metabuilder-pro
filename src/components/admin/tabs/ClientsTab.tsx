@@ -3,10 +3,48 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Unlock, Lock, Trash2, AlertTriangle, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Modal } from '@/components/ui/Modal'
-import { useClientsAdmin } from '../hooks/useClientsAdmin'
+import { useI18n } from '@/i18n/I18nContext'
+import { hasOpenBilling } from '@/lib/admin/billingCancel'
+import { useClientsAdmin, type BillingPreview } from '../hooks/useClientsAdmin'
 
 interface ClientsTabProps {
   hook: ReturnType<typeof useClientsAdmin>
+}
+
+const brl = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
+
+/** Cobrança no Asaas ligada ao cliente: o que será cancelado (excluir) ou a escolha de cancelar também (bloquear). */
+function BillingBox({ preview, mode, checked, onCheck, disabled }: { preview: BillingPreview; mode: 'block' | 'delete'; checked?: boolean; onCheck?: (v: boolean) => void; disabled?: boolean }) {
+  const { t } = useI18n()
+  const open = hasOpenBilling(preview.info)
+  const parts: string[] = []
+  if (preview.info?.hasSubscription) parts.push(t('admin_clients.billing_sub'))
+  if (preview.info && preview.info.chargeCount > 0) parts.push(t('admin_clients.billing_charges').replace('{n}', String(preview.info.chargeCount)).replace('{total}', brl(preview.info.chargeTotal)))
+  return (
+    <div data-testid="billing-box" className="rounded-2xl border border-neutral-200 dark:border-neutral-700 p-4 space-y-2 text-xs text-neutral-600 dark:text-neutral-300">
+      <p className="text-[11px] font-black uppercase tracking-widest text-neutral-500">{t('admin_clients.billing_title')}</p>
+      {preview.loading ? (
+        <p className="flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" />{t('admin_clients.billing_loading')}</p>
+      ) : preview.error ? (
+        <p className="text-amber-600 dark:text-amber-400">{t('admin_clients.billing_error').replace('{error}', preview.error)}</p>
+      ) : !open ? (
+        <p>{t('admin_clients.billing_none')}</p>
+      ) : mode === 'delete' ? (
+        <>
+          <p className="font-bold">{t('admin_clients.billing_delete_will')} {parts.join(' + ')}.</p>
+          <p className="opacity-80">{t('admin_clients.billing_delete_note')}</p>
+        </>
+      ) : (
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <input type="checkbox" data-testid="cancel-billing-check" className="mt-0.5" checked={!!checked} disabled={disabled} onChange={e => onCheck?.(e.target.checked)} />
+          <span>
+            <span className="font-bold block">{t('admin_clients.billing_block_label')} ({parts.join(' + ')})</span>
+            <span className="opacity-80">{t('admin_clients.billing_block_hint')}</span>
+          </span>
+        </label>
+      )}
+    </div>
+  )
 }
 
 export function ClientsTab({ hook }: ClientsTabProps) {
@@ -25,6 +63,9 @@ export function ClientsTab({ hook }: ClientsTabProps) {
     clientToDelete,
     setClientToDelete,
     isDeletingClient,
+    billingPreview,
+    cancelBillingOnBlock,
+    setCancelBillingOnBlock,
     filteredClients,
     clientTypeFilter,
     setClientTypeFilter,
@@ -358,6 +399,10 @@ export function ClientsTab({ hook }: ClientsTabProps) {
             </div>
           )}
 
+          {workspaceToBlock?.isBlocked && (
+            <BillingBox preview={billingPreview} mode="block" checked={cancelBillingOnBlock} onCheck={setCancelBillingOnBlock} disabled={isBlockingWorkspace} />
+          )}
+
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="button"
@@ -427,6 +472,8 @@ export function ClientsTab({ hook }: ClientsTabProps) {
               </p>
             </div>
           </div>
+
+          <BillingBox preview={billingPreview} mode="delete" disabled={isDeletingClient} />
 
           <div className="flex items-center justify-end gap-3 pt-2">
             <button

@@ -1,6 +1,11 @@
 import { useState, useMemo } from 'react'
 import { useToast } from '@/components/ui/Toast'
-import { toggleClientBlock, deleteClientAdmin } from '@/app/actions/admin'
+import { toggleClientBlock, deleteClientAdmin, inspectClientBilling } from '@/app/actions/admin'
+import type { BillingInspection } from '@/lib/admin/billingCancel'
+
+/** O que está para ser cancelado no Asaas, mostrado nos modais de bloquear e excluir. */
+export interface BillingPreview { loading: boolean; info: BillingInspection | null; error: string | null }
+const EMPTY_PREVIEW: BillingPreview = { loading: false, info: null, error: null }
 import { buildOwnerGuestIds } from '@/lib/admin/ownerGuests'
 
 export function useClientsAdmin(
@@ -25,6 +30,16 @@ export function useClientsAdmin(
   const [isDeleteClientModalOpen, setIsDeleteClientModalOpen] = useState(false)
   const [clientToDelete, setClientToDelete] = useState<{ id: string, name: string, ownerName: string, ownerId: string, ownerEmail: string } | null>(null)
   const [isDeletingClient, setIsDeletingClient] = useState(false)
+
+  // cobrança no Asaas: o modal consulta o que seria cancelado; ao bloquear, o SuperAdmin escolhe se cancela também (desmarcado por padrão)
+  const [billingPreview, setBillingPreview] = useState<BillingPreview>(EMPTY_PREVIEW)
+  const [cancelBillingOnBlock, setCancelBillingOnBlock] = useState(false)
+
+  const loadBillingPreview = async (ownerId: string) => {
+    setBillingPreview({ loading: true, info: null, error: null })
+    const r = await inspectClientBilling(ownerId)
+    setBillingPreview(r.success ? { loading: false, info: r.info ?? null, error: null } : { loading: false, info: null, error: r.error || 'Não foi possível consultar o Asaas.' })
+  }
 
   const filteredClients = useMemo(() => {
     const clientsMap = new Map<string, any>()
@@ -143,14 +158,17 @@ export function useClientsAdmin(
 
   const handleToggleBlock = (ownerId: string, isBlocked: boolean, clientName: string) => {
     setWorkspaceToBlock({ id: ownerId, isBlocked, name: clientName })
+    setCancelBillingOnBlock(false)
+    setBillingPreview(EMPTY_PREVIEW)
     setIsBlockModalOpen(true)
+    if (isBlocked) void loadBillingPreview(ownerId) // só ao bloquear: desbloquear não cancela nada
   }
 
   const handleConfirmToggleBlock = async () => {
     if (!workspaceToBlock) return
     setIsBlockingWorkspace(true)
     const actionLabel = workspaceToBlock.isBlocked ? 'bloquear' : 'desbloquear'
-    const result = await toggleClientBlock(workspaceToBlock.id, workspaceToBlock.isBlocked)
+    const result = await toggleClientBlock(workspaceToBlock.id, workspaceToBlock.isBlocked, workspaceToBlock.isBlocked && cancelBillingOnBlock)
     setIsBlockingWorkspace(false)
     if (result.success) {
       toast(`Cliente "${workspaceToBlock.name}" foi ${workspaceToBlock.isBlocked ? 'bloqueado' : 'desbloqueado'} com sucesso!`, 'success')
@@ -168,7 +186,9 @@ export function useClientsAdmin(
 
   const handleDeleteClient = (ownerName: string, ownerId: string, ownerEmail: string) => {
     setClientToDelete({ id: '', name: '', ownerName, ownerId, ownerEmail })
+    setBillingPreview(EMPTY_PREVIEW)
     setIsDeleteClientModalOpen(true)
+    void loadBillingPreview(ownerId)
   }
 
   const handleConfirmDeleteClient = async () => {
@@ -201,6 +221,9 @@ export function useClientsAdmin(
     clientToDelete,
     setClientToDelete,
     isDeletingClient,
+    billingPreview,
+    cancelBillingOnBlock,
+    setCancelBillingOnBlock,
     filteredClients,
     clientTypeFilter,
     setClientTypeFilter,

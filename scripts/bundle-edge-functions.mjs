@@ -3,16 +3,16 @@
 //   node scripts/bundle-edge-functions.mjs
 //
 // Saída: supabase/functions-dashboard/<nome>/index.ts (ignorado pelo git; é só para copiar e colar). Pela CLI não precisa disto:
-//   supabase functions deploy asaas-cancel asaas-checkout asaas-update-subscription asaas-webhook iclub-release partner-payout partner-transfer-validation
+//   supabase functions deploy admin-cancel-billing asaas-cancel asaas-checkout asaas-update-subscription asaas-webhook iclub-release partner-payout partner-transfer-validation
 import fs from 'node:fs'
 import path from 'node:path'
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..')
 const fnDir = path.join(root, 'supabase', 'functions')
 const outDir = path.join(root, 'supabase', 'functions-dashboard')
-const FUNCTIONS = ['asaas-cancel', 'asaas-checkout', 'asaas-update-subscription', 'asaas-webhook', 'iclub-release', 'partner-payout', 'partner-transfer-validation']
+const FUNCTIONS = ['admin-cancel-billing', 'asaas-cancel', 'asaas-checkout', 'asaas-update-subscription', 'asaas-webhook', 'iclub-release', 'partner-payout', 'partner-transfer-validation']
 
-const SHARED_ORDER = ['pricing', 'iclub', 'partnerCommission', 'partners', 'billingCore', 'billing']
+const SHARED_ORDER = ['pricing', 'iclub', 'partnerCommission', 'partners', 'billingCore', 'billing', 'adminCancel']
 const read = f => fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n')
 const sharedImport = /^import [^;]*?from ["']\.\.\/_shared\/([\w-]+)\.ts["'];?\s*$/gm
 const anyImport = /^import [^;]*?from ["']\.\/(\w+)\.ts["'];?\s*$/gm

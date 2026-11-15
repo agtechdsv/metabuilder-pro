@@ -6132,6 +6132,18 @@
     "err_invalid_settings": "Valores fuera de lo permitido.",
     "err_unknown": "No fue posible completar. ¿Ya se ejecutó el script scripts/sessoes-dispositivos.sql?"
   },
+  "admin_clients": {
+    "billing_title": "Cobro en Asaas",
+    "billing_loading": "Consultando el cobro en Asaas...",
+    "billing_none": "Sin suscripción ni cobro abierto en Asaas: nada que cancelar.",
+    "billing_error": "No se pudo consultar Asaas: {error}",
+    "billing_sub": "suscripción activa",
+    "billing_charges": "{n} cobro(s) abierto(s), {total}",
+    "billing_delete_will": "Se cancelará en Asaas antes de eliminar:",
+    "billing_delete_note": "Si la cancelación falla, el cliente no se elimina. Los cobros ya pagados no se devuelven (el reembolso se hace aparte, en Asaas).",
+    "billing_block_label": "Cancelar también los cobros futuros",
+    "billing_block_hint": "La suscripción se cancela en Asaas y los cobros abiertos se eliminan. Para volver a cobrar, el cliente debe suscribirse de nuevo. Sin marcar, Asaas sigue cobrando mientras el cliente esté bloqueado."
+  },
   "admin_email": {
     "title": "Gestor de e-mails",
     "subtitle": "Elija, para cada asunto, desde qué dirección sale el e-mail, adónde van las respuestas y quién recibe los avisos del equipo.",

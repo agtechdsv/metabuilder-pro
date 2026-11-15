@@ -326,7 +326,8 @@ serve(async (req) => {
         await supabase
           .from("profiles")
           .update({ subscription_status: "canceled" })
-          .eq("id", ctx.userId);
+          .eq("id", ctx.userId)
+          .neq("subscription_status", "blocked"); // cliente bloqueado pelo admin continua bloqueado (cancelar a cobrança não pode desbloquear o status)
         console.log(`[SUBSCRIPTION_DELETED] Profile ${ctx.userId} marked canceled`);
         // quem foi indicado por esta pessoa deixa de dar desconto; recalcula a assinatura de quem indicou
         try {
