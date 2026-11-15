@@ -8,6 +8,7 @@ import { LegalModal } from '@/components/legal/LegalModal'
 import { PrivacyContent } from '@/components/legal/PrivacyContent'
 import { TermsContent } from '@/components/legal/TermsContent'
 import { AgTechContent } from '@/components/legal/AgTechContent'
+import { salesWhatsappUrl } from '@/lib/contact'
 
 export function Footer() {
   const { t, language } = useI18n()
@@ -49,7 +50,16 @@ export function Footer() {
           >
             {t('footer.partners')}
           </Link>
-          <button 
+          <a
+            href={salesWhatsappUrl(t('footer.whatsapp_message'))}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="footer-whatsapp"
+            className="text-sm font-bold text-neutral-400 dark:text-neutral-500 hover:text-indigo-600 hover:underline underline-offset-4 transition-all"
+          >
+            {t('footer.whatsapp')}
+          </a>
+          <button
             onClick={() => setLegalType('privacy')}
             className="text-sm font-bold text-neutral-400 dark:text-neutral-500 hover:text-indigo-600 hover:underline underline-offset-4 transition-all cursor-pointer"
           >

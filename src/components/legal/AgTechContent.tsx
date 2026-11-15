@@ -1,7 +1,8 @@
 'use client'
 
-import { Mail, Zap } from 'lucide-react'
+import { Mail, MessageCircle, Zap } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
+import { salesWhatsappUrl } from '@/lib/contact'
 
 export function AgTechContent() {
   const { t } = useI18n()
@@ -39,6 +40,17 @@ export function AgTechContent() {
         >
           <Mail className="w-4 h-4 group-hover:scale-110 transition-transform" />
           {t('agtech.cta_button')}
+        </a>
+
+        <a
+          href={salesWhatsappUrl(t('agtech.wa_message'))}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="agtech-whatsapp"
+          className="w-full border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 py-5 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
+        >
+          <MessageCircle className="w-4 h-4" />
+          {t('agtech.cta_whatsapp')}
         </a>
       </div>
     </div>

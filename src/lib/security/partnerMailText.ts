@@ -101,7 +101,7 @@ export function partnerRejectedMail(lang: MailLang, d: { name: string }): MailCo
   const t = TEXTS[lang]
   const html = mailShell(t.rejectedTitle,
     `<p style="margin:0 0 16px 0;">${esc(t.rejectedBody(d.name))}</p><p style="margin:0 0 6px 0;">${esc(t.rejectedBye)}</p>`,
-    `© ${new Date().getFullYear()} METABUILDER PRO · ${t.footerWhy}`)
+    `© ${new Date().getFullYear()} METABUILDER PRO · ${t.footerWhy}`, false) // recusa curta, sem link nenhum
   const text = [t.rejectedTitle, '', t.rejectedBody(d.name), t.rejectedBye].join('\n')
   return { subject: t.rejectedSubject, html, text }
 }

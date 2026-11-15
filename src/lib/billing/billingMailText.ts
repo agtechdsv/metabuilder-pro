@@ -167,7 +167,7 @@ export function adminBillingMail(kind: string, d: AdminBillingData): MailContent
     rows = [row('Evento', d.event), row('Chave', d.keyName || '-'), row('Expira em', d.expiresAt || '-'), row('O que fazer', a.todo)]
   } else return null
   const html = mailShell(title, `<p style="margin:0 0 20px 0;">${esc(intro)}</p>` + infoBox('Detalhes', rows) + button('Abrir o painel', url),
-    `© ${new Date().getFullYear()} METABUILDER PRO · Alerta de cobrança para a equipe.`)
+    `© ${new Date().getFullYear()} METABUILDER PRO · Alerta de cobrança para a equipe.`, false)
   const text = [title, '', intro, '', ...rows.map(([k, v]) => `${k}: ${v}`), '', `Painel: ${url}`].join('\n')
   const noWho = kind === 'admin_digest' || kind === 'admin_key_alert'
   return { subject: `${title}${noWho ? '' : `: ${who}`}`.replace(/[\r\n]+/g, ' ').slice(0, 200), html, text }

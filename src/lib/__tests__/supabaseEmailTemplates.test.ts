@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
+import { SALES_WHATSAPP, SALES_WHATSAPP_DISPLAY } from '../contact'
 
 const root = process.cwd()
 const read = (p: string) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n')
@@ -83,6 +84,18 @@ describe('modelos de e-mail do Supabase em 3 idiomas', () => {
       const tpl = read(path.join(dir, `${name}.html`))
       expect(tpl, name).toContain('suporte@metabuilderpro.com')
       expect(tpl, name).not.toMatch(/20\d\d/)
+    }
+  })
+
+  it('só a confirmação de cadastro e o convite levam o WhatsApp, com o mesmo número do contato central', () => {
+    for (const name of NAMES) {
+      const tpl = read(path.join(dir, `${name}.html`))
+      if (name === 'confirm-signup' || name === 'invite-user') {
+        expect(tpl, name).toContain(`https://wa.me/${SALES_WHATSAPP}`)
+        expect(tpl, name).toContain(SALES_WHATSAPP_DISPLAY)
+      } else {
+        expect(tpl, name).not.toContain('wa.me')
+      }
     }
   })
 

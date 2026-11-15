@@ -2,6 +2,8 @@
  * Textos dos e-mails de segurança das vagas de sessão (puro, testável). O envio fica em securityMail.ts.
  * Idiomas: pt, en e es (o idioma vem do cookie app-language, como no resto do site).
  */
+import { SALES_WHATSAPP, SALES_WHATSAPP_DISPLAY } from '../contact'
+
 export type MailLang = 'pt' | 'en' | 'es'
 
 export interface MailContent { subject: string; html: string; text: string }
@@ -73,13 +75,13 @@ const TEXTS = {
  * Modelo único dos e-mails do MetaBuilder PRO (mesmo visual do e-mail de redefinição de senha): faixa em degradê verde e azul com o nome,
  * cartão branco com título centralizado, corpo e rodapé. `bodyHtml` já vem escapado por quem monta.
  */
-export const mailShell = (title: string, bodyHtml: string, footer: string) => `<!DOCTYPE html>
+export const mailShell = (title: string, bodyHtml: string, footer: string, withContact = true) => `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${esc(title)}</title></head>
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:32px auto;background:#ffffff;border-radius:24px;overflow:hidden;">
 <tr><td align="center" bgcolor="#10b981" style="padding:38px 32px;background:#10b981;background-image:linear-gradient(135deg,#10b981 0%,#3b82f6 100%);color:#ffffff;"><div style="font-size:30px;font-weight:800;letter-spacing:-0.5px;">MetaBuilder <span style="color:#a5f3fc;">PRO</span></div></td></tr>
 <tr><td align="center" style="padding:36px 36px 28px 36px;color:#52525b;font-size:15px;line-height:23px;"><h1 style="margin:0 0 18px 0;font-size:24px;line-height:30px;color:#18181b;">${esc(title)}</h1>${bodyHtml}</td></tr>
-<tr><td align="center" style="padding:20px 36px;border-top:1px solid #f4f4f5;color:#a1a1aa;font-size:11px;line-height:17px;">${esc(footer)}</td></tr>
+<tr><td align="center" style="padding:20px 36px;border-top:1px solid #f4f4f5;color:#a1a1aa;font-size:11px;line-height:17px;">${esc(footer)}${withContact ? `<br>WhatsApp <a href="https://wa.me/${SALES_WHATSAPP}" style="color:#a1a1aa;">${SALES_WHATSAPP_DISPLAY}</a>` : ''}</td></tr>
 </table></body></html>`
 const shell = mailShell
 
@@ -149,7 +151,7 @@ export function slotKickedMail(lang: MailLang, d: KickedMailData): MailContent {
     `<table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e4e4e7;border-radius:12px;margin:0 0 16px 0;text-align:left;">` +
     rows.map(([k, v]) => `<tr><td style="padding:10px 14px;color:#71717a;width:34%;">${esc(k)}</td><td style="padding:10px 14px;font-weight:600;">${esc(v)}</td></tr>`).join('') +
     `<tr><td style="padding:10px 14px;color:#71717a;">${esc(t.ended)}</td><td style="padding:10px 14px;">${esc(ended)}</td></tr></table>` +
-    `<p style="margin:0;color:#b45309;">${esc(t.notYou)}</p>`, t.footer)
+    `<p style="margin:0;color:#b45309;">${esc(t.notYou)}</p>`, t.footer, false)
   const text = [t.kickedTitle, '', t.kickedIntro, ...rows.map(([k, v]) => `${k}: ${v}`), `${t.ended}: ${ended}`, '', t.notYou].join('\n')
   return { subject: t.kickedSubject, html, text }
 }
@@ -159,7 +161,7 @@ export function slotCodeMail(lang: MailLang, code: string, ttlMinutes: number): 
   const html = shell(t.codeTitle,
     `<p style="margin:0 0 20px 0;">${esc(t.codeIntro)}</p>` +
     `<div style="text-align:center;margin:0 0 20px 0;"><span style="display:inline-block;padding:14px 28px;border-radius:14px;background:#eef2ff;color:#3730a3;font-size:32px;font-weight:800;letter-spacing:8px;">${esc(code)}</span></div>` +
-    `<p style="margin:0 0 8px 0;">${esc(t.codeValid(ttlMinutes))}</p><p style="margin:0;color:#b45309;">${esc(t.codeIgnore)}</p>`, t.footer)
+    `<p style="margin:0 0 8px 0;">${esc(t.codeValid(ttlMinutes))}</p><p style="margin:0;color:#b45309;">${esc(t.codeIgnore)}</p>`, t.footer, false)
   const text = [t.codeTitle, '', t.codeIntro, '', code, '', t.codeValid(ttlMinutes), t.codeIgnore].join('\n')
   return { subject: t.codeSubject, html, text }
 }

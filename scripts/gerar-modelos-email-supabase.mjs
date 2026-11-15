@@ -12,6 +12,9 @@ const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace
 const outDir = path.join(root, 'docs', 'emails-supabase')
 
 const SUPPORT = 'suporte@metabuilderpro.com'
+// Mesmo número de src/lib/contact.ts (um teste confere que os dois batem). Só os modelos com `whatsapp: true` mostram o contato.
+const WHATSAPP = '5531989560146'
+const WHATSAPP_SHOWN = '(31) 98956-0146'
 
 // Declaração do idioma (uma vez por modelo). `.Data` pode não existir: cada passo confere antes de usar.
 const DECLARE = '{{ $l := "pt" }}{{ if .Data }}{{ if .Data.lang }}{{ $l = .Data.lang }}{{ end }}{{ end }}'
@@ -25,7 +28,8 @@ const COMMON = {
 }
 
 /** Monta o HTML de um modelo. `button` e `code` são opcionais (a reautenticação mostra um código, sem botão). */
-function build({ title, intro, boxLabel, boxText, button, note, why, code }) {
+function build({ title, intro, boxLabel, boxText, button, note, why, code, whatsapp }) {
+  const whatsappHtml = whatsapp ? ` &middot; WhatsApp <a href="https://wa.me/${WHATSAPP}" style="color: #3b82f6; text-decoration: none;">${WHATSAPP_SHOWN}</a>` : ''
   const buttonHtml = button ? `
               <!-- Botão principal -->
               <table border="0" cellspacing="0" cellpadding="0" align="center" style="margin-top: 28px; margin-bottom: 8px;">
@@ -81,7 +85,7 @@ function build({ title, intro, boxLabel, boxText, button, note, why, code }) {
           <!-- Rodapé -->
           <tr>
             <td style="padding: 0 40px 40px 40px; text-align: center; border-top: 1px solid #f1f5f9;">
-              <p style="margin: 24px 0 8px 0; font-size: 12px; color: #64748b;">${T(COMMON.help)} <a href="mailto:${SUPPORT}" style="color: #3b82f6; text-decoration: none;">${SUPPORT}</a></p>
+              <p style="margin: 24px 0 8px 0; font-size: 12px; color: #64748b;">${T(COMMON.help)} <a href="mailto:${SUPPORT}" style="color: #3b82f6; text-decoration: none;">${SUPPORT}</a>${whatsappHtml}</p>
               <p style="margin: 0 0 8px 0; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">&copy; MetaBuilder PRO</p>
               <p style="margin: 0; font-size: 11px; line-height: 1.5; color: #94a3b8;">${T(why)}<br>${T(COMMON.tagline)}</p>
             </td>
@@ -98,6 +102,7 @@ function build({ title, intro, boxLabel, boxText, button, note, why, code }) {
 
 const TEMPLATES = {
   'confirm-signup': {
+    whatsapp: true,
     subject: { pt: 'Confirme o seu cadastro no MetaBuilder PRO', en: 'Confirm your MetaBuilder PRO sign-up', es: 'Confirme su registro en MetaBuilder PRO' },
     title: { pt: 'Confirme o seu e-mail', en: 'Confirm your e-mail', es: 'Confirme su e-mail' },
     intro: { pt: 'Olá! Falta só um passo para ativar a sua conta no <strong>MetaBuilder PRO</strong>. Confirme que este e-mail é seu clicando no botão abaixo.', en: 'Hello! Just one more step to activate your <strong>MetaBuilder PRO</strong> account. Confirm this e-mail is yours by clicking the button below.', es: '¡Hola! Falta solo un paso para activar su cuenta en <strong>MetaBuilder PRO</strong>. Confirme que este e-mail es suyo haciendo clic en el botón de abajo.' },
@@ -108,6 +113,7 @@ const TEMPLATES = {
     why: { pt: 'Você recebeu este e-mail porque este endereço foi usado para criar uma conta na plataforma.', en: 'You received this e-mail because this address was used to create an account on the platform.', es: 'Recibió este e-mail porque esta dirección se usó para crear una cuenta en la plataforma.' },
   },
   'invite-user': {
+    whatsapp: true,
     subject: { pt: 'Você foi convidado para o MetaBuilder PRO', en: 'You have been invited to MetaBuilder PRO', es: 'Lo invitaron a MetaBuilder PRO' },
     title: { pt: 'Você foi convidado!', en: 'You have been invited!', es: '¡Lo invitaron!' },
     intro: { pt: 'Olá! Preparamos tudo para você. Alguém acabou de te dar acesso à equipe e aos projetos no <strong>MetaBuilder PRO</strong>.', en: 'Hello! We have everything ready for you. Someone just gave you access to the team and projects on <strong>MetaBuilder PRO</strong>.', es: '¡Hola! Preparamos todo para usted. Alguien acaba de darle acceso al equipo y a los proyectos en <strong>MetaBuilder PRO</strong>.' },

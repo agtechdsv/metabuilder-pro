@@ -82,7 +82,7 @@ export function adminPayoutSummaryMail(d: PayoutSummaryData): MailContent {
   const html = mailShell(title,
     `<p style="margin:0 0 20px 0;">${esc(intro)}</p>` + infoBox('Parceiros do lote', lines) + infoBox('Totais', totals) +
     (d.note ? `<p style="margin:0 0 18px 0;color:#6b7280;">Observação do lote: ${esc(d.note)}</p>` : '') + button('Abrir o painel', url),
-    `© ${new Date().getFullYear()} METABUILDER PRO · Resumo de repasse para a equipe.`)
+    `© ${new Date().getFullYear()} METABUILDER PRO · Resumo de repasse para a equipe.`, false)
   const text = [title, '', intro, '', ...lines.map(([k, v]) => `${k}: ${v}`), '', ...totals.map(([k, v]) => `${k}: ${v}`), ...(d.note ? ['', `Observação do lote: ${d.note}`] : []), '', `Painel: ${url}`].join('\n')
   return { subject: `${title}: ${money(sum(paid), 'pt')}`.slice(0, 200), html, text }
 }
