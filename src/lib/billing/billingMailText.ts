@@ -127,7 +127,20 @@ export interface AdminBillingData {
   paymentId?: string | null
   /** resumo diário */
   digest?: { overdue: number; dueSoon: number; suspendedToday: number; received24h: number; failedNotices: number } | null
+  /** alerta da chave de API do Asaas: nome da chave e quando expira (o que o Asaas informar; nunca o valor da chave) */
+  keyName?: string | null
+  expiresAt?: string | null
   appUrl: string
+}
+
+/** O que cada evento da chave de API do Asaas significa para o sistema e o que fazer. O checkout e os repasses dependem da chave guardada em ASAAS_API_KEY. */
+const KEY_ALERTS: Record<string, { title: string; intro: string; todo: string }> = {
+  ACCESS_TOKEN_EXPIRING_SOON: { title: 'Chave de API do Asaas vai expirar', intro: 'Uma chave de API do Asaas está perto de expirar. Se for a chave que o sistema usa, o checkout e os repasses a parceiros vão parar quando ela expirar.', todo: 'Gere uma chave nova (com permissão de Transferências) em Asaas > Integrações > Chaves de API e atualize ASAAS_API_KEY nos Secrets das Edge Functions do Supabase, antes de expirar.' },
+  ACCESS_TOKEN_DISABLED: { title: 'Chave de API do Asaas desabilitada', intro: 'Uma chave de API do Asaas foi desabilitada (o Asaas desabilita chaves sem uso por 3 meses). Se for a chave do sistema, o checkout passa a responder "A chave de API fornecida é inválida" e os repasses falham.', todo: 'Reabilite a chave em Asaas > Integrações > Chaves de API, ou gere uma nova e atualize ASAAS_API_KEY nos Secrets das Edge Functions do Supabase.' },
+  ACCESS_TOKEN_EXPIRED: { title: 'Chave de API do Asaas expirou', intro: 'Uma chave de API do Asaas expirou de vez e não volta a funcionar. Se for a chave do sistema, o checkout e os repasses estão parados.', todo: 'Gere uma chave nova (com permissão de Transferências) em Asaas > Integrações > Chaves de API e atualize ASAAS_API_KEY nos Secrets das Edge Functions do Supabase.' },
+  ACCESS_TOKEN_CREATED: { title: 'Nova chave de API criada no Asaas', intro: 'Foi criada uma chave de API na conta do Asaas.', todo: 'Se não foi você, revogue a chave em Asaas > Integrações > Chaves de API e troque a senha da conta do Asaas.' },
+  ACCESS_TOKEN_ENABLED: { title: 'Chave de API do Asaas habilitada', intro: 'Uma chave de API do Asaas foi habilitada de novo.', todo: 'Se não foi você, desabilite a chave em Asaas > Integrações > Chaves de API e troque a senha da conta do Asaas.' },
+  ACCESS_TOKEN_DELETED: { title: 'Chave de API do Asaas excluída', intro: 'Uma chave de API do Asaas foi excluída. Se for a chave do sistema, o checkout e os repasses param.', todo: 'Se não foi você, troque a senha da conta do Asaas. Se a chave era a do sistema, gere uma nova em Asaas > Integrações > Chaves de API e atualize ASAAS_API_KEY nos Secrets das Edge Functions do Supabase.' },
 }
 
 /** Alerta ao admin (null se o tipo for desconhecido). O resumo diário traz só contagens, nunca dados de cliente. */
@@ -148,9 +161,14 @@ export function adminBillingMail(kind: string, d: AdminBillingData): MailContent
   } else if (kind === 'admin_digest' && d.digest) {
     title = 'Resumo diário de cobranças'; intro = 'Situação das cobranças de hoje.'
     rows = [row('Vencidas em aberto', d.digest.overdue), row('Vencem nos próximos 7 dias', d.digest.dueSoon), row('Suspensas hoje', d.digest.suspendedToday), row('Pagamentos nas últimas 24 h', d.digest.received24h), row('Avisos com falha de envio', d.digest.failedNotices)]
+  } else if (kind === 'admin_key_alert' && d.event && KEY_ALERTS[d.event]) {
+    const a = KEY_ALERTS[d.event]
+    title = a.title; intro = a.intro
+    rows = [row('Evento', d.event), row('Chave', d.keyName || '-'), row('Expira em', d.expiresAt || '-'), row('O que fazer', a.todo)]
   } else return null
   const html = mailShell(title, `<p style="margin:0 0 20px 0;">${esc(intro)}</p>` + infoBox('Detalhes', rows) + button('Abrir o painel', url),
     `© ${new Date().getFullYear()} METABUILDER PRO · Alerta de cobrança para a equipe.`)
   const text = [title, '', intro, '', ...rows.map(([k, v]) => `${k}: ${v}`), '', `Painel: ${url}`].join('\n')
-  return { subject: `${title}${kind === 'admin_digest' ? '' : `: ${who}`}`.replace(/[\r\n]+/g, ' ').slice(0, 200), html, text }
+  const noWho = kind === 'admin_digest' || kind === 'admin_key_alert'
+  return { subject: `${title}${noWho ? '' : `: ${who}`}`.replace(/[\r\n]+/g, ' ').slice(0, 200), html, text }
 }

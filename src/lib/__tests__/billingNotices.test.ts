@@ -65,7 +65,7 @@ describe('avisos de cobrança: carência e ajustes', () => {
     expect(resolveLang('en')).toBe('en'); expect(resolveLang('es')).toBe('es'); expect(resolveLang('fr')).toBe('pt'); expect(resolveLang(null)).toBe('pt')
     expect(noticeRef(['pay_1', null, 2])).toBe('pay_1::2')
     expect(isCustomerKind('suspended')).toBe(true); expect(isCustomerKind('admin_overdue')).toBe(false)
-    expect(ADMIN_KINDS.length).toBe(4)
+    expect(ADMIN_KINDS.length).toBe(5) // inclui admin_key_alert (alertas da chave de API do Asaas)
   })
 })
 

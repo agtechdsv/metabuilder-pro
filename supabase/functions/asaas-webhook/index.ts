@@ -410,6 +410,20 @@ serve(async (req) => {
       } catch (e) { console.error("[parceiros] erro ao aplicar o evento de transferência:", e); }
     }
 
+    // chave de API do Asaas (vai expirar, desabilitada, expirou, criada...): avisa o admin na hora. O checkout e os repasses dependem dela, e uma chave
+    // desabilitada derruba tudo em silêncio. Não depende do interruptor dos avisos de cobrança. Nunca guarda nada além do nome e da validade que o Asaas informar.
+    else if (typeof event === "string" && event.startsWith("ACCESS_TOKEN_")) {
+      try {
+        const tok = (body.accessToken || body.apiKey || {}) as Record<string, unknown>;
+        const str = (v: unknown) => (typeof v === "string" || typeof v === "number" ? String(v).slice(0, 120) : null);
+        if (await queuePayoutNotice(supabase, {
+          kind: "admin_key_alert",
+          ref: noticeRef([typeof body.id === "string" && body.id ? body.id : `${event}:${new Date().toISOString().slice(0, 13)}`]),
+          payload: { event, keyName: str(tok.name), expiresAt: str(tok.expirationDate ?? tok.expiresAt) },
+        })) queuedAny = true;
+      } catch (e) { console.error("[chave-api] erro ao enfileirar o alerta:", e); }
+    }
+
     else if (event === "PAYMENT_OVERDUE") {
       const ctx = await resolveContext();
       if (ctx?.userId) {

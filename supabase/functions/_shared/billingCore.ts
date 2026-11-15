@@ -9,7 +9,7 @@ export const CUSTOMER_KINDS = [
   "card_refused", "refunded", "canceled", "ending_soon",
 ] as const;
 /** Avisos ao ADMIN. */
-export const ADMIN_KINDS = ["admin_overdue", "admin_refund", "admin_unresolved", "admin_digest"] as const;
+export const ADMIN_KINDS = ["admin_overdue", "admin_refund", "admin_unresolved", "admin_digest", "admin_key_alert"] as const;
 /**
  * Avisos dos repasses a parceiros. Saem SEMPRE (não dependem do interruptor dos avisos de cobrança): são transacionais e ligados a um Pix que o
  * SuperAdmin mandou fazer. "partner_payout_paid" vai ao parceiro (um por item do lote, quando o Asaas conclui o Pix); "admin_payout_summary" vai
@@ -20,7 +20,7 @@ export const PAYOUT_KINDS = ["partner_payout_paid", "admin_payout_summary"] as c
 export const WELCOME_KIND = "welcome" as const;
 export type NoticeKind = (typeof CUSTOMER_KINDS)[number] | (typeof ADMIN_KINDS)[number] | (typeof PAYOUT_KINDS)[number] | typeof WELCOME_KIND;
 /** O que sai mesmo com os avisos de cobrança desligados (avisos transacionais). */
-export const ALWAYS_SEND_KINDS = [...PAYOUT_KINDS, WELCOME_KIND] as const;
+export const ALWAYS_SEND_KINDS = [...PAYOUT_KINDS, WELCOME_KIND, "admin_key_alert"] as const;
 
 export interface BillingSettings {
   /** desligado: nada e enviado e o atraso bloqueia no mesmo dia, como sempre foi */
