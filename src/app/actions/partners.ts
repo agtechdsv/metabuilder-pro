@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { siteBaseUrl } from '@/lib/siteUrl'
 import {
   isPixKeyType, isValidCnpj, isValidCpf, maskEmail, resolvePercent, summarizeCommissions, validatePixKey,
 } from '../../../supabase/functions/_shared/partnerCommission'
@@ -382,7 +383,7 @@ export async function submitMyPixKey(input: PixSubmitInput): Promise<Ok | Fail> 
     // aviso ao SuperAdmin: se o e-mail falhar, o pedido já está salvo e aparece na aba Parceiros
     const { data: notifyRow } = await admin.from('platform_settings').select('value').eq('key', 'partner_notify_email').maybeSingle()
     const to = typeof (notifyRow?.value as { email?: unknown } | null)?.email === 'string' ? String((notifyRow!.value as { email: string }).email) : null
-    const base = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://metabuilderpro.com').replace(/\/+$/, '')
+    const base = siteBaseUrl()
     const mail = partnerPixPendingMail({ partnerName: partner.name, partnerEmail: user.email || '', type: input.pixKeyType, keyMasked: `•••${v.key.slice(-3)}` }, `${base}/admin/platform`)
     await sendTeamNotice(mail.subject, mail.text, mail.html, to)
     revalidatePath('/parceiro')
@@ -421,7 +422,7 @@ export async function resolvePartnerPix(partnerId: string, accept: boolean): Pro
         // idioma da candidatura que deu origem a este parceiro; sem ela, português
         const { data: app } = await admin.from('partner_applications').select('lang').eq('partner_id', partnerId).order('decided_at', { ascending: false }).limit(1).maybeSingle()
         const lang = resolveMailLang(app?.lang)
-        const panelUrl = `${(process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://metabuilderpro.com').replace(/\/+$/, '')}/parceiro`
+        const panelUrl = `${siteBaseUrl()}/parceiro`
         const mail = accept
           ? partnerPixAcceptedMail(lang, { name: p.name, type: p.pix_pending_type, keyMasked: `•••${String(p.pix_pending_key).slice(-3)}`, panelUrl })
           : partnerPixDeclinedMail(lang, { name: p.name, panelUrl })

@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/utils/supabase/server'
+import { siteBaseUrl } from '@/lib/siteUrl'
 import { sendMailTo, sendTeamNoticeFor } from '@/lib/security/securityMail'
 import { adminBillingMail, customerBillingMail } from '@/lib/billing/billingMailText'
 import { adminPayoutSummaryMail, partnerPayoutPaidMail } from '@/lib/billing/payoutMailText'
@@ -14,7 +15,7 @@ type Admin = ReturnType<typeof createAdminClient>
 const MAX_ATTEMPTS = 3
 const BATCH = 50
 
-const appUrl = () => (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://metabuilderpro.com').replace(/\/+$/, '')
+const appUrl = () => siteBaseUrl()
 
 /** Ajustes dos avisos (desligados por padrão). */
 export async function loadBillingSettings(admin: Admin): Promise<BillingSettings> {

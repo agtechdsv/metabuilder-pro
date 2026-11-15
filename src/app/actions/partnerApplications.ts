@@ -2,6 +2,7 @@
 
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
+import { siteBaseUrl } from '@/lib/siteUrl'
 import { createClient, createAdminClient } from '@/utils/supabase/server'
 import { clientIp, hashIp } from '@/lib/sessions/slotCore'
 import { sendMailTo, sendTeamNotice } from '@/lib/security/securityMail'
@@ -56,7 +57,7 @@ export async function submitPartnerApplication(input: ApplicationInput): Promise
     // aviso para a equipe: se o e-mail falhar, a candidatura já está salva e aparece na tela do SuperAdmin
     const { data: notifyRow } = await admin.from('platform_settings').select('value').eq('key', NOTIFY_KEY).maybeSingle()
     const notifyTo = typeof (notifyRow?.value as { email?: unknown } | null)?.email === 'string' ? String((notifyRow!.value as { email: string }).email) : null
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://metabuilderpro.com').replace(/\/+$/, '')
+    const appUrl = siteBaseUrl()
     const mail = partnerApplicationMail(v, appUrl + '/admin/platform')
     await sendTeamNotice(mail.subject, mail.text, mail.html, notifyTo)
     return { success: true }
@@ -146,7 +147,7 @@ export async function decidePartnerApplication(id: string, status: ApplicationSt
   } catch { return { success: false, code: 'not_authorized' } }
 }
 
-const siteUrl = () => (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://metabuilderpro.com').replace(/\/+$/, '')
+const siteUrl = () => siteBaseUrl()
 
 /**
  * Manda ao parceiro recém-cadastrado o e-mail de boas-vindas (código, link, condições e painel), no idioma da candidatura (ou português

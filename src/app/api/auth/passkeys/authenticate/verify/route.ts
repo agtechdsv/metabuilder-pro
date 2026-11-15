@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { verifyAuthenticationResponse } from '@simplewebauthn/server'
 import { createClient } from '@/utils/supabase/server'
+import { siteBaseUrl } from '@/lib/siteUrl'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 export async function POST(request: Request) {
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
       }
 
       // Generate a magic link
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || 'https://metabuilderpro.com'
+      const appUrl = siteBaseUrl()
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
         email: profile.email,
