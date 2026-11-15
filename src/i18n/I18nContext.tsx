@@ -93,6 +93,13 @@ export function I18nProvider({
       }
     }
     
+    // Quem está logado: o idioma dos e-mails do Supabase (senha, confirmações) acompanha a troca de idioma. Falha aqui nunca atrapalha a troca.
+    import('@/utils/supabase/client').then(async ({ createClient }) => {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user && session.user.user_metadata?.lang !== lang) await supabase.auth.updateUser({ data: { lang } })
+    }).catch(() => {})
+
     // Atualiza os Server Components sem dar reload na página (mantém o estado do React)
     router.refresh()
   }

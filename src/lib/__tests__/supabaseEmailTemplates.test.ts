@@ -113,6 +113,18 @@ describe('modelos de e-mail do Supabase em 3 idiomas', () => {
     const ws = read('src/app/actions/workspace.ts')
     expect((ws.match(/lang: await currentMailLang\(\)/g) || []).length).toBe(3) // os 3 convites
     expect(read('src/app/auth/callback/page.tsx')).toContain("session.user.user_metadata?.lang !== language")
+    // trocar de idioma logado atualiza o idioma dos e-mails; e "Esqueceu?" usa o idioma da tela no momento do pedido (não o do último login)
+    expect(read('src/i18n/I18nContext.tsx')).toContain('await supabase.auth.updateUser({ data: { lang } })')
+    const reset = read('src/app/actions/mailLang.ts')
+    expect(reset).toContain("'use server'")
+    expect(reset).toContain('await currentMailLang()') // vem do cookie lido no servidor, não do pedido
+    expect(reset).toContain('user_metadata: { ...meta, lang }') // preserva o resto dos dados
+    expect(reset).toContain('if (meta.lang === lang) return') // só grava se mudou
+    expect(reset).not.toMatch(/return\s*\{[^}]*(found|exists|encontr)/i) // nunca revela se a conta existe
+    const form = read('src/components/auth/LoginForm.tsx')
+    const fn = form.slice(form.indexOf('const handleForgotPassword'), form.indexOf('// ── Tela de "Retomando sessão"'))
+    expect(fn.indexOf('prepareResetMailLang(address)')).toBeGreaterThan(0)
+    expect(fn.indexOf('prepareResetMailLang(address)')).toBeLessThan(fn.indexOf('resetPasswordForEmail(address'))
     const lang = read('src/lib/auth/mailLangServer.ts')
     expect(lang).toContain("'app-language'")
     expect(lang).toContain('resolveMailLang(')

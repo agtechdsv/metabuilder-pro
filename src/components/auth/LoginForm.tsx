@@ -1,6 +1,7 @@
 'use client'
 
 import { login, signup, verifyMfaPolicy, signOut } from '@/app/auth/actions'
+import { prepareResetMailLang } from '@/app/actions/mailLang'
 import { Mail, Lock, Layers, Eye, EyeOff, User, ArrowRight, CheckCircle2, Circle, AlertCircle, Loader2 } from 'lucide-react'
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
@@ -518,6 +519,8 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
     }
     setIsLoading(true)
     try {
+      // o e-mail sai no idioma que está na tela agora (e não no do último login)
+      try { await prepareResetMailLang(address) } catch { /* o idioma do e-mail é um extra */ }
       const supabase = createClient()
       const origin = typeof window !== 'undefined' ? window.location.origin : ''
       const { error } = await supabase.auth.resetPasswordForEmail(address, { redirectTo: `${origin}/auth/callback?next=${encodeURIComponent('/auth/reset-password')}` })
