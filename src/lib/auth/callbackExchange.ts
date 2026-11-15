@@ -12,6 +12,18 @@ export function isAuthCallbackPath(pathname: string | null | undefined): boolean
 }
 
 /**
+ * O cliente compartilhado NÃO deve tentar trocar o código sozinho ao carregar? Vale para a página de retorno e também para a raiz "/" com código na URL:
+ * quando o Supabase não aceita a URL de retorno ele cai na raiz com `?code=`, e um script do layout manda para /auth/callback. Mesmo assim a raiz começava
+ * a carregar e o cliente trocava o código em segundo plano (o servidor aceitava e apagava o verificador), a navegação interrompia a gravação da sessão
+ * e a página de retorno falhava com "PKCE code verifier not found" depois de o login ter dado certo.
+ */
+export function shouldSkipUrlSessionDetection(pathname: string | null | undefined, search = '', hash = ''): boolean {
+  if (isAuthCallbackPath(pathname)) return true
+  if (pathname === '/') return /[?&]code=/.test(search) || /access_token=/.test(hash)
+  return false
+}
+
+/**
  * Espera a sessão aparecer (a troca pode ter sido concluída por outro caminho um instante depois). Tenta `attempts` vezes, `delayMs` entre elas.
  * Devolve a sessão ou null se ela não aparecer.
  */

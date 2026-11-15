@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { isAuthCallbackPath, waitForSession } from '../auth/callbackExchange'
+import { isAuthCallbackPath, shouldSkipUrlSessionDetection, waitForSession } from '../auth/callbackExchange'
 
 const read = (p: string) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n')
 
@@ -13,6 +13,15 @@ describe('retorno do login: uma troca de código só', () => {
     expect(isAuthCallbackPath('/auth/sessao-ativa')).toBe(false)
     expect(isAuthCallbackPath(null)).toBe(false)
     expect(isAuthCallbackPath(undefined)).toBe(false)
+  })
+
+  it('na raiz com código (queda do Supabase para a URL base) o cliente também não troca sozinho; em outras páginas continua detectando', () => {
+    expect(shouldSkipUrlSessionDetection('/', '?code=abc&ref=X')).toBe(true)
+    expect(shouldSkipUrlSessionDetection('/', '?ref=ALEXANDRE')).toBe(false)
+    expect(shouldSkipUrlSessionDetection('/', '', '#access_token=t&refresh_token=r')).toBe(true)
+    expect(shouldSkipUrlSessionDetection('/auth/callback', '?code=abc')).toBe(true)
+    expect(shouldSkipUrlSessionDetection('/auth/set-password', '?code=abc')).toBe(false)
+    expect(shouldSkipUrlSessionDetection('/login', '?code=abc')).toBe(false)
   })
 
   it('espera a sessão aparecer: devolve na primeira tentativa que a tiver, sem esperar o resto', async () => {
@@ -36,7 +45,7 @@ describe('retorno do login: uma troca de código só', () => {
 
   it('o cliente compartilhado não troca o código sozinho na página de retorno e a tela espera a sessão antes de dar erro', () => {
     const client = read('src/utils/supabase/client.ts')
-    expect(client).toContain("isAuthCallbackPath(window.location.pathname)")
+    expect(client).toContain('shouldSkipUrlSessionDetection(window.location.pathname, window.location.search, window.location.hash)')
     expect(client).toMatch(/onCallbackPage \? \{ auth: \{ detectSessionInUrl: false, \.\.\.options\?\.auth \} \}/)
     const page = read('src/app/auth/callback/page.tsx')
     expect(page).toContain('waitForSession(')
