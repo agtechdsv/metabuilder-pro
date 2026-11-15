@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/utils/supabase/server'
 import nodemailer from 'nodemailer'
+import { routeFor } from '@/lib/email/routingServer'
 
 // Busca os slots ocupados para uma data específica (público)
 export async function getOccupiedSlots(dateStr: string) {
@@ -408,8 +409,10 @@ export async function sendConfirmationEmail(input: {
 </body>
 </html>`
 
+    const agendaRoute = await routeFor('agenda')
     const mailOptions = {
-      from: `"MetaBuilderPRO" <${smtpUser}>`,
+      from: process.env.SMTP_USER ? agendaRoute.fromHeader : `"MetaBuilderPRO" <${smtpUser}>`,
+      ...(agendaRoute.replyTo ? { replyTo: agendaRoute.replyTo } : {}),
       to: input.clientEmail,
       subject: 'MetaBuilderPRO - Demonstração Confirmada! \u{1F680}',
       text: `Olá, ${input.clientName}! Sua demonstração prática está confirmada.\n\nData: ${friendlyDate}\nHorário: ${timeStr} (Horário de Brasília)\nLink da Reunião: ${input.linkDemonstracao}\n\nPor favor, não responda a este e-mail.`,

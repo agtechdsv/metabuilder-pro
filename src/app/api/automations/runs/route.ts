@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import nodemailer from 'nodemailer'
+import { routeFor } from '@/lib/email/routingServer'
 import { RateLimiter } from '@/lib/tunnel/relayPolicy'
 import { parseRunReport, failureRecipients, failureEmail } from '@/lib/automations/runReport'
 
@@ -90,7 +91,8 @@ export async function POST(req: NextRequest) {
             secure: Number(process.env.SMTP_PORT) === 465,
             auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
           })
-          await transporter.sendMail({ from: `"MetaBuilder PRO" <${process.env.SMTP_USER}>`, to, subject, html })
+          const route = await routeFor('automations')
+          await transporter.sendMail({ from: route.fromHeader, ...(route.replyTo ? { replyTo: route.replyTo } : {}), to, subject, html })
           notified = true
         } catch (e: any) {
           console.error('[automations/runs] falha ao enviar o aviso por e-mail:', e?.message)

@@ -181,7 +181,7 @@ export async function sendPartnerWelcome(partnerId: string, applicationId?: stri
       hasAccount, signupUrl: `${base}/login`,
       percent, graceDays: val('partner_grace_days', 'days', DEFAULT_PARTNER_SETTINGS.graceDays), minPayout: val('partner_min_payout', 'amount', DEFAULT_PARTNER_SETTINGS.minPayout),
     })
-    return { success: true, mailed: await sendMailTo(to, mail) }
+    return { success: true, mailed: await sendMailTo(to, mail, 'partner_mail') }
   } catch { return { success: false, code: 'not_authorized' } }
 }
 
@@ -195,7 +195,7 @@ export async function rejectPartnerApplication(id: string, notify: boolean): Pro
     if (error) return { success: false, code: 'unknown', error: error.message }
     revalidatePath('/admin/platform')
     if (!notify) return { success: true, mailed: false }
-    return { success: true, mailed: await sendMailTo(app.email, partnerRejectedMail(resolveMailLang(app.lang), { name: app.name })) }
+    return { success: true, mailed: await sendMailTo(app.email, partnerRejectedMail(resolveMailLang(app.lang), { name: app.name }), 'partner_mail') }
   } catch { return { success: false, code: 'not_authorized' } }
 }
 

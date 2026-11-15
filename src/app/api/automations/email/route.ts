@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
+import { routeFor } from '@/lib/email/routingServer';
 import { RateLimiter } from '@/lib/tunnel/relayPolicy';
 import { parseEmailRequest } from '@/lib/automations/emailGuard';
 
@@ -63,8 +64,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const route = await routeFor('automations');
     const info = await transporter.sendMail({
-      from: `"MetaBuilder PRO" <${process.env.SMTP_USER}>`,
+      from: route.fromHeader,
+      ...(route.replyTo ? { replyTo: route.replyTo } : {}),
       to,
       subject,
       html,

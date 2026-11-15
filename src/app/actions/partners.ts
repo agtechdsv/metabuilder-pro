@@ -425,7 +425,7 @@ export async function resolvePartnerPix(partnerId: string, accept: boolean): Pro
         const mail = accept
           ? partnerPixAcceptedMail(lang, { name: p.name, type: p.pix_pending_type, keyMasked: `•••${String(p.pix_pending_key).slice(-3)}`, panelUrl })
           : partnerPixDeclinedMail(lang, { name: p.name, panelUrl })
-        mailed = await sendMailTo(to, mail)
+        mailed = await sendMailTo(to, mail, 'partner_mail')
       }
     } catch { /* o aviso é um extra: a decisão já está salva */ }
     return { success: true, mailed }

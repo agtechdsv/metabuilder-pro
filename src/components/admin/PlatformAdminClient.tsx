@@ -29,6 +29,7 @@ import { PartnersAdmin } from './PartnersAdmin'
 import { PartnerSettingsAdmin } from './PartnerSettingsAdmin'
 import { DeviceSessionsAdmin } from './DeviceSessionsAdmin'
 import { BillingNoticesAdmin } from './BillingNoticesAdmin'
+import { EmailManagerAdmin } from './EmailManagerAdmin'
 import { ReleaseAdminView } from './ReleaseAdminView'
 import { ReleaseCompletionNotifier } from './ReleaseCompletionNotifier'
 
@@ -399,6 +400,7 @@ export default function PlatformAdminClient({
             transition={{ duration: 0.25 }}
             className="space-y-6"
           >
+            <EmailManagerAdmin refreshKey={refreshCount} />
             <BillingNoticesAdmin refreshKey={refreshCount} />
             <DeviceSessionsAdmin refreshKey={refreshCount} />
             <TrashSettingsAdmin />

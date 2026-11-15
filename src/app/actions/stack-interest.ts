@@ -1,6 +1,7 @@
 'use server'
 
 import nodemailer from 'nodemailer'
+import { routeFor } from '@/lib/email/routingServer'
 import { createClient, createAdminClient } from '@/utils/supabase/server'
 import { getOrCreateChatRoom, sendChatMessage } from '@/app/actions/community'
 import {
@@ -149,6 +150,7 @@ export async function sendStackInterestMessage(input: {
         })
       : null
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://metabuilderpro.com'
+    const stackRoute = await routeFor('stack_interest')
 
     const results: StackMessageResult[] = []
     for (const p of profiles || []) {
@@ -166,7 +168,8 @@ export async function sendStackInterestMessage(input: {
       else {
         try {
           await transporter.sendMail({
-            from: `"MetaBuilder PRO" <${SMTP_USER}>`,
+            from: stackRoute.fromHeader,
+            ...(stackRoute.replyTo ? { replyTo: stackRoute.replyTo } : {}),
             to: p.email,
             subject,
             html: buildEmailHtml({ name, title: subject, message: emailMessage, ctaLabel: 'Abrir o MetaBuilder PRO', ctaUrl: appUrl }),

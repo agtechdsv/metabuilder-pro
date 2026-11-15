@@ -1,6 +1,7 @@
 'use server'
 
 import nodemailer from 'nodemailer'
+import { routeFor } from '@/lib/email/routingServer'
 
 export async function sendPaymentEmail({
   email,
@@ -100,8 +101,10 @@ export async function sendPaymentEmail({
 
     const subject = isPix ? `Seu PIX de ${formattedAmount} - MetaBuilder PRO` : `Seu Boleto de ${formattedAmount} - MetaBuilder PRO`
 
+    const route = await routeFor('checkout')
     await transporter.sendMail({
-      from: `"MetaBuilder PRO" <${SMTP_USER}>`,
+      from: route.fromHeader,
+      ...(route.replyTo ? { replyTo: route.replyTo } : {}),
       to: email,
       subject: subject,
       html: htmlContent,

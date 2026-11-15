@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/utils/supabase/server'
-import { sendMailTo, sendTeamNotice } from '@/lib/security/securityMail'
+import { sendMailTo, sendTeamNoticeFor } from '@/lib/security/securityMail'
 import { adminBillingMail, customerBillingMail } from '@/lib/billing/billingMailText'
 import { adminPayoutSummaryMail, partnerPayoutPaidMail } from '@/lib/billing/payoutMailText'
 import { resolveMailLang } from '@/lib/security/securityMailText'
@@ -166,11 +166,11 @@ export async function processQueue(admin: Admin, cfg: BillingSettings): Promise<
           const r = await buildPartnerPayoutMail(admin, String(p.itemId || it.ref))
           if ('skip' in r) { await mark('sent', r.skip); out.skipped++; continue }
           if ('error' in r) { await mark('failed', r.error); out.failed++; continue }
-          if (await sendMailTo(r.to, r.mail)) { await mark('sent'); out.sent++ } else { await mark('failed', 'o SMTP recusou ou não está configurado'); out.failed++ }
+          if (await sendMailTo(r.to, r.mail, 'partner_mail')) { await mark('sent'); out.sent++ } else { await mark('failed', 'o SMTP recusou ou não está configurado'); out.failed++ }
         } else {
           const mail = await buildPayoutSummaryMail(admin, String(p.payoutId || it.ref))
           if (!mail) { await mark('failed', 'lote não encontrado'); out.failed++; continue }
-          if (await sendTeamNotice(mail.subject, mail.text, mail.html, cfg.adminEmail || null)) { await mark('sent'); out.sent++ } else { await mark('failed', 'o SMTP recusou ou não está configurado'); out.failed++ }
+          if (await sendTeamNoticeFor('partner_team', mail.subject, mail.text, mail.html, cfg.adminEmail || null)) { await mark('sent'); out.sent++ } else { await mark('failed', 'o SMTP recusou ou não está configurado'); out.failed++ }
         }
       } else if (isCustomerKind(it.kind)) {
         const { data: prof } = await admin.from('profiles').select('email, full_name, billing_language, overdue_since').eq('id', it.user_id).maybeSingle()
@@ -186,7 +186,7 @@ export async function processQueue(admin: Admin, cfg: BillingSettings): Promise<
           wasSuspended: !!p.wasSuspended, appUrl: appUrl(),
         })
         if (!mail) { await mark('failed', 'tipo desconhecido'); out.failed++; continue }
-        if (await sendMailTo(prof.email, mail)) { await mark('sent'); out.sent++ } else { await mark('failed', 'o SMTP recusou ou não está configurado'); out.failed++ }
+        if (await sendMailTo(prof.email, mail, 'billing_customer')) { await mark('sent'); out.sent++ } else { await mark('failed', 'o SMTP recusou ou não está configurado'); out.failed++ }
       } else {
         let customerName: string | null = null, customerEmail: string | null = null
         if (p.userId) {
@@ -195,7 +195,7 @@ export async function processQueue(admin: Admin, cfg: BillingSettings): Promise<
         }
         const mail = adminBillingMail(it.kind, { customerName, customerEmail, amount: p.amount ?? null, dueDate: p.dueDate ?? null, event: p.event ?? null, paymentId: p.paymentId ?? null, digest: p.digest ?? null, appUrl: appUrl() })
         if (!mail) { await mark('failed', 'tipo desconhecido'); out.failed++; continue }
-        if (await sendTeamNotice(mail.subject, mail.text, mail.html, cfg.adminEmail || null)) { await mark('sent'); out.sent++ } else { await mark('failed', 'o SMTP recusou ou não está configurado'); out.failed++ }
+        if (await sendTeamNoticeFor('billing_team', mail.subject, mail.text, mail.html, cfg.adminEmail || null)) { await mark('sent'); out.sent++ } else { await mark('failed', 'o SMTP recusou ou não está configurado'); out.failed++ }
       }
     } catch (e) {
       console.error('[avisos] erro ao enviar o aviso', it.id, (e as Error)?.message)
