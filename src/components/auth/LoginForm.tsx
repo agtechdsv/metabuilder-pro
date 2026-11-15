@@ -503,6 +503,34 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
     }
   }
 
+  /**
+   * "Esqueceu?": manda o link de redefinição para o e-mail digitado. O link volta pela página de retorno do login e leva a /auth/reset-password,
+   * onde a pessoa escolhe a nova senha. A resposta é sempre a mesma, exista a conta ou não (não revela quem tem cadastro).
+   */
+  const handleForgotPassword = async () => {
+    setClientError(null)
+    setSuccessMessage(null)
+    const address = email.trim()
+    if (!address || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(address)) {
+      setClientError(t('auth.login.forgot_need_email', 'Digite o seu e-mail no campo acima e clique em "Esqueceu?" de novo.'))
+      emailInputRef.current?.focus()
+      return
+    }
+    setIsLoading(true)
+    try {
+      const supabase = createClient()
+      const origin = typeof window !== 'undefined' ? window.location.origin : ''
+      const { error } = await supabase.auth.resetPasswordForEmail(address, { redirectTo: `${origin}/auth/callback?next=${encodeURIComponent('/auth/reset-password')}` })
+      // limite de envios: avisa; qualquer outro resultado (inclusive conta inexistente) mostra a mesma mensagem
+      if (error && /rate limit|too many|429/i.test(error.message || '')) setClientError(t('auth.login.forgot_rate_limit', 'Muitos pedidos seguidos. Aguarde alguns minutos e tente de novo.'))
+      else setSuccessMessage(t('auth.login.forgot_sent', 'Se existir uma conta com este e-mail, enviamos um link para redefinir a senha. Confira também o spam.'))
+    } catch {
+      setSuccessMessage(t('auth.login.forgot_sent', 'Se existir uma conta com este e-mail, enviamos um link para redefinir a senha. Confira também o spam.'))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // ── Tela de "Retomando sessão" ───────────────────────────────────────────
   if (resumingSession) {
     const initials = resumingSession.name
@@ -719,7 +747,7 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
           <div className="flex justify-between items-center px-2">
             <label className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">{t('auth.login.password_label', 'Senha de Acesso')}</label>
             {mode === 'login' && (
-              <button type="button" className="text-[10px] font-black text-indigo-500 hover:text-indigo-400 transition-colors uppercase tracking-widest">{t('auth.login.forgot_password', 'Esqueceu?')}</button>
+              <button type="button" onClick={handleForgotPassword} disabled={isLoading} className="text-[10px] font-black text-indigo-500 hover:text-indigo-400 transition-colors uppercase tracking-widest disabled:opacity-50">{t('auth.login.forgot_password', 'Esqueceu?')}</button>
             )}
           </div>
           <div className="relative group">
