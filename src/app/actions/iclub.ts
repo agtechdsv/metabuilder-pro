@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import type { IClubRule, IClubReferral, IClubReward } from '@/lib/iclub'
 import { iclubCountedLicenses, referralPercentTotal } from '../../../supabase/functions/_shared/pricing'
+import { archivedReferralEmail, decideReferralAction } from '@/lib/partnerReferral'
 
 // Helper to check super admin authorization
 async function checkSuperAdmin() {
@@ -236,8 +237,19 @@ async function registerPartnerReferral(
     return { success: false, error: 'Auto-indicação não permitida.' }
   }
 
-  const { data: existing } = await adminSupabase.from('partner_referrals').select('id').ilike('referred_email', email).maybeSingle()
-  if (existing) return { success: true, message: 'Indicação já existia.' }
+  // indicação ativa do mesmo e-mail continua valendo; a CANCELADA é arquivada (histórico e comissões ficam) e a nova toma o lugar
+  const { data: existing } = await adminSupabase.from('partner_referrals').select('id, status').ilike('referred_email', email).maybeSingle()
+  const action = decideReferralAction(existing)
+  if (action === 'keep') return { success: true, message: 'Indicação já existia.' }
+  if (action === 'archive_then_create' && existing) {
+    const { error: archiveError } = await adminSupabase.from('partner_referrals')
+      .update({ referred_email: archivedReferralEmail(email, existing.id), updated_at: new Date().toISOString() })
+      .eq('id', existing.id).eq('status', 'canceled')
+    if (archiveError) {
+      console.error('Erro ao arquivar a indicação cancelada:', archiveError)
+      return { success: false, error: archiveError.message }
+    }
+  }
 
   let validReferredId: string | null = null
   if (referredId) {
