@@ -8,7 +8,7 @@ import { useI18n } from '@/i18n/I18nContext'
 import { waitForSession } from '@/lib/auth/callbackExchange'
 
 function CallbackHandler() {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const searchParams = useSearchParams()
   const next = searchParams.get('next') ?? '/workspace'
   const errorDesc = searchParams.get('error_description') || searchParams.get('error')
@@ -47,6 +47,11 @@ function CallbackHandler() {
           console.error('Erro ao limpar need_password_setup no callback OAuth:', e)
         }
       }
+
+      // Idioma dos e-mails do Supabase = idioma da tela (login com Google, confirmação de cadastro e recuperação passam por aqui). Nunca impede o login.
+      try {
+        if (session?.user && session.user.user_metadata?.lang !== language) await supabase.auth.updateUser({ data: { lang: language } })
+      } catch { /* o idioma do e-mail é um extra */ }
 
       // Registrar indicação se aplicável
       if (session?.user?.email) {

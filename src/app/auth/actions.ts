@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { currentSessionId } from '@/lib/sessions/currentSlot'
 import { releaseSlot } from '@/lib/sessions/slotService'
 import { SLOT_COOKIE } from '@/lib/sessions/slotCore'
+import { currentMailLang } from '@/lib/auth/mailLangServer'
 
 export async function login(formData: FormData) {
   const supabase = await createClient()
@@ -29,6 +30,11 @@ export async function login(formData: FormData) {
   // -- MFA Verification --
   const { data: { user } } = await supabase.auth.getUser()
   if (user) {
+    // mantém o idioma dos e-mails do Supabase igual ao da tela (quem troca de idioma passa a receber no novo); falha aqui nunca impede o login
+    try {
+      const lang = await currentMailLang()
+      if (user.user_metadata?.lang !== lang) await supabase.auth.updateUser({ data: { lang } })
+    } catch { /* o idioma do e-mail é um extra */ }
     const mfaStatus = await verifyMfaPolicy()
     if (mfaStatus.mfaChallengeRequired) return mfaStatus
     if (mfaStatus.mfaSetupRequired) return mfaStatus
@@ -199,6 +205,8 @@ export async function signup(formData: FormData) {
     options: {
       data: {
         full_name: displayName,
+        // idioma da tela no cadastro: os e-mails do Supabase (confirmação, senha...) saem nele
+        lang: await currentMailLang(),
       }
     }
   })

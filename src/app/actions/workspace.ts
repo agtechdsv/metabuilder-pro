@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@supabase/supabase-js'
+import { currentMailLang } from '@/lib/auth/mailLangServer'
 
 // Usamos Service Role Key aqui para ter acesso à admin API e contornar RLS
 let _supabaseAdmin: any = null;
@@ -96,7 +97,8 @@ export async function inviteWorkspaceMember(workspaceId: string, workspaceSlug: 
       data: {
         invited_workspace_id: workspaceId,
         invited_role: role,
-        need_password_setup: true
+        need_password_setup: true,
+        lang: await currentMailLang() // idioma de quem convida: o e-mail do convite sai nele
       }
     })
 
@@ -519,7 +521,8 @@ export async function inviteStudioGuest(email: string) {
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       redirectTo: redirectUrl,
       data: {
-        need_password_setup: true
+        need_password_setup: true,
+        lang: await currentMailLang()
       }
     })
 
@@ -848,7 +851,8 @@ export async function resendStudioGuestInvite(email: string) {
     const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       redirectTo: redirectUrl,
       data: {
-        need_password_setup: true
+        need_password_setup: true,
+        lang: await currentMailLang()
       }
     })
 

@@ -1,0 +1,64 @@
+{{ $l := "pt" }}{{ if .Data }}{{ if .Data.lang }}{{ $l = .Data.lang }}{{ end }}{{ end }}<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaBuilder PRO</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <!-- Card principal -->
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 580px; width: 100%; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);">
+
+          <!-- Faixa superior: cor sólida de reserva + gradiente (alguns clientes de e-mail ignoram o gradiente) -->
+          <tr>
+            <td align="center" bgcolor="#10b981" style="background-color: #10b981; background-image: linear-gradient(135deg, #10b981 0%, #3b82f6 100%); padding: 50px 20px;">
+              <h1 style="margin: 0; font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: -0.025em;">MetaBuilder <span style="color: #d1fae5;">PRO</span></h1>
+            </td>
+          </tr>
+
+          <!-- Conteúdo -->
+          <tr>
+            <td style="padding: 40px; text-align: center;">
+              <h2 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 800; color: #111827; letter-spacing: -0.025em;">{{ if eq $l "en" }}Confirm your new e-mail{{ else if eq $l "es" }}Confirme su nuevo e-mail{{ else }}Confirmar o novo e-mail{{ end }}</h2>
+              <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #4b5563;">{{ if eq $l "en" }}We received a request to change your account e-mail from <strong>{{ .Email }}</strong> to <strong>{{ .NewEmail }}</strong>. Confirm by clicking the button below.{{ else if eq $l "es" }}Recibimos una solicitud para cambiar el e-mail de su cuenta de <strong>{{ .Email }}</strong> a <strong>{{ .NewEmail }}</strong>. Confirme haciendo clic en el botón de abajo.{{ else }}Recebemos um pedido para trocar o e-mail da sua conta de <strong>{{ .Email }}</strong> para <strong>{{ .NewEmail }}</strong>. Confirme clicando no botão abaixo.{{ end }}</p>
+
+              <!-- Bloco de destaque -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border-radius: 16px; margin: 24px 0;">
+                <tr>
+                  <td style="padding: 20px; text-align: center;">
+                    <span style="font-size: 10px; font-weight: 800; color: #10b981; letter-spacing: 0.1em; text-transform: uppercase;">{{ if eq $l "en" }}Account security{{ else if eq $l "es" }}Seguridad de la cuenta{{ else }}Segurança da conta{{ end }}</span>
+                    <p style="margin: 6px 0 0 0; font-size: 14px; font-weight: 700; color: #1e293b;">{{ if eq $l "en" }}Confirm the e-mail change{{ else if eq $l "es" }}Confirme el cambio de e-mail{{ else }}Confirme a troca de e-mail{{ end }}</p>
+                  </td>
+                </tr>
+              </table>
+              <!-- Botão principal -->
+              <table border="0" cellspacing="0" cellpadding="0" align="center" style="margin-top: 28px; margin-bottom: 8px;">
+                <tr>
+                  <td align="center" bgcolor="#10b981" style="border-radius: 12px; background-color: #10b981;">
+                    <a href="{{ .ConfirmationURL }}" target="_blank" style="display: inline-block; padding: 14px 32px; font-size: 14px; font-weight: 700; color: #ffffff; text-decoration: none; border-radius: 12px;">{{ if eq $l "en" }}CONFIRM CHANGE{{ else if eq $l "es" }}CONFIRMAR CAMBIO{{ else }}CONFIRMAR TROCA{{ end }}</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 22px 0 0 0; font-size: 12px; line-height: 1.5; color: #94a3b8;">{{ if eq $l "en" }}If the button does not work, copy and paste this address into your browser:{{ else if eq $l "es" }}Si el botón no funciona, copie y pegue esta dirección en su navegador:{{ else }}Se o botão não funcionar, copie e cole este endereço no navegador:{{ end }}<br><a href="{{ .ConfirmationURL }}" target="_blank" style="color: #3b82f6; word-break: break-all;">{{ .ConfirmationURL }}</a></p>
+              <p style="margin: 24px 0 0 0; font-size: 12px; line-height: 1.5; color: #b45309;">{{ if eq $l "en" }}If it was not you, do not click and change your password.{{ else if eq $l "es" }}Si no fue usted, no haga clic y cambie su contraseña.{{ else }}Se não foi você, não clique e troque a sua senha.{{ end }}</p>
+            </td>
+          </tr>
+
+          <!-- Rodapé -->
+          <tr>
+            <td style="padding: 0 40px 40px 40px; text-align: center; border-top: 1px solid #f1f5f9;">
+              <p style="margin: 24px 0 8px 0; font-size: 12px; color: #64748b;">{{ if eq $l "en" }}Need help? Write to{{ else if eq $l "es" }}¿Necesita ayuda? Escriba a{{ else }}Precisa de ajuda? Escreva para{{ end }} <a href="mailto:suporte@metabuilderpro.com" style="color: #3b82f6; text-decoration: none;">suporte@metabuilderpro.com</a></p>
+              <p style="margin: 0 0 8px 0; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">&copy; MetaBuilder PRO</p>
+              <p style="margin: 0; font-size: 11px; line-height: 1.5; color: #94a3b8;">{{ if eq $l "en" }}You received this e-mail because of an e-mail change request on the platform.{{ else if eq $l "es" }}Recibió este e-mail por una solicitud de cambio de e-mail en la plataforma.{{ else }}Você recebeu este e-mail devido a um pedido de troca de e-mail na plataforma.{{ end }}<br>{{ if eq $l "en" }}Advanced Development Platform.{{ else if eq $l "es" }}Plataforma de Desarrollo Avanzada.{{ else }}Plataforma de Desenvolvimento Avançada.{{ end }}</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
