@@ -638,7 +638,7 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
         </div>
 
         <h2 className="text-3xl font-black text-neutral-900 dark:text-white tracking-tight mb-2">
-          {mode === 'login' ? 'MetaBuilder' : t('auth.login.join_title', 'Comece')} <span className="text-indigo-600">{mode === 'login' ? 'PRO' : 'Gratuitamente'}</span>
+          {mode === 'login' ? 'MetaBuilder' : t('auth.login.join_title', 'Comece')} <span className="text-indigo-600">{mode === 'login' ? 'PRO' : 'MetaBuilder PRO'}</span>
         </h2>
         <p className="text-neutral-500 dark:text-neutral-400 text-sm font-medium px-4">
           {mode === 'login'

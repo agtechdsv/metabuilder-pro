@@ -42,14 +42,23 @@ export function AuthModal({ isOpen, onClose, children, hideCloseButton = false }
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[40]"
           />
 
-          {/* Modal Container - Z-60 (above Navbar Z-50) */}
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 pointer-events-none">
+          {/* Modal Container - Z-60 (above Navbar Z-50). Rola quando o formulário é mais alto que a tela (monitores baixos, cadastro com várias linhas);
+              clicar na área vazia em volta fecha, como o fundo escuro. */}
+          <div
+            data-testid="auth-modal-scroll"
+            className="fixed inset-0 z-[60] overflow-y-auto overscroll-contain"
+            onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+          >
+            <div
+              className="flex min-h-full items-center justify-center p-4 md:p-6"
+              onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+            >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: 'spring', damping: 25, stiffness: 400 }}
-              className="relative w-full max-w-[450px] bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,0.2)] dark:shadow-[0_30px_100px_rgba(0,0,0,0.6)] overflow-hidden transition-all pointer-events-auto"
+              className="relative my-auto w-full max-w-[450px] bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,0.2)] dark:shadow-[0_30px_100px_rgba(0,0,0,0.6)] overflow-hidden transition-all"
             >
               {/* Close Button */}
               {!hideCloseButton && (
@@ -72,6 +81,7 @@ export function AuthModal({ isOpen, onClose, children, hideCloseButton = false }
               <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/30 rounded-full blur-[100px] pointer-events-none" />
               <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-600/30 rounded-full blur-[100px] pointer-events-none" />
             </motion.div>
+            </div>
           </div>
         </>
       )}

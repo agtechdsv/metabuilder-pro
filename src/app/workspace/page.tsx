@@ -179,7 +179,9 @@ export default async function GlobalDashboard() {
     }
   }
 
-  const emailPrefix = user.email?.split('@')[0] || 'Usuário'
+  // saudação: o primeiro nome que a pessoa informou (perfil ou cadastro); só sem nome nenhum usa o começo do e-mail
+  const givenName = String(profile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || '').trim().split(/\s+/)[0]
+  const emailPrefix = givenName || user.email?.split('@')[0] || 'Usuário'
   const capitalizedUserName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)
 
   return (
