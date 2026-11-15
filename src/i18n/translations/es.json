@@ -3894,6 +3894,11 @@
       "community": "MetaBuilders",
       "arquivos": "IDEs, CLI y Manuales",
       "releases": "Releases (IDE)",
+      "dashboard_short": "Dashboard",
+      "clients_short": "Clientes",
+      "iclub_short": "iClub",
+      "arquivos_short": "IDEs",
+      "releases_short": "Releases",
       "partners": "Socios",
       "system": "Sistema"
     }

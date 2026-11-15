@@ -82,18 +82,28 @@ interface WorkspaceMember {
 }
 
 const TAB_CONFIG = {
-  dashboard: { label: 'Dashboard BI', icon: BarChart3, iconColor: 'text-blue-500 dark:text-blue-400' },
-  plans: { label: 'Regras de Preços', icon: Layers, iconColor: 'text-emerald-500 dark:text-emerald-400' },
-  clients: { label: 'Gestão de Clientes', icon: Users, iconColor: 'text-purple-500 dark:text-purple-400' },
-  agenda: { label: 'Agenda', icon: Calendar, iconColor: 'text-teal-500 dark:text-teal-400' },
-  iclub: { label: 'Gestão do iClub', icon: Zap, iconColor: 'text-indigo-500 dark:text-indigo-400' },
-  metavoice: { label: 'MetaVoice', icon: Lightbulb, iconColor: 'text-amber-500 dark:text-amber-400' },
-  community: { label: 'MetaBuilders', icon: Users, iconColor: 'text-blue-500 dark:text-blue-400' },
-  arquivos: { label: 'IDEs, CLI & Manuais', icon: Layers, iconColor: 'text-indigo-500 dark:text-indigo-400' },
-  releases: { label: 'Releases (IDE)', icon: Rocket, iconColor: 'text-rose-500 dark:text-rose-400' },
-  partners: { label: 'Parceiros', icon: Handshake, iconColor: 'text-indigo-500 dark:text-indigo-400' },
-  system: { label: 'Sistema', icon: Settings2, iconColor: 'text-neutral-500 dark:text-neutral-400' },
+  // `short` = o que aparece na aba; o nome completo (`label`) aparece ao passar o mouse
+  dashboard: { label: 'Dashboard BI', short: 'Dashboard', icon: BarChart3, iconColor: 'text-blue-500 dark:text-blue-400' },
+  plans: { label: 'Regras de Preços', short: 'Regras de Preços', icon: Layers, iconColor: 'text-emerald-500 dark:text-emerald-400' },
+  clients: { label: 'Gestão de Clientes', short: 'Clientes', icon: Users, iconColor: 'text-purple-500 dark:text-purple-400' },
+  agenda: { label: 'Agenda', short: 'Agenda', icon: Calendar, iconColor: 'text-teal-500 dark:text-teal-400' },
+  iclub: { label: 'Gestão do iClub', short: 'iClub', icon: Zap, iconColor: 'text-indigo-500 dark:text-indigo-400' },
+  metavoice: { label: 'MetaVoice', short: 'MetaVoice', icon: Lightbulb, iconColor: 'text-amber-500 dark:text-amber-400' },
+  community: { label: 'MetaBuilders', short: 'MetaBuilders', icon: Users, iconColor: 'text-blue-500 dark:text-blue-400' },
+  arquivos: { label: 'IDEs, CLI & Manuais', short: 'IDEs', icon: Layers, iconColor: 'text-indigo-500 dark:text-indigo-400' },
+  releases: { label: 'Releases (IDE)', short: 'Releases', icon: Rocket, iconColor: 'text-rose-500 dark:text-rose-400' },
+  partners: { label: 'Parceiros', short: 'Parceiros', icon: Handshake, iconColor: 'text-indigo-500 dark:text-indigo-400' },
+  system: { label: 'Sistema', short: 'Sistema', icon: Settings2, iconColor: 'text-neutral-500 dark:text-neutral-400' },
 } as const
+
+/** nome completo da aba, só ao passar o mouse (ou focar com o teclado); não ocupa lugar na barra */
+function TabFullName({ text }: { text: string }) {
+  return (
+    <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-30 mt-1.5 -translate-x-1/2 rounded-lg bg-neutral-900 px-2.5 py-1 text-[11px] font-bold text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 dark:bg-white dark:text-neutral-900">
+      {text}
+    </span>
+  )
+}
 
 interface PlatformAdminClientProps {
   initialWorkspaces: Workspace[]
@@ -203,17 +213,18 @@ export default function PlatformAdminClient({
   const { t } = useI18n()
 
   const TAB_CONFIG = {
-    dashboard: { label: t('admin.tabs.dashboard', 'Dashboard BI'), icon: BarChart3, iconColor: 'text-blue-500 dark:text-blue-400' },
-    plans: { label: t('admin.tabs.plans', 'Regras de Preços'), icon: Layers, iconColor: 'text-emerald-500 dark:text-emerald-400' },
-    clients: { label: t('admin.tabs.clients', 'Gestão de Clientes'), icon: Users, iconColor: 'text-purple-500 dark:text-purple-400' },
-    agenda: { label: t('admin.tabs.agenda', 'Agenda'), icon: Calendar, iconColor: 'text-teal-500 dark:text-teal-400' },
-    iclub: { label: t('admin.tabs.iclub', 'Gestão do iClub'), icon: Zap, iconColor: 'text-indigo-500 dark:text-indigo-400' },
-    metavoice: { label: t('admin.tabs.metavoice', 'MetaVoice'), icon: Lightbulb, iconColor: 'text-amber-500 dark:text-amber-400' },
-    community: { label: t('admin.tabs.community', 'MetaBuilders'), icon: Users, iconColor: 'text-blue-500 dark:text-blue-400' },
-    arquivos: { label: t('admin.tabs.arquivos', 'IDEs, CLI & Manuais'), icon: Layers, iconColor: 'text-indigo-500 dark:text-indigo-400' },
-    releases: { label: t('admin.tabs.releases', 'Releases (IDE)'), icon: Rocket, iconColor: 'text-rose-500 dark:text-rose-400' },
-    partners: { label: t('admin.tabs.partners', 'Parceiros'), icon: Handshake, iconColor: 'text-indigo-500 dark:text-indigo-400' },
-    system: { label: t('admin.tabs.system', 'Sistema'), icon: Settings2, iconColor: 'text-neutral-500 dark:text-neutral-400' },
+    // `short` = o que aparece na aba; o nome completo (`label`) aparece ao passar o mouse
+    dashboard: { label: t('admin.tabs.dashboard', 'Dashboard BI'), short: t('admin.tabs.dashboard_short', 'Dashboard'), icon: BarChart3, iconColor: 'text-blue-500 dark:text-blue-400' },
+    plans: { label: t('admin.tabs.plans', 'Regras de Preços'), short: t('admin.tabs.plans', 'Regras de Preços'), icon: Layers, iconColor: 'text-emerald-500 dark:text-emerald-400' },
+    clients: { label: t('admin.tabs.clients', 'Gestão de Clientes'), short: t('admin.tabs.clients_short', 'Clientes'), icon: Users, iconColor: 'text-purple-500 dark:text-purple-400' },
+    agenda: { label: t('admin.tabs.agenda', 'Agenda'), short: t('admin.tabs.agenda', 'Agenda'), icon: Calendar, iconColor: 'text-teal-500 dark:text-teal-400' },
+    iclub: { label: t('admin.tabs.iclub', 'Gestão do iClub'), short: t('admin.tabs.iclub_short', 'iClub'), icon: Zap, iconColor: 'text-indigo-500 dark:text-indigo-400' },
+    metavoice: { label: t('admin.tabs.metavoice', 'MetaVoice'), short: t('admin.tabs.metavoice', 'MetaVoice'), icon: Lightbulb, iconColor: 'text-amber-500 dark:text-amber-400' },
+    community: { label: t('admin.tabs.community', 'MetaBuilders'), short: t('admin.tabs.community', 'MetaBuilders'), icon: Users, iconColor: 'text-blue-500 dark:text-blue-400' },
+    arquivos: { label: t('admin.tabs.arquivos', 'IDEs, CLI & Manuais'), short: t('admin.tabs.arquivos_short', 'IDEs'), icon: Layers, iconColor: 'text-indigo-500 dark:text-indigo-400' },
+    releases: { label: t('admin.tabs.releases', 'Releases (IDE)'), short: t('admin.tabs.releases_short', 'Releases'), icon: Rocket, iconColor: 'text-rose-500 dark:text-rose-400' },
+    partners: { label: t('admin.tabs.partners', 'Parceiros'), short: t('admin.tabs.partners', 'Parceiros'), icon: Handshake, iconColor: 'text-indigo-500 dark:text-indigo-400' },
+    system: { label: t('admin.tabs.system', 'Sistema'), short: t('admin.tabs.system', 'Sistema'), icon: Settings2, iconColor: 'text-neutral-500 dark:text-neutral-400' },
   } as const
 
   return (
@@ -264,15 +275,17 @@ export default function PlatformAdminClient({
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
+                  aria-label={config.label}
                   className={cn(
-                    "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 whitespace-nowrap",
+                    "group relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 whitespace-nowrap",
                     activeTab === tab
                       ? "bg-white dark:bg-neutral-850 text-neutral-900 dark:text-white shadow-sm"
                       : "text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
                   )}
                 >
                   <Icon className={cn("w-4 h-4", config.iconColor)} />
-                  <span>{config.label}</span>
+                  <span>{config.short}</span>
+                  {config.short !== config.label && <TabFullName text={config.label} />}
                 </button>
               )
             })}
@@ -287,15 +300,17 @@ export default function PlatformAdminClient({
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
+                  aria-label={config.label}
                   className={cn(
-                    "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 whitespace-nowrap",
+                    "group relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 whitespace-nowrap",
                     activeTab === tab
                       ? "bg-white dark:bg-neutral-850 text-neutral-900 dark:text-white shadow-sm"
                       : "text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
                   )}
                 >
                   <Icon className={cn("w-4 h-4", config.iconColor)} />
-                  <span>{config.label}</span>
+                  <span>{config.short}</span>
+                  {config.short !== config.label && <TabFullName text={config.label} />}
                   {tab === 'partners' && pendingPartnerCount > 0 && (
                     <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-black leading-none text-white" title={t('admin_partners.tab_pending')}>{pendingPartnerCount}</span>
                   )}

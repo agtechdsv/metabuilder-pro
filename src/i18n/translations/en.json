@@ -3807,6 +3807,11 @@
       "community": "MetaBuilders",
       "arquivos": "IDEs, CLI & Manuals",
       "releases": "Releases (IDE)",
+      "dashboard_short": "Dashboard",
+      "clients_short": "Clients",
+      "iclub_short": "iClub",
+      "arquivos_short": "IDEs",
+      "releases_short": "Releases",
       "partners": "Partners",
       "system": "System"
     }
