@@ -4589,6 +4589,8 @@
     "pix_submit": "Enviar chave para conferência",
     "pix_sending": "Enviando...",
     "pix_change": "Trocar chave Pix",
+    "pix_current": "Chave Pix ativa",
+    "pix_current_none": "nenhuma chave ativa ainda",
     "pix_cancel": "Cancelar",
     "pix_pending_title": "Chave Pix enviada, em conferência",
     "pix_pending_desc": "Vamos conferir os dados e ativar a chave. Enquanto isso, nenhum pagamento é feito para ela; se você já tinha uma chave ativa, ela continua valendo até a nova ser aceita.",

@@ -4589,6 +4589,8 @@
     "pix_submit": "Send key for review",
     "pix_sending": "Sending...",
     "pix_change": "Change Pix key",
+    "pix_current": "Active Pix key",
+    "pix_current_none": "no active key yet",
     "pix_cancel": "Cancel",
     "pix_pending_title": "Pix key sent, under review",
     "pix_pending_desc": "We will check the data and activate the key. Meanwhile, no payment is made to it; if you already had an active key, it stays valid until the new one is accepted.",

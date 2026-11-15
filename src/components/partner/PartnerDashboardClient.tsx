@@ -79,7 +79,13 @@ export default function PartnerDashboardClient({ dashboard }: { dashboard: Partn
       )}
       {((!p.hasPixKey && !p.pixPending) || changingPix) && <PartnerPixForm onCancel={p.hasPixKey || p.pixPending ? () => setChangingPix(false) : undefined} />}
       {(p.hasPixKey || p.pixPending) && !changingPix && (
-        <button type="button" onClick={() => setChangingPix(true)} className="text-xs font-black text-indigo-600 hover:underline">{t(P + 'pix_change')}</button>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <p className="text-xs text-neutral-600 dark:text-neutral-300">
+            <b>{t(P + 'pix_current')}:</b>{' '}
+            <span className="font-mono" data-testid="partner-pix-current">{p.hasPixKey && p.pixKeyMasked ? `${p.pixKeyType ? p.pixKeyType + ': ' : ''}${p.pixKeyMasked}` : t(P + 'pix_current_none')}</span>
+          </p>
+          <button type="button" onClick={() => setChangingPix(true)} className="text-xs font-black text-indigo-600 hover:underline">{t(P + 'pix_change')}</button>
+        </div>
       )}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

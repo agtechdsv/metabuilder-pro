@@ -4677,6 +4677,8 @@
     "pix_submit": "Enviar clave para verificación",
     "pix_sending": "Enviando...",
     "pix_change": "Cambiar clave Pix",
+    "pix_current": "Clave Pix activa",
+    "pix_current_none": "aún no hay una clave activa",
     "pix_cancel": "Cancelar",
     "pix_pending_title": "Clave Pix enviada, en verificación",
     "pix_pending_desc": "Verificaremos los datos y activaremos la clave. Mientras tanto, no se hace ningún pago a ella; si ya tenía una clave activa, sigue vigente hasta que se acepte la nueva.",
