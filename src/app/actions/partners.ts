@@ -68,7 +68,7 @@ export async function savePartnerSettings(input: PartnerSettings): Promise<Ok | 
   try {
     const { admin, user } = await requireSuperAdmin()
     const ok = (n: number, min: number, max: number) => Number.isFinite(n) && n >= min && n <= max
-    if (!ok(input.defaultPercent, 0, 100) || !ok(input.graceDays, 0, 90) || !ok(input.minPayout, 1, 100000) || !ok(input.payoutCap, 1, 1000000)) return fail('percent_invalid')
+    if (!ok(input.defaultPercent, 0, 100) || !ok(input.graceDays, 0, 90) || !ok(input.minPayout, 0.01, 100000) || !ok(input.payoutCap, 1, 1000000)) return fail('percent_invalid')
     const rows = (Object.entries(SETTING_KEYS) as [keyof PartnerSettings, readonly [string, string]][]).map(([k, [key, field]]) => ({
       key,
       value: { [field]: k === 'graceDays' ? Math.floor(input[k]) : Math.round(input[k] * 100) / 100 },

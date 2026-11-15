@@ -51,7 +51,7 @@ export function PartnerSettingsAdmin({ onOpenPartnersTab, refreshKey = 0 }: { on
           <label className="block"><span className={labelCls}>{k('settings_grace')}</span>
             <input type="number" min={0} max={90} className={inputCls} value={settings.graceDays} onChange={e => setSettings({ ...settings, graceDays: num(e.target.value) })} /></label>
           <label className="block"><span className={labelCls}>{k('settings_min')}</span>
-            <input type="number" min={1} className={inputCls} value={settings.minPayout} onChange={e => setSettings({ ...settings, minPayout: num(e.target.value) })} /></label>
+            <input type="number" min={0.01} step="0.01" className={inputCls} value={settings.minPayout} onChange={e => setSettings({ ...settings, minPayout: num(e.target.value) })} /></label>
           <label className="block"><span className={labelCls}>{k('settings_cap')}</span>
             <input type="number" min={1} className={inputCls} value={settings.payoutCap} onChange={e => setSettings({ ...settings, payoutCap: num(e.target.value) })} /></label>
           <div className="flex items-end"><button type="button" disabled={busy} onClick={save} className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-neutral-900 px-3 py-2 text-xs font-black text-white hover:bg-neutral-800 disabled:opacity-50 dark:bg-neutral-700"><Save className="h-3.5 w-3.5" />{k('settings_save')}</button></div>
