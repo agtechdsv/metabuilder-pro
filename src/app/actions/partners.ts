@@ -9,6 +9,7 @@ import {
   DEFAULT_PARTNER_SETTINGS, type PartnerDashboard, type PartnerErrorCode, type PartnerInput, type PartnerRow, type PartnerSettings, type PayoutRow, type PixSubmitInput,
 } from '@/lib/partners'
 import { sendMailTo, sendTeamNotice } from '@/lib/security/securityMail'
+import { loadBillingSettings, processQueue, queuePayoutSummaryIfFinal } from '@/lib/billing/billingService'
 import { resolveMailLang } from '@/lib/security/securityMailText'
 import { partnerPixAcceptedMail, partnerPixDeclinedMail, partnerPixPendingMail } from '@/lib/security/partnerMailText'
 
@@ -260,6 +261,11 @@ export async function createPartnerPayout(
       body: JSON.stringify({ payout_id: payout.payout_id }),
     })
     const body = (await res.json().catch(() => ({}))) as { results?: { ok: boolean }[]; error?: string }
+    // se o lote já terminou aqui (ex.: o Asaas recusou todos na hora), o resumo ao admin sai agora; senão sai quando o último Pix concluir (webhook)
+    try {
+      await queuePayoutSummaryIfFinal(admin, payout.payout_id)
+      await processQueue(admin, await loadBillingSettings(admin))
+    } catch (e) { console.error('[repasse] erro ao enviar o resumo do lote:', (e as Error)?.message) }
     revalidatePath('/admin/platform')
     if (!res.ok) return fail('unknown', body?.error || `A função de pagamento respondeu ${res.status}. O lote foi criado: veja o estado dos itens.`)
     const results = body.results || []

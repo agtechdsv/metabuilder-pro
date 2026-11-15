@@ -35,6 +35,24 @@ export async function queueNotice(
   }
 }
 
+/**
+ * Enfileira um aviso de repasse a parceiro (ver PAYOUT_KINDS): NÃO depende do interruptor dos avisos de cobrança. Único por (tipo, referência).
+ * Falha ao enfileirar nunca derruba o webhook: o repasse já foi registrado e o admin vê o lote na tela.
+ */
+export async function queuePayoutNotice(supabase: any, n: { kind: NoticeKind; ref: string; payload?: Record<string, unknown> }): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from("billing_notices")
+      .upsert({ user_id: null, kind: n.kind, ref: n.ref, payload: n.payload ?? {} }, { onConflict: "kind,ref", ignoreDuplicates: true })
+      .select("id");
+    if (error) { console.error("[repasse] falha ao enfileirar o aviso:", error.message); return false; }
+    return (data?.length ?? 0) > 0;
+  } catch (e) {
+    console.error("[repasse] erro ao enfileirar o aviso:", (e as Error)?.message);
+    return false;
+  }
+}
+
 /** Pede ao site para enviar a fila agora. Sem as variaveis, ou se falhar, a rotina diaria envia depois (nunca trava o webhook). */
 export async function pingNotify(): Promise<void> {
   const url = Deno.env.get("BILLING_NOTIFY_URL")?.trim();

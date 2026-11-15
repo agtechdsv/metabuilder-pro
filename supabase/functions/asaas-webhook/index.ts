@@ -3,8 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
 import { grantVolumeLicenses, processReferralConversion, revokeReferralRewards, syncNextCharge } from "../_shared/iclub.ts";
 import { CYCLE_MONTHS, isCycle } from "../_shared/pricing.ts";
 import { applyTransferEvent, cancelPartnerReferral, recordPartnerCommission, revokePartnerCommissionForPayment } from "../_shared/partners.ts";
-import { billingSettings, pingNotify, queueNotice } from "../_shared/billing.ts";
-import { noticeRef, type NoticeKind } from "../_shared/billingCore.ts";
+import { billingSettings, pingNotify, queueNotice, queuePayoutNotice } from "../_shared/billing.ts";
+import { noticeRef, payoutIsFinal, type NoticeKind } from "../_shared/billingCore.ts";
 
 serve(async (req) => {
   if (req.method !== "POST") {
@@ -397,7 +397,17 @@ serve(async (req) => {
 
     // transferências Pix dos lotes de parceiros (o webhook do Asaas precisa assinar os eventos TRANSFER_*)
     else if (typeof event === "string" && event.startsWith("TRANSFER_")) {
-      try { await applyTransferEvent(supabase, event, body.transfer); } catch (e) { console.error("[parceiros] erro ao aplicar o evento de transferência:", e); }
+      try {
+        const outcome = await applyTransferEvent(supabase, event, body.transfer);
+        if (outcome) {
+          // Pix concluído: avisa o parceiro (um por item). Lote inteiro terminado (pagos ou com falha): resumo ao admin (um por lote). Não dependem do
+          // interruptor dos avisos de cobrança; falha ao enfileirar nunca derruba o webhook.
+          if (outcome.result === "done" && await queuePayoutNotice(supabase, { kind: "partner_payout_paid", ref: outcome.itemId, payload: { itemId: outcome.itemId } })) queuedAny = true;
+          const { data: items } = await supabase.from("partner_payout_items").select("status").eq("payout_id", outcome.payoutId);
+          if (payoutIsFinal((items || []).map((i: { status: string }) => i.status))
+            && await queuePayoutNotice(supabase, { kind: "admin_payout_summary", ref: outcome.payoutId, payload: { payoutId: outcome.payoutId } })) queuedAny = true;
+        }
+      } catch (e) { console.error("[parceiros] erro ao aplicar o evento de transferência:", e); }
     }
 
     else if (event === "PAYMENT_OVERDUE") {

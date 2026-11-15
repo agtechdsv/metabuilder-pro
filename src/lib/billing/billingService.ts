@@ -1,8 +1,10 @@
 import { createAdminClient } from '@/utils/supabase/server'
 import { sendMailTo, sendTeamNotice } from '@/lib/security/securityMail'
 import { adminBillingMail, customerBillingMail } from '@/lib/billing/billingMailText'
+import { adminPayoutSummaryMail, partnerPayoutPaidMail } from '@/lib/billing/payoutMailText'
+import { resolveMailLang } from '@/lib/security/securityMailText'
 import {
-  isCustomerKind, noticeRef, parseBillingSettings, reminderKindFor, resolveLang, suspensionDate, graceExpired,
+  isCustomerKind, isPayoutKind, noticeRef, parseBillingSettings, payoutIsFinal, PAYOUT_KINDS, reminderKindFor, resolveLang, suspensionDate, graceExpired,
   type BillingSettings, type NoticeKind,
 } from '../../../supabase/functions/_shared/billingCore'
 
@@ -99,18 +101,78 @@ export async function scheduleDigest(admin: Admin, now: Date): Promise<boolean> 
   return queue(admin, { kind: 'admin_digest', ref: noticeRef(['digest', day]), payload: { digest: { overdue, dueSoon, suspendedToday, received24h, failedNotices } } })
 }
 
-/** Envia a fila (até BATCH por vez). Aviso de cobrança que já foi paga nesse meio tempo não sai. Falha: tenta de novo até MAX_ATTEMPTS. */
+/** O lote terminou (todos os itens pagos ou com falha)? Então enfileira o resumo ao admin (um por lote). Devolve true se entrou agora. */
+export async function queuePayoutSummaryIfFinal(admin: Admin, payoutId: string): Promise<boolean> {
+  const { data: items } = await admin.from('partner_payout_items').select('status').eq('payout_id', payoutId)
+  if (!payoutIsFinal((items || []).map((i: any) => i.status))) return false
+  return queue(admin, { kind: 'admin_payout_summary', ref: payoutId, payload: { payoutId } })
+}
+
+/** Aviso ao parceiro: o Pix da comissão dele foi concluído. Devolve o e-mail pronto e para quem vai, ou o motivo de não enviar. */
+async function buildPartnerPayoutMail(admin: Admin, itemId: string): Promise<{ to: string; mail: ReturnType<typeof partnerPayoutPaidMail> } | { skip: string } | { error: string }> {
+  const { data: item } = await admin.from('partner_payout_items').select('id, amount, pix_key, pix_key_type, status, updated_at, partner_id').eq('id', itemId).maybeSingle()
+  if (!item) return { error: 'item do lote não encontrado' }
+  if (item.status !== 'done') return { skip: 'ignorado: o item não está pago' }
+  const { data: partner } = await admin.from('partners').select('id, user_id, email, name').eq('id', item.partner_id).maybeSingle()
+  if (!partner) return { error: 'parceiro não encontrado' }
+  // o endereço é sempre o do próprio parceiro: o e-mail da conta dele ou, se ainda não criou conta, o do cadastro
+  const { data: prof } = partner.user_id ? await admin.from('profiles').select('email').eq('id', partner.user_id).maybeSingle() : { data: null }
+  const to = String(prof?.email || partner.email || '').trim()
+  if (!to) return { error: 'parceiro sem e-mail' }
+  const { data: app } = await admin.from('partner_applications').select('lang').eq('partner_id', partner.id).order('decided_at', { ascending: false }).limit(1).maybeSingle()
+  return {
+    to,
+    mail: partnerPayoutPaidMail(resolveMailLang(app?.lang), {
+      name: String(partner.name || '').trim() || to, amount: Number(item.amount), paidAt: item.updated_at, type: String(item.pix_key_type || ''),
+      keyMasked: `•••${String(item.pix_key || '').slice(-3)}`, panelUrl: `${appUrl()}/parceiro`,
+    }),
+  }
+}
+
+/** Resumo do lote ao admin: uma linha por parceiro (valor, situação e data). */
+async function buildPayoutSummaryMail(admin: Admin, payoutId: string) {
+  const { data: payout } = await admin.from('partner_payouts').select('id, note, created_at').eq('id', payoutId).maybeSingle()
+  if (!payout) return null
+  const { data: items } = await admin.from('partner_payout_items').select('partner_id, amount, status, fail_reason, pix_key, pix_key_type, updated_at').eq('payout_id', payoutId).order('created_at', { ascending: true })
+  const ids = Array.from(new Set((items || []).map((i: any) => i.partner_id)))
+  const { data: partners } = ids.length ? await admin.from('partners').select('id, name').in('id', ids) : { data: [] as any[] }
+  const name = new Map((partners || []).map((x: any) => [x.id as string, String(x.name || '')]))
+  return adminPayoutSummaryMail({
+    createdAt: payout.created_at, note: payout.note, appUrl: appUrl(),
+    items: (items || []).map((i: any) => ({
+      partner: name.get(i.partner_id) || 'parceiro', amount: Number(i.amount), status: i.status, at: i.updated_at, failReason: i.fail_reason,
+      type: i.pix_key_type, keyMasked: `•••${String(i.pix_key || '').slice(-3)}`,
+    })),
+  })
+}
+
+/**
+ * Envia a fila (até BATCH por vez). Aviso de cobrança que já foi paga nesse meio tempo não sai. Falha: tenta de novo até MAX_ATTEMPTS.
+ * Com os avisos de cobrança desligados, só os avisos de repasse a parceiros saem (são transacionais e não dependem do interruptor).
+ */
 export async function processQueue(admin: Admin, cfg: BillingSettings): Promise<{ sent: number; failed: number; skipped: number }> {
   const out = { sent: 0, failed: 0, skipped: 0 }
-  if (!cfg.enabled) return out
-  const { data: items } = await admin.from('billing_notices').select('*').in('status', ['queued', 'failed']).lt('attempts', MAX_ATTEMPTS).order('created_at', { ascending: true }).limit(BATCH)
+  let query = admin.from('billing_notices').select('*').in('status', ['queued', 'failed']).lt('attempts', MAX_ATTEMPTS).order('created_at', { ascending: true }).limit(BATCH)
+  if (!cfg.enabled) query = query.in('kind', [...PAYOUT_KINDS])
+  const { data: items } = await query
   for (const it of (items || []) as any[]) {
     const mark = async (status: 'sent' | 'failed', error?: string) => {
       await admin.from('billing_notices').update({ status, attempts: it.attempts + 1, last_error: error || null, sent_at: status === 'sent' ? new Date().toISOString() : null }).eq('id', it.id)
     }
     try {
       const p = (it.payload || {}) as Record<string, any>
-      if (isCustomerKind(it.kind)) {
+      if (isPayoutKind(it.kind)) {
+        if (it.kind === 'partner_payout_paid') {
+          const r = await buildPartnerPayoutMail(admin, String(p.itemId || it.ref))
+          if ('skip' in r) { await mark('sent', r.skip); out.skipped++; continue }
+          if ('error' in r) { await mark('failed', r.error); out.failed++; continue }
+          if (await sendMailTo(r.to, r.mail)) { await mark('sent'); out.sent++ } else { await mark('failed', 'o SMTP recusou ou não está configurado'); out.failed++ }
+        } else {
+          const mail = await buildPayoutSummaryMail(admin, String(p.payoutId || it.ref))
+          if (!mail) { await mark('failed', 'lote não encontrado'); out.failed++; continue }
+          if (await sendTeamNotice(mail.subject, mail.text, mail.html, cfg.adminEmail || null)) { await mark('sent'); out.sent++ } else { await mark('failed', 'o SMTP recusou ou não está configurado'); out.failed++ }
+        }
+      } else if (isCustomerKind(it.kind)) {
         const { data: prof } = await admin.from('profiles').select('email, full_name, billing_language, overdue_since').eq('id', it.user_id).maybeSingle()
         if (!prof?.email) { await mark('failed', 'cliente sem e-mail'); out.failed++; continue }
         // cobrança paga ou estornada nesse meio tempo: lembrete e aviso de atraso não fazem mais sentido
@@ -149,7 +211,7 @@ export async function runBillingNotices(now = new Date()) {
   const admin = createAdminClient()
   const cfg = await loadBillingSettings(admin)
   const expired = await expireCanceled(admin, now)
-  if (!cfg.enabled) return { enabled: false, expired }
+  if (!cfg.enabled) return { enabled: false, expired, ...(await processQueue(admin, cfg)) } // avisos de repasse a parceiros saem mesmo assim
   const reminders = await scheduleReminders(admin, now)
   const suspended = await suspendAfterGrace(admin, cfg, now)
   const ending = await scheduleEndingSoon(admin, now)

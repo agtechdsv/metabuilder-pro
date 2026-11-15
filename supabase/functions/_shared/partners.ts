@@ -74,17 +74,26 @@ export async function cancelPartnerReferral(supabase: any, referredUserId: strin
 }
 
 /** Evento TRANSFER_* do Asaas: conclui ou falha o item do lote que tem esse id de transferência. Idempotente. */
-export async function applyTransferEvent(supabase: any, event: string, transfer: any): Promise<void> {
-  if (!transfer?.id) return;
-  const { data: item } = await supabase.from("partner_payout_items").select("id, status").eq("asaas_transfer_id", transfer.id).maybeSingle();
-  if (!item) return;
+export interface TransferOutcome { itemId: string; payoutId: string; result: "done" | "failed" }
+
+/**
+ * Devolve o que terminou (item pago ou com falha) para o chamador avisar; null se o evento só andou o item (pendente, bloqueado) ou não é nosso.
+ * Idempotente: reentrega do mesmo evento devolve o mesmo resultado, e quem enfileira o aviso é único por item.
+ */
+export async function applyTransferEvent(supabase: any, event: string, transfer: any): Promise<TransferOutcome | null> {
+  if (!transfer?.id) return null;
+  const { data: item } = await supabase.from("partner_payout_items").select("id, status, payout_id").eq("asaas_transfer_id", transfer.id).maybeSingle();
+  if (!item) return null;
   if (event === "TRANSFER_DONE") {
     await supabase.rpc("mb_partner_finish_item", { p_item_id: item.id, p_receipt: transfer.transactionReceiptUrl ?? null });
+    return { itemId: item.id, payoutId: item.payout_id, result: "done" };
   } else if (event === "TRANSFER_FAILED" || event === "TRANSFER_CANCELLED" || event === "TRANSFER_BLOCKED") {
     // bloqueada pode ser liberada depois pelo Asaas; só marcamos falha nos estados finais
-    if (event === "TRANSFER_BLOCKED") { await supabase.from("partner_payout_items").update({ fail_reason: "Bloqueada pelo Asaas (aguarde ou verifique no painel do Asaas)", updated_at: new Date().toISOString() }).eq("id", item.id); return; }
+    if (event === "TRANSFER_BLOCKED") { await supabase.from("partner_payout_items").update({ fail_reason: "Bloqueada pelo Asaas (aguarde ou verifique no painel do Asaas)", updated_at: new Date().toISOString() }).eq("id", item.id); return null; }
     await supabase.rpc("mb_partner_fail_item", { p_item_id: item.id, p_reason: transfer.failReason || event });
+    return { itemId: item.id, payoutId: item.payout_id, result: "failed" };
   } else if (event === "TRANSFER_PENDING" || event === "TRANSFER_IN_BANK_PROCESSING" || event === "TRANSFER_CREATED") {
     if (item.status === "sending") await supabase.from("partner_payout_items").update({ status: "sent", updated_at: new Date().toISOString() }).eq("id", item.id);
   }
+  return null;
 }

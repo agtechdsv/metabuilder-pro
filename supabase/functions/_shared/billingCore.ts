@@ -10,7 +10,13 @@ export const CUSTOMER_KINDS = [
 ] as const;
 /** Avisos ao ADMIN. */
 export const ADMIN_KINDS = ["admin_overdue", "admin_refund", "admin_unresolved", "admin_digest"] as const;
-export type NoticeKind = (typeof CUSTOMER_KINDS)[number] | (typeof ADMIN_KINDS)[number];
+/**
+ * Avisos dos repasses a parceiros. Saem SEMPRE (não dependem do interruptor dos avisos de cobrança): são transacionais e ligados a um Pix que o
+ * SuperAdmin mandou fazer. "partner_payout_paid" vai ao parceiro (um por item do lote, quando o Asaas conclui o Pix); "admin_payout_summary" vai
+ * ao admin (um por lote, quando todos os itens terminaram: pagos ou com falha).
+ */
+export const PAYOUT_KINDS = ["partner_payout_paid", "admin_payout_summary"] as const;
+export type NoticeKind = (typeof CUSTOMER_KINDS)[number] | (typeof ADMIN_KINDS)[number] | (typeof PAYOUT_KINDS)[number];
 
 export interface BillingSettings {
   /** desligado: nada e enviado e o atraso bloqueia no mesmo dia, como sempre foi */
@@ -91,6 +97,15 @@ export function suspensionDate(overdueSince: string | null | undefined, graceDay
 
 /** Referencia unica de um aviso por pagamento, ou por usuario e data (suspensao, cancelamento). */
 export const noticeRef = (parts: (string | number | null | undefined)[]): string => parts.map(p => String(p ?? "")).join(":");
+
+export function isPayoutKind(kind: string): boolean {
+  return (PAYOUT_KINDS as readonly string[]).includes(kind);
+}
+
+/** O lote terminou? Todos os itens estão pagos ou com falha (nenhum preparando, enviando ou aguardando o Asaas). Lote sem itens não termina. */
+export function payoutIsFinal(itemStatuses: readonly string[]): boolean {
+  return itemStatuses.length > 0 && itemStatuses.every(s => s === "done" || s === "failed");
+}
 
 /** O dono pode ser avisado? So tem e-mail se o perfil tiver; e o idioma cai em portugues. */
 export function isCustomerKind(kind: string): boolean {
