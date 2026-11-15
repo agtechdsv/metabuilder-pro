@@ -14,6 +14,7 @@ import { useI18n } from '@/i18n/I18nContext'
 import { askDialog } from '@/utils/askDialog'
 import { DEFAULT_PARTNER_SETTINGS, type PartnerErrorCode, type PartnerInput, type PartnerRow, type PartnerSettings, type PayoutRow } from '@/lib/partners'
 import { PIX_KEY_TYPES } from '../../../supabase/functions/_shared/partnerCommission'
+import { PARTNER_FILTERS, filterPartners, payoutSkipReason, toggleAllVisible, type PartnerFilter } from '@/lib/partnersFilter'
 
 // Tela só do SuperAdmin, em pt, en e es (textos em `admin_partners.*`). Quem paga, quanto e quando é decisão do SuperAdmin.
 
@@ -43,6 +44,8 @@ export function PartnersAdmin({ onPendingCount, refreshKey = 0 }: { onPendingCou
   const [busy, setBusy] = useState(false)
   const [form, setForm] = useState<PartnerInput | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [filter, setFilter] = useState<PartnerFilter>('all')
+  const [query, setQuery] = useState('')
   const [confirming, setConfirming] = useState(false)
   const [note, setNote] = useState('')
   const [applications, setApplications] = useState<ApplicationRow[]>([])
@@ -148,7 +151,9 @@ export function PartnersAdmin({ onPendingCount, refreshKey = 0 }: { onPendingCou
   // avisa a aba "Parceiros" quantas candidaturas novas existem (contador no rótulo da aba)
   // o que espera o SuperAdmin: chaves Pix para conferir (primeiro na lista) e candidaturas novas
   const pixWaiting = partners.filter(p => p.pendingPix)
-  const orderedPartners = [...partners].sort((a, b) => Number(!!b.pendingPix) - Number(!!a.pendingPix))
+  const orderedPartners = filterPartners([...partners].sort((a, b) => Number(!!b.pendingPix) - Number(!!a.pendingPix)), filter, query, settings.minPayout)
+  const visibleIds = orderedPartners.map(p => p.id)
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selected.has(id))
   useEffect(() => { onPendingCount?.(newApps.length + pixWaiting.length) }, [newApps.length, pixWaiting.length]) // eslint-disable-line react-hooks/exhaustive-deps
   const shownApps = showDecided ? applications : newApps
 
@@ -156,7 +161,7 @@ export function PartnersAdmin({ onPendingCount, refreshKey = 0 }: { onPendingCou
 
   // o que o lote pagaria agora (mesma conta do SQL; a função SQL é quem decide de verdade)
   const plan = useMemo(() => partners.filter(p => selected.has(p.id)).map(p => {
-    const reason = p.status !== 'active' ? 'suspended' : !p.pixKey ? 'no_pix' : p.summary.payable < settings.minPayout ? 'below_min' : null
+    const reason = payoutSkipReason(p, settings.minPayout)
     return { p, reason }
   }), [partners, selected, settings.minPayout])
   const payable = plan.filter(x => !x.reason)
@@ -312,6 +317,18 @@ export function PartnersAdmin({ onPendingCount, refreshKey = 0 }: { onPendingCou
         <p className="rounded-2xl border border-dashed border-neutral-200 py-8 text-center text-sm text-neutral-400 dark:border-neutral-800">{k('empty')}</p>
       ) : (
         <div className="overflow-x-auto">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <input value={query} onChange={e => setQuery(e.target.value)} placeholder={k('search_placeholder')} aria-label={k('search_placeholder')} className="w-56 rounded-xl border border-neutral-200 bg-transparent px-3 py-2 text-xs font-bold dark:border-neutral-700" />
+            <select value={filter} onChange={e => setFilter(e.target.value as PartnerFilter)} aria-label={k('filter_label')} className="rounded-xl border border-neutral-200 bg-transparent px-3 py-2 text-xs font-bold dark:border-neutral-700">
+              {PARTNER_FILTERS.map(f => <option key={f} value={f}>{k(`filter_${f}`)}</option>)}
+            </select>
+            <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-neutral-200 px-3 py-2 text-xs font-black dark:border-neutral-700">
+              <input type="checkbox" checked={allVisibleSelected} disabled={visibleIds.length === 0} onChange={() => setSelected(prev => toggleAllVisible(prev, visibleIds))} />
+              {k('select_all_shown', { n: visibleIds.length })}
+            </label>
+            <span className="text-[11px] text-neutral-400">{k('shown_count', { n: visibleIds.length, total: partners.length })}</span>
+          </div>
+          {visibleIds.length === 0 && <p className="mb-3 rounded-2xl border border-dashed border-neutral-200 py-6 text-center text-sm text-neutral-400 dark:border-neutral-800">{k('empty_filter')}</p>}
           <table className="w-full text-left text-sm">
             <thead><tr className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
               <th className={th} /><th className={th}>{k('th_partner')}</th><th className={th}>{k('th_code')}</th><th className={th}>%</th><th className={th}>{k('th_referred')}</th>
