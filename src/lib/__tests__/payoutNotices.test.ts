@@ -72,7 +72,7 @@ describe('avisos de repasse a parceiros', () => {
 
   it('o envio da fila manda só os avisos de repasse quando os de cobrança estão desligados, e a rotina diária também', () => {
     const svc = read('src/lib/billing/billingService.ts')
-    expect(svc).toContain("if (!cfg.enabled) query = query.in('kind', [...PAYOUT_KINDS])")
+    expect(svc).toContain("if (!cfg.enabled) query = query.in('kind', [...ALWAYS_SEND_KINDS])")
     expect(svc).not.toMatch(/if \(!cfg\.enabled\) return out/)
     expect(svc).toContain('...(await processQueue(admin, cfg))')
     // o aviso do parceiro só sai se o item está pago e vai para o e-mail do próprio parceiro (nunca de um campo vindo da tela)

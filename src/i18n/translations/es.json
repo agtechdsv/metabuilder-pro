@@ -6161,6 +6161,8 @@
     "err_unknown": "No se pudo completar. Inténtelo de nuevo.",
     "topic_security": "Seguridad y cupos de sesión",
     "topic_security_desc": "Código de confirmación y aviso de que una sesión fue cerrada por un nuevo inicio. Va al propio usuario.",
+    "topic_welcome": "Bienvenida al cliente nuevo",
+    "topic_welcome_desc": "E-mail enviado una vez a quien acaba de crear la cuenta (con e-mail y contraseña o con Google).",
     "topic_billing_customer": "Cobro al cliente",
     "topic_billing_customer_desc": "Recordatorios de vencimiento, atraso, suspensión, pago recibido y cancelación.",
     "topic_billing_team": "Alertas de cobro al equipo",

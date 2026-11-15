@@ -7,6 +7,7 @@ import { currentSessionId } from '@/lib/sessions/currentSlot'
 import { releaseSlot } from '@/lib/sessions/slotService'
 import { SLOT_COOKIE } from '@/lib/sessions/slotCore'
 import { currentMailLang } from '@/lib/auth/mailLangServer'
+import { sendWelcomeIfNew } from '@/lib/billing/billingService'
 
 export async function login(formData: FormData) {
   const supabase = await createClient()
@@ -222,6 +223,10 @@ export async function signup(formData: FormData) {
       await registerReferral(email, data.user.id)
     } catch (refError) {
       console.error('Erro ao registrar indicação no cadastro:', refError)
+    }
+    // boas-vindas: quem entrou na hora (sem precisar confirmar e-mail) recebe agora; com confirmação ligada, recebe ao confirmar (página de retorno)
+    if (data.session) {
+      try { await sendWelcomeIfNew(data.user.id) } catch (e) { console.error('Erro ao enviar as boas-vindas:', e) }
     }
   }
 

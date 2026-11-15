@@ -6,6 +6,7 @@
 export const EMAIL_TOPICS = [
   // aviso ao usuário/cliente/parceiro: só controla De e Responder para
   { id: 'security', team: false },
+  { id: 'welcome', team: false },
   { id: 'billing_customer', team: false },
   { id: 'partner_mail', team: false },
   { id: 'checkout', team: false },

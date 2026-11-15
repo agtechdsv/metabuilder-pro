@@ -2,9 +2,10 @@ import { createAdminClient } from '@/utils/supabase/server'
 import { sendMailTo, sendTeamNoticeFor } from '@/lib/security/securityMail'
 import { adminBillingMail, customerBillingMail } from '@/lib/billing/billingMailText'
 import { adminPayoutSummaryMail, partnerPayoutPaidMail } from '@/lib/billing/payoutMailText'
+import { welcomeMail } from '@/lib/billing/welcomeMailText'
 import { resolveMailLang } from '@/lib/security/securityMailText'
 import {
-  isCustomerKind, isPayoutKind, noticeRef, parseBillingSettings, payoutIsFinal, PAYOUT_KINDS, reminderKindFor, resolveLang, suspensionDate, graceExpired,
+  ALWAYS_SEND_KINDS, isCustomerKind, isPayoutKind, noticeRef, parseBillingSettings, payoutIsFinal, reminderKindFor, resolveLang, suspensionDate, graceExpired,
   type BillingSettings, type NoticeKind,
 } from '../../../supabase/functions/_shared/billingCore'
 
@@ -101,6 +102,27 @@ export async function scheduleDigest(admin: Admin, now: Date): Promise<boolean> 
   return queue(admin, { kind: 'admin_digest', ref: noticeRef(['digest', day]), payload: { digest: { overdue, dueSoon, suspendedToday, received24h, failedNotices } } })
 }
 
+const WELCOME_WINDOW_DAYS = 7
+
+/**
+ * Boas-vindas ao cliente novo, UMA vez por usuário (a fila é única por tipo e usuário). Só para contas criadas há pouco: quem já usava a plataforma
+ * antes não recebe de repente. O endereço e o idioma vêm da conta (nunca do pedido). Devolve true se entrou na fila agora.
+ */
+export async function queueWelcome(admin: Admin, userId: string): Promise<boolean> {
+  const { data: found } = await admin.auth.admin.getUserById(userId)
+  const u = found?.user
+  if (!u?.email) return false
+  const created = new Date(u.created_at).getTime()
+  if (!Number.isFinite(created) || Date.now() - created > WELCOME_WINDOW_DAYS * 86_400_000) return false
+  return queue(admin, { kind: 'welcome', userId, ref: noticeRef([userId]) })
+}
+
+/** Enfileira as boas-vindas do usuário e envia já (se o SMTP falhar, a rotina diária tenta de novo). */
+export async function sendWelcomeIfNew(userId: string): Promise<void> {
+  const admin = createAdminClient()
+  if (await queueWelcome(admin, userId)) await processQueue(admin, await loadBillingSettings(admin))
+}
+
 /** O lote terminou (todos os itens pagos ou com falha)? Então enfileira o resumo ao admin (um por lote). Devolve true se entrou agora. */
 export async function queuePayoutSummaryIfFinal(admin: Admin, payoutId: string): Promise<boolean> {
   const { data: items } = await admin.from('partner_payout_items').select('status').eq('payout_id', payoutId)
@@ -153,7 +175,7 @@ async function buildPayoutSummaryMail(admin: Admin, payoutId: string) {
 export async function processQueue(admin: Admin, cfg: BillingSettings): Promise<{ sent: number; failed: number; skipped: number }> {
   const out = { sent: 0, failed: 0, skipped: 0 }
   let query = admin.from('billing_notices').select('*').in('status', ['queued', 'failed']).lt('attempts', MAX_ATTEMPTS).order('created_at', { ascending: true }).limit(BATCH)
-  if (!cfg.enabled) query = query.in('kind', [...PAYOUT_KINDS])
+  if (!cfg.enabled) query = query.in('kind', [...ALWAYS_SEND_KINDS])
   const { data: items } = await query
   for (const it of (items || []) as any[]) {
     const mark = async (status: 'sent' | 'failed', error?: string) => {
@@ -161,7 +183,16 @@ export async function processQueue(admin: Admin, cfg: BillingSettings): Promise<
     }
     try {
       const p = (it.payload || {}) as Record<string, any>
-      if (isPayoutKind(it.kind)) {
+      if (it.kind === 'welcome') {
+        const { data: found } = await admin.auth.admin.getUserById(String(it.user_id || p.userId || ''))
+        const u = found?.user
+        const to = String(u?.email || '').trim()
+        if (!to) { await mark('failed', 'usuário sem e-mail'); out.failed++; continue }
+        const meta = (u?.user_metadata || {}) as Record<string, unknown>
+        const first = String(meta.full_name || meta.name || '').trim().split(/\s+/)[0] || to
+        const mail = welcomeMail(resolveMailLang(meta.lang as string | undefined), { name: first, appUrl: appUrl() })
+        if (await sendMailTo(to, mail, 'welcome')) { await mark('sent'); out.sent++ } else { await mark('failed', 'o SMTP recusou ou não está configurado'); out.failed++ }
+      } else if (isPayoutKind(it.kind)) {
         if (it.kind === 'partner_payout_paid') {
           const r = await buildPartnerPayoutMail(admin, String(p.itemId || it.ref))
           if ('skip' in r) { await mark('sent', r.skip); out.skipped++; continue }

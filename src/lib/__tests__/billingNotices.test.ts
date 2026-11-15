@@ -152,7 +152,7 @@ describe('avisos de cobrança: ligação no sistema', () => {
     const svc = read('src/lib/billing/billingService.ts')
     expect(svc.indexOf('expireCanceled(admin, now)')).toBeLessThan(svc.indexOf('if (!cfg.enabled) return { enabled: false, expired,'))
     // desligado: não envia avisos de cobrança (só os de repasse a parceiros, que não dependem do interruptor)
-    expect(svc).toContain("if (!cfg.enabled) query = query.in('kind', [...PAYOUT_KINDS])")
+    expect(svc).toContain("if (!cfg.enabled) query = query.in('kind', [...ALWAYS_SEND_KINDS])")
     expect(read('vercel.json')).toContain('/api/cron/billing-notices')
     expect(read('src/app/api/cron/billing-notices/route.ts')).toContain('CRON_SECRET')
   })

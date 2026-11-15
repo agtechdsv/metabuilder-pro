@@ -6073,6 +6073,8 @@
     "err_unknown": "Não foi possível concluir. Tente de novo.",
     "topic_security": "Segurança e vagas de sessão",
     "topic_security_desc": "Código de confirmação e aviso de que uma sessão foi encerrada por um novo login. Vai ao próprio usuário.",
+    "topic_welcome": "Boas-vindas ao cliente novo",
+    "topic_welcome_desc": "E-mail enviado uma vez a quem acabou de criar a conta (com e-mail e senha ou com o Google).",
     "topic_billing_customer": "Cobrança ao cliente",
     "topic_billing_customer_desc": "Lembretes de vencimento, atraso, suspensão, pagamento recebido e cancelamento.",
     "topic_billing_team": "Alertas de cobrança à equipe",

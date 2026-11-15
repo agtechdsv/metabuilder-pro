@@ -6073,6 +6073,8 @@
     "err_unknown": "Could not complete. Try again.",
     "topic_security": "Security and session slots",
     "topic_security_desc": "Confirmation code and notice that a session was ended by a new login. Goes to the user.",
+    "topic_welcome": "Welcome to the new customer",
+    "topic_welcome_desc": "E-mail sent once to whoever just created an account (with e-mail and password or with Google).",
     "topic_billing_customer": "Billing to the customer",
     "topic_billing_customer_desc": "Due-date reminders, overdue, suspension, payment received and cancellation.",
     "topic_billing_team": "Billing alerts to the team",

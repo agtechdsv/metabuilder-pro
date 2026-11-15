@@ -53,6 +53,12 @@ function CallbackHandler() {
         if (session?.user && session.user.user_metadata?.lang !== language) await supabase.auth.updateUser({ data: { lang: language } })
       } catch { /* o idioma do e-mail é um extra */ }
 
+      // Boas-vindas (uma vez por usuário, só para conta recém-criada: Google e confirmação de cadastro). Nunca impede o login.
+      try {
+        const { welcomeCurrentUser } = await import('@/app/actions/welcome')
+        await welcomeCurrentUser()
+      } catch { /* o e-mail de boas-vindas é um extra */ }
+
       // Registrar indicação se aplicável
       if (session?.user?.email) {
         try {

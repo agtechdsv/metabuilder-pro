@@ -16,7 +16,11 @@ export const ADMIN_KINDS = ["admin_overdue", "admin_refund", "admin_unresolved",
  * ao admin (um por lote, quando todos os itens terminaram: pagos ou com falha).
  */
 export const PAYOUT_KINDS = ["partner_payout_paid", "admin_payout_summary"] as const;
-export type NoticeKind = (typeof CUSTOMER_KINDS)[number] | (typeof ADMIN_KINDS)[number] | (typeof PAYOUT_KINDS)[number];
+/** Boas-vindas ao cliente novo (um por usuário). Também sai sempre, sem depender do interruptor dos avisos de cobrança. */
+export const WELCOME_KIND = "welcome" as const;
+export type NoticeKind = (typeof CUSTOMER_KINDS)[number] | (typeof ADMIN_KINDS)[number] | (typeof PAYOUT_KINDS)[number] | typeof WELCOME_KIND;
+/** O que sai mesmo com os avisos de cobrança desligados (avisos transacionais). */
+export const ALWAYS_SEND_KINDS = [...PAYOUT_KINDS, WELCOME_KIND] as const;
 
 export interface BillingSettings {
   /** desligado: nada e enviado e o atraso bloqueia no mesmo dia, como sempre foi */
