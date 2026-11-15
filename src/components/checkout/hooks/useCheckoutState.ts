@@ -5,6 +5,7 @@ import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { getEnabledCycles } from '@/lib/pricing-cycles'
 import { useI18n } from '@/i18n/I18nContext'
+import { maskCpfCnpj, maskPhone, onlyDigits } from '@/lib/checkout/masks'
 
 export interface CheckoutClientProps {
   rules: any
@@ -44,9 +45,9 @@ export function useCheckoutState({ rules, initialLicenses = 1, initialCycle, wor
 
   // Checkout form states
   const [billingName, setBillingName] = useState(profile?.full_name || '')
-  const [billingCpfCnpj, setBillingCpfCnpj] = useState(profile?.cnpj || '')
+  const [billingCpfCnpj, setBillingCpfCnpj] = useState(maskCpfCnpj(profile?.cnpj || ''))
   const [billingEmail, setBillingEmail] = useState(profile?.email || user?.email || '')
-  const [billingPhone, setBillingPhone] = useState(profile?.whatsapp || '')
+  const [billingPhone, setBillingPhone] = useState(maskPhone(profile?.whatsapp || ''))
   
   // Payment methods: 'card' | 'pix' | 'boleto'
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'pix' | 'boleto'>('card')
@@ -104,9 +105,9 @@ export function useCheckoutState({ rules, initialLicenses = 1, initialCycle, wor
           setBillingName(data.full_name)
           setCardName(data.full_name)
         }
-        if (data.cnpj) setBillingCpfCnpj(data.cnpj)
+        if (data.cnpj) setBillingCpfCnpj(maskCpfCnpj(data.cnpj))
         if (data.email) setBillingEmail(data.email)
-        if (data.whatsapp) setBillingPhone(data.whatsapp)
+        if (data.whatsapp) setBillingPhone(maskPhone(data.whatsapp))
         if (data.address_zip) setBillingPostalCode(data.address_zip)
         if (data.address_number) setBillingAddressNumber(data.address_number)
       }
@@ -230,9 +231,9 @@ export function useCheckoutState({ rules, initialLicenses = 1, initialCycle, wor
           cycle: cycle,
           paymentMethod: paymentMethod,
           billingName: billingName,
-          billingCpfCnpj: billingCpfCnpj,
+          billingCpfCnpj: onlyDigits(billingCpfCnpj),
           billingEmail: billingEmail,
-          phone: billingPhone,
+          phone: onlyDigits(billingPhone),
           postalCode: paymentMethod === 'card' ? billingPostalCode : '',
           addressNumber: paymentMethod === 'card' ? billingAddressNumber : '',
           cardNumber: paymentMethod === 'card' ? cardNumber : undefined,

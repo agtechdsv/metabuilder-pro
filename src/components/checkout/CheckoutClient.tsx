@@ -9,6 +9,7 @@ import { getOrCreateDefaultWorkspace } from '@/app/actions/checkout'
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/utils/supabase/client'
 import { useCheckoutState } from './hooks/useCheckoutState'
+import { maskCpfCnpj, maskPhone } from '@/lib/checkout/masks'
 import { CheckoutSuccessView } from './components/CheckoutSuccessView'
 import { CheckoutPaymentWaitView } from './components/CheckoutPaymentWaitView'
 import { useI18n } from '@/i18n'
@@ -127,7 +128,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                     type="text" 
                     required
                     value={billingCpfCnpj}
-                    onChange={(e) => setBillingCpfCnpj(e.target.value)}
+                    onChange={(e) => setBillingCpfCnpj(maskCpfCnpj(e.target.value))}
                     placeholder="000.000.000-00"
                     className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none text-neutral-900 dark:text-white transition-all shadow-sm focus:ring-2 focus:ring-indigo-500/25"
                   />
@@ -139,7 +140,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                     type="tel" 
                     required
                     value={billingPhone}
-                    onChange={(e) => setBillingPhone(e.target.value)}
+                    onChange={(e) => setBillingPhone(maskPhone(e.target.value))}
                     placeholder={t('checkout.phone_placeholder', 'Ex: (11) 99999-9999')}
                     className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:border-indigo-500 outline-none text-neutral-900 dark:text-white transition-all shadow-sm focus:ring-2 focus:ring-indigo-500/25"
                   />
