@@ -5,7 +5,7 @@ import { Laptop, Loader2, Mail, MonitorSmartphone, ShieldAlert } from 'lucide-re
 import { useI18n } from '@/i18n/I18nContext'
 import { signOut } from '@/app/auth/actions'
 import { confirmTakeoverCodeAction, requestTakeoverCodeAction, takeOverSlotAction } from '@/app/actions/deviceSessions'
-import { placeText, type SlotKind, type SlotOther } from '@/lib/sessions/slotCore'
+import { LEFT_URL, placeText, type SlotKind, type SlotOther } from '@/lib/sessions/slotCore'
 import type { DeviceErrorCode } from '@/lib/sessions/deviceTypes'
 
 interface Props {
@@ -49,7 +49,7 @@ export function ActiveSessionChooser({ other, kind, email, next }: Props) {
       await signOut()
       document.cookie = 'passkey_authenticated=; path=/; max-age=0; SameSite=Lax'
     } finally {
-      window.location.href = '/login'
+      window.location.href = LEFT_URL // página inicial com o aviso "você saiu deste dispositivo"
     }
   }
 

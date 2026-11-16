@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   chooseUrl, clientIp, codeMatches, decideGate, describeClient, generateCode, geoFromHeaders, hashCode, hashIp, isProtectedApiPath, isProtectedPath, isUuid,
-  parseKind, parseMode, placeText, revokedUrl, safeNext, sessionIdFromJwt, signSlotCookie, slotSecret, verifySlotCookie,
+  LEFT_URL, parseKind, parseMode, placeText, revokedUrl, safeNext, sessionIdFromJwt, signSlotCookie, slotSecret, verifySlotCookie,
   type SlotResult,
 } from '../slotCore'
 
@@ -158,7 +158,8 @@ describe('vagas de sessão: destinos', () => {
   it('monta os endereços da tela de escolha e do aviso de sessão encerrada', () => {
     expect(chooseUrl('/client/dashboard?a=1&b=2')).toBe('/auth/sessao-ativa?next=%2Fclient%2Fdashboard%3Fa%3D1%26b%3D2')
     expect(chooseUrl('https://evil.com')).toBe('/auth/sessao-ativa?next=%2Fclient%2Fdashboard')
-    expect(revokedUrl()).toBe('/login?motivo=encerrada')
+    expect(LEFT_URL).toBe('/?motivo=saiu')
+    expect(revokedUrl()).toBe('/?motivo=encerrada')
     const u = revokedUrl({ city: 'Belo Horizonte', region: 'MG', since: '2026-11-13T01:00:00.000Z' })
     const q = new URL('http://x' + u).searchParams
     expect(q.get('motivo')).toBe('encerrada')

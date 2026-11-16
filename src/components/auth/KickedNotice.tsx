@@ -1,12 +1,27 @@
 'use client'
 
-import { LogOut } from 'lucide-react'
+import { Info, LogOut } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 
-/** Aviso na tela de entrada: "sua sessão foi encerrada porque você entrou em outro lugar". */
-export function KickedNotice({ city, time }: { city?: string; time?: string }) {
+/**
+ * Aviso na página inicial depois de sair por causa das vagas de sessão:
+ * - kicked: "sua sessão foi encerrada porque você entrou em outro lugar";
+ * - left: "você saiu deste dispositivo; a sessão no outro continua ativa" (escolheu "Permanecer lá e sair daqui").
+ */
+export function KickedNotice({ city, time, variant = 'kicked' }: { city?: string; time?: string; variant?: 'kicked' | 'left' }) {
   const { t, language } = useI18n()
   const k = (key: string) => t(`device_sessions.${key}`)
+  if (variant === 'left') {
+    return (
+      <div role="status" className="mb-6 flex items-start gap-3 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 p-4 text-sm">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
+        <div>
+          <p className="font-bold text-indigo-900 dark:text-indigo-200">{k('left_title')}</p>
+          <p className="text-indigo-800 dark:text-indigo-300/80">{k('left_desc')}</p>
+        </div>
+      </div>
+    )
+  }
   const when = time && !Number.isNaN(new Date(time).getTime()) ? new Date(time).toLocaleString(language) : ''
   const message = city && when ? k('kicked_desc_place').replace('{place}', city).replace('{time}', when) : k('kicked_desc')
   return (

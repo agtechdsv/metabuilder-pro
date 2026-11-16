@@ -6213,6 +6213,8 @@
     "kicked_title": "Your session was ended",
     "kicked_desc_place": "You signed in on another device ({place}) at {time}, and this session was ended.",
     "kicked_desc": "You signed in on another device, and this session was ended.",
+    "left_title": "You left this device",
+    "left_desc": "The session on the other device is still active. Sign in again here whenever you want to switch.",
     "kicked_local": "Your project files are still saved on this computer and will sync again at your next sign-in.",
     "kicked_btn": "Sign in again",
     "mydev_title": "My devices",

@@ -6301,6 +6301,8 @@
     "kicked_title": "Tu sesión fue cerrada",
     "kicked_desc_place": "Iniciaste sesión en otro dispositivo ({place}) el {time}, y esta sesión fue cerrada.",
     "kicked_desc": "Iniciaste sesión en otro dispositivo, y esta sesión fue cerrada.",
+    "left_title": "Saliste de este dispositivo",
+    "left_desc": "La sesión en el otro dispositivo sigue activa. Inicia sesión de nuevo aquí cuando quieras cambiar.",
     "kicked_local": "Los archivos de tu proyecto siguen guardados en este ordenador y vuelven a sincronizarse en el próximo inicio de sesión.",
     "kicked_btn": "Entrar de nuevo",
     "mydev_title": "Mis dispositivos",

@@ -9,7 +9,7 @@ import { isTauri } from '@/utils/tauriUtils'
 import { Zap, Code2 } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 
-export function IDELanding({ user }: { user: any }) {
+export function IDELanding({ user, notice }: { user: any; notice?: React.ReactNode }) {
   const { t } = useI18n()
   const [localVersion, setLocalVersion] = useState<string | null>(null)
 
@@ -122,6 +122,7 @@ export function IDELanding({ user }: { user: any }) {
             <div className="flex flex-col items-center">
               <h3 className="text-xl font-bold mb-6 text-center mt-4">{t('ide_landing.access_account', 'Acesse sua conta')}</h3>
             </div>
+            {notice}
             <LoginForm disableAutoRedirectOnMount={!isTauri()} />
           </div>
         </motion.div>

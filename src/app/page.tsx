@@ -5,8 +5,17 @@ import { MarketingSections } from '@/components/marketing/MarketingSections'
 import { CampaignTopBar } from '@/components/marketing/CampaignBanner'
 import { Footer } from '@/components/layout/Footer'
 import { HomeClientRouter } from '@/components/landing/HomeClientRouter'
+import { KickedNotice } from '@/components/auth/KickedNotice'
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ motivo?: string; cidade?: string; hora?: string }> }) {
+  const params = await searchParams
+  // aviso de "sessão encerrada por outro login": aparece na própria página inicial (do site ou da IDE), sem passar pela tela de login
+  // ("saiu": escolheu "Permanecer lá e sair daqui" na tela de escolha; a sessão do outro dispositivo continua ativa)
+  const kicked = params?.motivo === 'encerrada'
+    ? <KickedNotice city={params.cidade?.slice(0, 80)} time={params.hora?.slice(0, 40)} />
+    : params?.motivo === 'saiu'
+      ? <KickedNotice variant="left" />
+      : null
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -34,6 +43,8 @@ export default async function Home() {
           <div className="absolute bottom-[20%] right-[-10%] w-[50%] h-[50%] bg-purple-500/10 rounded-full blur-[140px]"></div>
         </div>
 
+        {kicked && <div className="relative z-10 w-full max-w-xl px-6 pt-6">{kicked}</div>}
+
         <HeroContent user={user} />
         
         {/* New Marketing Sections */}
@@ -43,5 +54,5 @@ export default async function Home() {
     </div>
   )
 
-  return <HomeClientRouter webContent={webContent} user={user} />
+  return <HomeClientRouter webContent={webContent} user={user} ideNotice={kicked} />
 }

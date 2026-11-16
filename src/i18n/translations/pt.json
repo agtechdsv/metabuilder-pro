@@ -6213,6 +6213,8 @@
     "kicked_title": "Sua sessão foi encerrada",
     "kicked_desc_place": "Você entrou em outro dispositivo ({place}) em {time}, e esta sessão foi encerrada.",
     "kicked_desc": "Você entrou em outro dispositivo, e esta sessão foi encerrada.",
+    "left_title": "Você saiu deste dispositivo",
+    "left_desc": "A sessão no outro dispositivo continua ativa. Entre de novo aqui quando quiser trocar.",
     "kicked_local": "Os arquivos do seu projeto continuam salvos neste computador e voltam a sincronizar no próximo login.",
     "kicked_btn": "Entrar novamente",
     "mydev_title": "Meus dispositivos",

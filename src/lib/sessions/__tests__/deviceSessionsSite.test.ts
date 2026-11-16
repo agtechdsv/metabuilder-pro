@@ -97,6 +97,30 @@ describe('vagas de sessão: ligação no código', () => {
     expect(read('src/components/admin/PlatformAdminClient.tsx')).toContain('<DeviceSessionsAdmin ')
   })
 
+  it('quem foi derrubado volta à página inicial (site ou IDE) com o aviso, e /login continua aceitando o aviso', () => {
+    const home = read('src/app/page.tsx')
+    expect(home).toContain("params?.motivo === 'encerrada'")
+    expect(home).toContain('<KickedNotice')
+    expect(home).toContain('ideNotice={kicked}') // dentro do cartão de entrada da IDE
+    expect(home).toContain('{kicked && ') // e no topo da página do site
+    expect(read('src/components/landing/HomeClientRouter.tsx')).toContain('notice={ideNotice}')
+    expect(read('src/components/landing/IDELanding.tsx')).toContain('{notice}')
+    expect(read('src/app/login/page.tsx')).toContain("motivo === 'encerrada'")
+    // "Permanecer lá e sair daqui" também volta à página inicial, com o aviso próprio (a sessão do outro dispositivo continua)
+    expect(home).toContain("params?.motivo === 'saiu'")
+    expect(home).toContain('variant="left"')
+    const chooser = read('src/components/auth/ActiveSessionChooser.tsx')
+    expect(chooser).toContain('window.location.href = LEFT_URL')
+    expect(chooser).not.toContain("window.location.href = '/login'")
+    for (const l of LANGS) {
+      const d = json(l).device_sessions
+      expect(typeof d.left_title === 'string' && d.left_title.trim().length > 0, `${l}: left_title`).toBe(true)
+      expect(typeof d.left_desc === 'string' && d.left_desc.trim().length > 0, `${l}: left_desc`).toBe(true)
+    }
+    // a página inicial não é área protegida: o aviso aparece sem exigir login
+    expect(isProtectedPath('/')).toBe(false)
+  })
+
   it('só o SuperAdmin muda os ajustes e vê o painel (a ação confere a sessão, não o corpo do pedido)', () => {
     const src = read('src/app/actions/deviceSessions.ts')
     for (const fn of ['adminDeviceOverviewAction', 'adminSaveDeviceSettingsAction', 'adminRevokeDeviceAction']) {

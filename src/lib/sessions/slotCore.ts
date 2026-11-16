@@ -247,12 +247,16 @@ export function safeNext(next: string | null | undefined): string {
 
 export const chooseUrl = (next: string) => `/auth/sessao-ativa?next=${encodeURIComponent(safeNext(next))}`
 
+/** Para onde vai quem escolheu "Permanecer lá e sair daqui": página inicial com o aviso "você saiu deste dispositivo". */
+export const LEFT_URL = '/?motivo=saiu'
+
 export function revokedUrl(by?: SlotOther | null): string {
   const q = new URLSearchParams({ motivo: 'encerrada' })
   const place = placeText(by)
   if (place) q.set('cidade', place)
   if (by?.since) q.set('hora', by.since)
-  return `/login?${q.toString()}`
+  // página inicial (a do site no navegador, a de entrada na IDE), que mostra o aviso; /login continua aceitando o mesmo aviso (links antigos)
+  return `/?${q.toString()}`
 }
 
 /** Códigos de erro que as ações devolvem à tela. */

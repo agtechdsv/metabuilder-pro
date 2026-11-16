@@ -7,9 +7,11 @@ import { IDELanding } from './IDELanding'
 interface HomeClientRouterProps {
   webContent: React.ReactNode
   user: any
+  /** aviso mostrado dentro do cartão de entrada da IDE (ex.: sessão encerrada por outro login) */
+  ideNotice?: React.ReactNode
 }
 
-export function HomeClientRouter({ webContent, user }: HomeClientRouterProps) {
+export function HomeClientRouter({ webContent, user, ideNotice }: HomeClientRouterProps) {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `
@@ -20,7 +22,7 @@ export function HomeClientRouter({ webContent, user }: HomeClientRouterProps) {
         {webContent}
       </div>
       <div className="ide-only-content">
-        <IDELanding user={user} />
+        <IDELanding user={user} notice={ideNotice} />
       </div>
     </>
   )
