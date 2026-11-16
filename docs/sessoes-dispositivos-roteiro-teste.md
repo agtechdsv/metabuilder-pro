@@ -82,9 +82,9 @@ Mude para **Valer** e salve. Recomece U1 (consulta de apoio) e faça logout em t
 | **C7** | U1 entra em **C2** (navegador da M2) | **tela de escolha** (a vaga web está com C1) |
 | **C8** | em I1 e C1, mexa na tela por 1 minuto | continuam funcionando (o batimento mantém as vagas) |
 
-- [x] C1 · [ ] C2 · [x] C3 · [x] C4 · [x] C5 · [ ] C6 · [x] C7 · [x] C8
+- [x] C1 · [ ] C2 · [x] C3 · [x] C4 · [x] C5 · [x] C6 · [x] C7 · [x] C8
 
-*(16/11: C1, C3, C4, C5 e C7 foram feitos com o note e a VM, a IDE da VM e a IDE do note. C2 (E1, outro navegador na mesma máquina) e C6 (Permanecer lá na IDE) não foram feitos. C8: as duas vagas ficaram vivas por mais de 10 minutos, vistas pelo `last_seen_at` no banco.)*
+*(16/11: C1, C3, C4, C5 e C7 foram feitos com o note e a VM, a IDE da VM e a IDE do note. C2 (E1, outro navegador na mesma máquina) não foi feito. C3 e C6 foram revistos depois do deploy do commit d881e3fa: "Permanecer lá e sair daqui" leva à página inicial com o aviso azul "Você saiu deste dispositivo", visto no navegador e na IDE. C8: as duas vagas ficaram vivas por mais de 10 minutos, vistas pelo `last_seen_at` no banco.)*
 
 ## D. A tela de escolha
 Provoque a tela (por exemplo, C7).
@@ -109,9 +109,9 @@ Com a vaga web ocupada por C1, tente entrar com U1 em C2 por cada caminho (faça
 Estado: U1 em C1 (vaga web). Em C2, entre com U1 e escolha **Encerrar a outra sessão e entrar aqui**.
 - [x] **F1.** C2 entra no dashboard.
 - [x] **F2.** Em **C1**, em até ~1 minuto aparece o modal **"Sua sessão foi encerrada"** com cidade e horário do novo login e a frase sobre os arquivos locais.
-- [x] **F3.** Em C1, o botão **Entrar novamente** leva à **página inicial** (do site ou da IDE) com o **aviso amarelo** de sessão encerrada. *(Testado em 16/11 ainda indo ao login com o aviso; a página inicial é do commit d881e3fa e precisa ser revista depois do deploy.)*
+- [x] **F3.** Em C1, o botão **Entrar novamente** leva à **página inicial** (do site ou da IDE) com o **aviso amarelo** de sessão encerrada. *(Revisto depois do deploy do commit d881e3fa: no navegador o aviso amarelo aparece na página inicial, com cidade e hora. Na IDE a página inicial com o aviso amarelo ainda não foi vista.)*
 - [ ] **F4.** Em C1, se você navegar para outra tela **antes** do modal (clique rápido), vai direto para o login com o mesmo aviso.
-- [ ] **F5.** **E-mail de segurança** chega ao e-mail de U1 (assunto "Sua sessão no MetaBuilder PRO foi encerrada"; confira a caixa de spam), com dispositivo, onde e quando. Repita com o idioma do site em **en** e **es** e confira a tradução.
+- [x] **F5.** *(Visto em português: um e-mail por troca, às 14:19, 14:30, 15:31 e 15:38 no horário de Brasília; falta conferir **en** e **es**.)* **E-mail de segurança** chega ao e-mail de U1 (assunto "Sua sessão no MetaBuilder PRO foi encerrada"; confira a caixa de spam), com dispositivo, onde e quando. Repita com o idioma do site em **en** e **es** e confira a tradução.
 - [x] **F6.** **O mais importante:** depois de C1 clicar em "Entrar novamente" (que faz logout), **C2 continua logado** (o logout só vale para o próprio dispositivo).
 - [x] **F7.** Mesma coisa na IDE: I1 derrubada por I2 mostra o modal; os arquivos locais do projeto continuam na pasta e sincronizam no próximo login.
 - [x] **F8.** Consulta de eventos: `takeover` registrado, com os dados da sessão derrubada.
@@ -126,19 +126,19 @@ Estado: U1 em C1 (vaga web). Em C2, entre com U1 e escolha **Encerrar a outra se
 
 ## H. Limite de trocas por dia e código por e-mail (limite 3)
 Faça **três trocas** seguidas entre C1, C2 e E1 (cada uma em "Encerrar a outra e entrar aqui").
-- [ ] **H1.** As três passam, sem código.
-- [ ] **H2.** A **quarta** troca mostra o passo do código ("Confirme por e-mail") e o e-mail chega com o código de 6 dígitos (e-mail mascarado na tela).
-- [ ] **H3.** Código **errado**: mensagem de erro; a vaga **não** muda.
-- [ ] **H4.** Código **certo**: a troca acontece.
-- [ ] **H5.** Peça outro código antes de 1 minuto: "Aguarde um minuto". Depois de 1 minuto: o botão **Enviar outro código** envia e o código antigo deixa de valer.
-- [ ] **H6.** Erre o código **5 vezes**: "Muitas tentativas"; o código é apagado e precisa de um novo.
-- [ ] **H7.** Espere mais de 10 minutos com um código pedido: "O código venceu".
-- [ ] **H8.** No SuperAdmin: "Limite atingido (7 dias)" mostra 1 e U1 aparece destacado em "Quem trocou mais". Eventos `cap_reached` e `code_failed` (após H6) aparecem na tabela.
+- [x] **H1.** As três passam, sem código. *(As três contadas em 16/11: web às 14:19, IDE às 14:30 e web às 15:31, no horário de Brasília.)*
+- [x] **H2.** A **quarta** troca mostra o passo do código ("Confirme por e-mail") e o e-mail chega com o código de 6 dígitos (e-mail mascarado na tela).
+- [x] **H3.** Código **errado**: mensagem de erro; a vaga **não** muda.
+- [x] **H4.** Código **certo**: a troca acontece.
+- [x] **H5.** Peça outro código antes de 1 minuto: "Aguarde um minuto". Depois de 1 minuto: o botão **Enviar outro código** envia e o código antigo deixa de valer.
+- [x] **H6.** *(Feito na IDE: depois de 5 erros veio "Muitas tentativas erradas. Peça um novo código.")* Erre o código **5 vezes**: "Muitas tentativas"; o código é apagado e precisa de um novo.
+- [x] **H7.** *(Feito na IDE: o código pedido às 16:06 foi usado depois das 16:20 e a tela disse "O código venceu. Peça outro.")* Espere mais de 10 minutos com um código pedido: "O código venceu".
+- [x] **H8.** *(Visto às 16:22: Trocas 5, Tentativas em 2ª máquina 13, Limite atingido 3; o LGPD aparece destacado em "Quem trocou mais"; "Limite de trocas atingido" e "Código errado demais" aparecem nos eventos.)* No SuperAdmin: "Limite atingido (7 dias)" mostra 1 e U1 aparece destacado em "Quem trocou mais". Eventos `cap_reached` e `code_failed` (após H6) aparecem na tabela.
 - [ ] **H9.** O contador é de 24 horas móveis: para repetir sem esperar, use a consulta de "recomeçar".
 
 ## I. Logout
 - [x] **I1.** U1 sai em C1. Consulta: a vaga fica com `revoked_reason = logout`. C2 entra **direto**.
-- [x] **I2.** U1 em C1 e C2 (via escolha). Em C2, clique **Permanecer lá e sair daqui**: C2 vai à página inicial com o aviso azul "Você saiu deste dispositivo" e **C1 continua logado e funcionando**. *(Testado em 16/11 quando ia ao login sem aviso; o aviso azul é do commit d881e3fa e precisa ser revisto depois do deploy.)*
+- [x] **I2.** U1 em C1 e C2 (via escolha). Em C2, clique **Permanecer lá e sair daqui**: C2 vai à página inicial com o aviso azul "Você saiu deste dispositivo" e **C1 continua logado e funcionando**. *(Revisto depois do deploy do commit d881e3fa: o aviso azul aparece na página inicial do site e da IDE.)*
 - [ ] **I3.** O menu do usuário > Sair (navegador e IDE) funciona e libera a vaga.
 - [ ] **I4.** Na tela de login com sessão a retomar, o botão **"Não sou eu — entrar como outro usuário"** sai só deste dispositivo.
 - [ ] **I5.** Sair numa tela com `passkey_authenticated` ativo (login por passkey) também limpa tudo.
@@ -212,15 +212,18 @@ Em /client/dashboard > Segurança (e no perfil, aba Segurança):
 ## Anotações da rodada de 16/11/2026
 **Como foi feita:** conta grátis LGPD (não é a U1 assinante do roteiro) no Chrome do note (M1), no Chrome anônimo da VM (M2) e na IDE da M1 e da M2. Modos Desligado, Observar e Valer, com os ajustes nos valores padrão (15, 3 e 60).
 
-**Passou:** A1 a A4, B1 a B5, C1, C3, C4, C5, C7, C8, D1, D4, F1, F2, F3, F6, F7, F8, I1, I2, J1, J3, J4 (parcial) e K2.
+**Passou:** A1 a A4, B1 a B5, C1, C3 a C8, D1, D4, F1, F2, F3, F5 (em português), F6, F7, F8, H1 a H8, I1, I2, J1, J3, J4 (parcial) e K2. A segunda rodada do dia (depois do deploy dos avisos novos e com a quarta troca) confirmou o limite de 3 trocas por dia: as 3 primeiras passam, a quarta mostra o passo do código por e-mail, o código errado é recusado, o pedido de outro código antes de 1 minuto é barrado, e o código antigo deixa de valer quando sai um novo.
 
 **Pendências, por ordem de utilidade:**
-1. **E** (caminhos de login: Google, biometria, MFA, convite), **G** (ociosidade, com 2 min nos ajustes) e **H** (limite de 3 trocas e código por e-mail). Em 16/11 houve 2 trocas (uma na web, uma na IDE); falta uma para atingir o limite.
-2. Itens soltos dos blocos já iniciados: C2 e C6, D2, D3, D5 a D7, F4, F5 (e-mail de segurança), F9, I3 a I5, J2, J5 e J6, K1 e K3 a K7.
-3. **L a Q** (convidados, áreas dentro e fora da regra, IDE, burlas, emergência, regressões) e o bloco **R**.
+1. **H9** (repetir o limite sem esperar 24 horas, com a consulta de "recomeçar"). O restante do bloco H está feito, inclusive na IDE: o código por e-mail também vale para a vaga da IDE, e H6 a H8 foram vistos nela.
+2. **E** (caminhos de login: Google, biometria, MFA, convite) e **G** (ociosidade). Sobre o G: o banco mostra um `idle_release` às 18:27 UTC (uma sessão web parada por cerca de 27 minutos, com o padrão de 15), seguido de novo login direto; se isso foi proposital durante o intervalo, G2 e G3 passaram. Falta confirmar e fazer o G5.
+3. Itens soltos dos blocos já iniciados: C2, D2, D3, D5 a D7, F4, F5 em **en** e **es**, F9, o aviso amarelo de sessão encerrada na **IDE**, I3 a I5, J2, J5 e J6, K1 e K3 a K7.
+4. **L a Q** (convidados, áreas dentro e fora da regra, IDE, burlas, emergência, regressões) e o bloco **R**.
 
 **Observações do teste:**
 - A aba **Segurança** do Painel de Controle só aparece para assinante (conta grátis é "convidado" e vê só Downloads, MetaBuilders e MetaVoice); **Meus dispositivos** da conta grátis está em Meu Perfil > Segurança.
 - No modo **Observar** a segunda máquina não ganha linha própria: fica só o evento `conflict` (a vaga é uma por tipo). O painel do SuperAdmin e o Meus dispositivos mostram a única sessão ocupada.
-- **Mudanças feitas a partir do teste (commits do dia 16/11):** o item **Workspace** passou a aparecer no avatar da conta grátis; o aviso de Meus dispositivos muda com o modo; o login limpa a sessão local também no erro 429 (um cookie ruim na VM causou loop de renovação de token); quem é derrubado, e quem escolhe "Permanecer lá e sair daqui", volta à **página inicial** (site ou IDE) com aviso amarelo ou azul. Estes dois últimos avisos (F3, C3, C6 e I2) precisam ser revistos depois do deploy.
+- **Mudanças feitas a partir do teste (commits do dia 16/11):** o item **Workspace** passou a aparecer no avatar da conta grátis; o aviso de Meus dispositivos muda com o modo; o login limpa a sessão local também no erro 429 (um cookie ruim na VM causou loop de renovação de token); quem é derrubado, e quem escolhe "Permanecer lá e sair daqui", volta à **página inicial** (site ou IDE) com aviso amarelo ou azul. Estes dois últimos avisos foram vistos em produção depois do deploy (amarelo no navegador, azul no navegador e na IDE).
+- **Contador de trocas:** só **Encerrar a outra sessão e entrar aqui** conta (evento `takeover`); "Permanecer lá e sair daqui" não conta. A janela é de 24 horas móveis, por usuário, somando web e IDE. As trocas que passaram pelo código por e-mail também entram na conta.
+- Ao fim da rodada, o modo continua **Valer** e os ajustes estão em 15, 3 e 60 (padrão). Lembre de voltar para **Observar** até a revisão dos Termos e da Privacidade.
 - Duas máquinas parecidas (mesmo navegador, mesma cidade) aparecem iguais na tela de escolha ("Chrome · Windows, Belo Horizonte"); só o horário as distingue. Se incomodar, dá para acrescentar o nome do computador.
