@@ -1,6 +1,6 @@
 # Roteiro de teste: vagas de sessão (1 IDE + 1 navegador por usuário)
 
-Desenho e regras: `docs/sessoes-dispositivos-desenho.md`. **Nada disto foi testado em navegador ou IDE reais**: o que foi verificado até aqui é `tsc`, a suíte de testes, o build e o SQL num PostgreSQL de verdade (54 comportamentos). Marque cada item com `[x]` ao passar e anote o que fugir do esperado.
+Desenho e regras: `docs/sessoes-dispositivos-desenho.md`. Em 16/11/2026 foi feita a primeira rodada em navegador e IDE reais (blocos A e B, boa parte de C, F e I, e itens de D, J e K), com a conta grátis LGPD, o note e a VM; as notas estão no fim do arquivo. Antes disso, só `tsc`, a suíte de testes, o build e o SQL num PostgreSQL de verdade (54 comportamentos) haviam verificado o desenho. Marque cada item com `[x]` ao passar e anote o que fugir do esperado.
 
 ## 0. Preparação
 
@@ -20,9 +20,9 @@ Desenho e regras: `docs/sessoes-dispositivos-desenho.md`. **Nada disto foi testa
 Use janelas anônimas (ou perfis separados) quando precisar de "outro navegador" na mesma máquina.
 
 ### Antes de ligar
-- [ ] Rodei `scripts/sessoes-dispositivos.sql` no SQL Editor (a última linha do resultado não pode ter erro; pode rodar de novo, é idempotente).
-- [ ] Fiz o deploy do site com esta versão.
-- [ ] Em **/admin/platform > Sistema > Sessões e dispositivos** a tela abre, mostra o modo **Desligado** e os valores 15, 3 e 60.
+- [x] Rodei `scripts/sessoes-dispositivos.sql` no SQL Editor (a última linha do resultado não pode ter erro; pode rodar de novo, é idempotente).
+- [x] Fiz o deploy do site com esta versão.
+- [x] Em **/admin/platform > Sistema > Sessões e dispositivos** a tela abre, mostra o modo **Desligado** e os valores 15, 3 e 60.
 - [ ] (Opcional) criei `DEVICE_SLOT_SECRET` na Vercel (qualquer texto longo e aleatório). Sem ela, o site usa a chave de serviço do Supabase para assinar o cookie.
 
 ### Ajustes provisórios para testar mais rápido
@@ -55,18 +55,18 @@ delete from public.mb_slot_challenges  where user_id = (select id from auth.user
 ---
 
 ## A. Modo Desligado (nada pode mudar)
-- [ ] **A1.** Com o modo **Desligado**, entre com U1 em C1 e em C2 ao mesmo tempo. *Esperado:* os dois entram direto, como antes.
-- [ ] **A2.** Consulta das vagas. *Esperado:* **nenhuma linha** nova (no modo Desligado nada é registrado).
-- [ ] **A3.** Em C1 abra /client/dashboard > Segurança. *Esperado:* aparece **Meus dispositivos** com o aviso "A regra de uma sessão por tipo ainda não está ativa" e lista vazia.
-- [ ] **A4.** Home, /features/tour, /parceiros, /login, /terms, /privacy. *Esperado:* normais. Termos e Privacidade mostram o **item 5** (pt, en e es: troque o idioma).
+- [x] **A1.** Com o modo **Desligado**, entre com U1 em C1 e em C2 ao mesmo tempo. *Esperado:* os dois entram direto, como antes.
+- [x] **A2.** Consulta das vagas. *Esperado:* **nenhuma linha** nova (no modo Desligado nada é registrado).
+- [x] **A3.** Em C1 abra /client/dashboard > Segurança (conta grátis: em **Meu Perfil > Segurança**). *Esperado:* aparece **Meus dispositivos** com o aviso "O registro de sessões está desligado na plataforma..." e lista vazia. *(O texto do aviso mudou em 16/11: Desligado explica a lista vazia; Observar diz que as sessões só são registradas.)*
+- [x] **A4.** Home, /features/tour, /parceiros, /login, /terms, /privacy. *Esperado:* normais. Termos e Privacidade mostram o **item 5** (pt, en e es: troque o idioma).
 
 ## B. Modo Observar (registra, não bloqueia)
 Mude para **Observar** e salve. Faça logout de tudo e entre de novo (para criar sessões novas).
-- [ ] **B1.** U1 entra em C1. *Esperado:* entra; a consulta mostra 1 vaga `web` ativa com cidade (em produção) e "Chrome · Windows".
-- [ ] **B2.** U1 entra em C2 (outra máquina). *Esperado:* **entra sem tela de escolha**; nada é derrubado.
-- [ ] **B3.** Eventos de U1. *Esperado:* um evento `conflict` (e só um, mesmo que você atualize a página várias vezes).
-- [ ] **B4.** Na tela do SuperAdmin, "Tentativas em 2ª máquina (7 dias)" mostra 1 e U1 aparece em "Quem trocou mais".
-- [ ] **B5.** Em C2 clique em **Encerrar a outra e entrar aqui** não existe (não há tela). *Esperado:* ninguém é encerrado no modo Observar.
+- [x] **B1.** U1 entra em C1. *Esperado:* entra; a consulta mostra 1 vaga `web` ativa com cidade (em produção) e "Chrome · Windows".
+- [x] **B2.** U1 entra em C2 (outra máquina). *Esperado:* **entra sem tela de escolha**; nada é derrubado.
+- [x] **B3.** Eventos de U1. *Esperado:* um evento `conflict` (e só um, mesmo que você atualize a página várias vezes).
+- [x] **B4.** Na tela do SuperAdmin, "Tentativas em 2ª máquina (7 dias)" mostra 1 e U1 aparece em "Quem trocou mais".
+- [x] **B5.** Em C2 clique em **Encerrar a outra e entrar aqui** não existe (não há tela). *Esperado:* ninguém é encerrado no modo Observar.
 
 ## C. Modo Valer: ocupação básica
 Mude para **Valer** e salve. Recomece U1 (consulta de apoio) e faça logout em todo lugar.
@@ -75,21 +75,23 @@ Mude para **Valer** e salve. Recomece U1 (consulta de apoio) e faça logout em t
 |---|---|---|
 | **C1** | U1 entra em **C1** | entra direto |
 | **C2** | U1 entra em **E1** (outro navegador, mesma máquina) | **tela de escolha** (é outro dispositivo) |
-| **C3** | em E1, escolha **Permanecer lá e sair daqui** | E1 volta ao login; **C1 continua logado** |
+| **C3** | em E1, escolha **Permanecer lá e sair daqui** | E1 volta à **página inicial** com o aviso azul "Você saiu deste dispositivo" (antes ia ao login, sem aviso); **C1 continua logado** |
 | **C4** | U1 entra em **I1** (IDE, mesma máquina de C1) | entra direto: a IDE tem vaga própria |
 | **C5** | U1 entra em **I2** (IDE na M2) | **tela de escolha**, falando em IDE |
-| **C6** | em I2, escolha **Permanecer lá** | I2 volta ao login; I1 continua logada |
+| **C6** | em I2, escolha **Permanecer lá** | I2 volta à página inicial da IDE com o aviso azul "Você saiu deste dispositivo"; I1 continua logada |
 | **C7** | U1 entra em **C2** (navegador da M2) | **tela de escolha** (a vaga web está com C1) |
 | **C8** | em I1 e C1, mexa na tela por 1 minuto | continuam funcionando (o batimento mantém as vagas) |
 
-- [ ] C1 · [ ] C2 · [ ] C3 · [ ] C4 · [ ] C5 · [ ] C6 · [ ] C7 · [ ] C8
+- [x] C1 · [ ] C2 · [x] C3 · [x] C4 · [x] C5 · [ ] C6 · [x] C7 · [x] C8
+
+*(16/11: C1, C3, C4, C5 e C7 foram feitos com o note e a VM, a IDE da VM e a IDE do note. C2 (E1, outro navegador na mesma máquina) e C6 (Permanecer lá na IDE) não foram feitos. C8: as duas vagas ficaram vivas por mais de 10 minutos, vistas pelo `last_seen_at` no banco.)*
 
 ## D. A tela de escolha
 Provoque a tela (por exemplo, C7).
-- [ ] **D1.** Mostra **dispositivo** (navegador e sistema), **onde** (cidade e região; fora da Vercel aparece "Local desconhecido"), **conectado desde** e **última atividade**, no seu idioma.
+- [x] **D1.** *(visto em português, no navegador e na IDE)* Mostra **dispositivo** (navegador e sistema), **onde** (cidade e região; fora da Vercel aparece "Local desconhecido"), **conectado desde** e **última atividade**, no seu idioma.
 - [ ] **D2.** Digitar a URL de /auth/sessao-ativa **sem estar logado**: vai para o login (a tela não revela nada antes de autenticar).
 - [ ] **D3.** Trocar o idioma (pt, en, es): todos os textos acompanham.
-- [ ] **D4.** Tema claro e escuro: legível.
+- [x] **D4.** Tema claro e escuro: legível. *(visto nos dois temas)*
 - [ ] **D5.** Atualizar a página (F5) na tela de escolha: continua nela, sem erro.
 - [ ] **D6.** Tentar abrir /client/dashboard à mão estando na escolha: volta para a tela de escolha.
 - [ ] **D7.** `next` seguro: abra `/auth/sessao-ativa?next=https://evil.com` já autenticado: depois de escolher você vai para o **dashboard**, nunca para o outro site.
@@ -105,14 +107,14 @@ Com a vaga web ocupada por C1, tente entrar com U1 em C2 por cada caminho (faça
 
 ## F. Encerrar a outra sessão (troca) e o aviso a quem foi derrubado
 Estado: U1 em C1 (vaga web). Em C2, entre com U1 e escolha **Encerrar a outra sessão e entrar aqui**.
-- [ ] **F1.** C2 entra no dashboard.
-- [ ] **F2.** Em **C1**, em até ~1 minuto aparece o modal **"Sua sessão foi encerrada"** com cidade e horário do novo login e a frase sobre os arquivos locais.
-- [ ] **F3.** Em C1, o botão **Entrar novamente** leva ao login com o **aviso amarelo** de sessão encerrada.
+- [x] **F1.** C2 entra no dashboard.
+- [x] **F2.** Em **C1**, em até ~1 minuto aparece o modal **"Sua sessão foi encerrada"** com cidade e horário do novo login e a frase sobre os arquivos locais.
+- [x] **F3.** Em C1, o botão **Entrar novamente** leva à **página inicial** (do site ou da IDE) com o **aviso amarelo** de sessão encerrada. *(Testado em 16/11 ainda indo ao login com o aviso; a página inicial é do commit d881e3fa e precisa ser revista depois do deploy.)*
 - [ ] **F4.** Em C1, se você navegar para outra tela **antes** do modal (clique rápido), vai direto para o login com o mesmo aviso.
 - [ ] **F5.** **E-mail de segurança** chega ao e-mail de U1 (assunto "Sua sessão no MetaBuilder PRO foi encerrada"; confira a caixa de spam), com dispositivo, onde e quando. Repita com o idioma do site em **en** e **es** e confira a tradução.
-- [ ] **F6.** **O mais importante:** depois de C1 clicar em "Entrar novamente" (que faz logout), **C2 continua logado** (o logout só vale para o próprio dispositivo).
-- [ ] **F7.** Mesma coisa na IDE: I1 derrubada por I2 mostra o modal; os arquivos locais do projeto continuam na pasta e sincronizam no próximo login.
-- [ ] **F8.** Consulta de eventos: `takeover` registrado, com os dados da sessão derrubada.
+- [x] **F6.** **O mais importante:** depois de C1 clicar em "Entrar novamente" (que faz logout), **C2 continua logado** (o logout só vale para o próprio dispositivo).
+- [x] **F7.** Mesma coisa na IDE: I1 derrubada por I2 mostra o modal; os arquivos locais do projeto continuam na pasta e sincronizam no próximo login.
+- [x] **F8.** Consulta de eventos: `takeover` registrado, com os dados da sessão derrubada.
 - [ ] **F9.** Cerca de 15 min depois, a consulta de `auth.sessions` não mostra mais a sessão derrubada (ou rode `select public.mb_purge_revoked_auth_sessions(1)` pelo SQL Editor depois de 1 min para ver o efeito).
 
 ## G. Ociosidade (com 2 min nos ajustes)
@@ -135,24 +137,24 @@ Faça **três trocas** seguidas entre C1, C2 e E1 (cada uma em "Encerrar a outra
 - [ ] **H9.** O contador é de 24 horas móveis: para repetir sem esperar, use a consulta de "recomeçar".
 
 ## I. Logout
-- [ ] **I1.** U1 sai em C1. Consulta: a vaga fica com `revoked_reason = logout`. C2 entra **direto**.
-- [ ] **I2.** U1 em C1 e C2 (via escolha). Em C2, clique **Permanecer lá e sair daqui**: C2 vai ao login e **C1 continua logado e funcionando**.
+- [x] **I1.** U1 sai em C1. Consulta: a vaga fica com `revoked_reason = logout`. C2 entra **direto**.
+- [x] **I2.** U1 em C1 e C2 (via escolha). Em C2, clique **Permanecer lá e sair daqui**: C2 vai à página inicial com o aviso azul "Você saiu deste dispositivo" e **C1 continua logado e funcionando**. *(Testado em 16/11 quando ia ao login sem aviso; o aviso azul é do commit d881e3fa e precisa ser revisto depois do deploy.)*
 - [ ] **I3.** O menu do usuário > Sair (navegador e IDE) funciona e libera a vaga.
 - [ ] **I4.** Na tela de login com sessão a retomar, o botão **"Não sou eu — entrar como outro usuário"** sai só deste dispositivo.
 - [ ] **I5.** Sair numa tela com `passkey_authenticated` ativo (login por passkey) também limpa tudo.
 
 ## J. Meus dispositivos (usuário comum)
 Em /client/dashboard > Segurança (e no perfil, aba Segurança):
-- [ ] **J1.** Lista as sessões ativas (tipo, dispositivo, cidade, desde, última atividade) com o selo **Este dispositivo** na atual.
+- [x] **J1.** Lista as sessões ativas (tipo, dispositivo, cidade, desde, última atividade) com o selo **Este dispositivo** na atual.
 - [ ] **J2.** Na sessão de outro dispositivo, **Encerrar** pede confirmação (modal do app, também na IDE) e encerra; o outro dispositivo cai em até ~1 minuto com o aviso.
-- [ ] **J3.** Na sessão atual **não** há botão de encerrar.
-- [ ] **J4.** **Histórico recente** (recolhido) mostra as encerradas com o motivo (substituída, inativa, saiu, encerrada por você, pelo administrador, novo login no mesmo dispositivo).
+- [x] **J3.** Na sessão atual **não** há botão de encerrar.
+- [x] **J4.** *(visto só o motivo "Saiu"; os outros motivos ainda não)* **Histórico recente** (recolhido) mostra as encerradas com o motivo (substituída, inativa, saiu, encerrada por você, pelo administrador, novo login no mesmo dispositivo).
 - [ ] **J5.** Botão de atualizar funciona; sem sessões, mostra "Nenhuma sessão ativa registrada".
 - [ ] **J6.** Idiomas pt, en e es.
 
 ## K. SuperAdmin
 - [ ] **K1.** SA entra em C1, C2 e I1 ao mesmo tempo: **sem escolha** e sem derrubar (isento). Consulta: nenhuma vaga de SA.
-- [ ] **K2.** A tela mostra os totais, "Quem trocou mais", "Sessões ativas agora" (com e-mail) e "Eventos recentes".
+- [x] **K2.** A tela mostra os totais, "Quem trocou mais", "Sessões ativas agora" (com e-mail) e "Eventos recentes".
 - [ ] **K3.** **Encerrar** uma sessão de U1 pela tela: pede confirmação; U1 cai em até ~1 minuto; motivo "Encerrada pelo administrador" no histórico de U1.
 - [ ] **K4.** Valores inválidos (0, 99999, vazio) são recusados com a mensagem de valores fora do permitido; os válidos salvam e a tela recarrega com eles.
 - [ ] **K5.** Ao trocar para **Valer**, aparece a pergunta sobre Termos e Privacidade. Cancelar não salva.
@@ -204,3 +206,21 @@ Em /client/dashboard > Segurança (e no perfil, aba Segurança):
 - [ ] Voltei os ajustes para **ociosidade 15**, **trocas 3** e **conferência 60**.
 - [ ] Deixei o modo no valor que quero para o uso real (sugestão: **Observar** por alguns dias; **Valer** depois da revisão dos Termos e da Privacidade com o advogado).
 - [ ] Anotei os desvios e me passou o que falhou (com a tela e, se possível, a consulta das vagas e dos eventos).
+
+---
+
+## Anotações da rodada de 16/11/2026
+**Como foi feita:** conta grátis LGPD (não é a U1 assinante do roteiro) no Chrome do note (M1), no Chrome anônimo da VM (M2) e na IDE da M1 e da M2. Modos Desligado, Observar e Valer, com os ajustes nos valores padrão (15, 3 e 60).
+
+**Passou:** A1 a A4, B1 a B5, C1, C3, C4, C5, C7, C8, D1, D4, F1, F2, F3, F6, F7, F8, I1, I2, J1, J3, J4 (parcial) e K2.
+
+**Pendências, por ordem de utilidade:**
+1. **E** (caminhos de login: Google, biometria, MFA, convite), **G** (ociosidade, com 2 min nos ajustes) e **H** (limite de 3 trocas e código por e-mail). Em 16/11 houve 2 trocas (uma na web, uma na IDE); falta uma para atingir o limite.
+2. Itens soltos dos blocos já iniciados: C2 e C6, D2, D3, D5 a D7, F4, F5 (e-mail de segurança), F9, I3 a I5, J2, J5 e J6, K1 e K3 a K7.
+3. **L a Q** (convidados, áreas dentro e fora da regra, IDE, burlas, emergência, regressões) e o bloco **R**.
+
+**Observações do teste:**
+- A aba **Segurança** do Painel de Controle só aparece para assinante (conta grátis é "convidado" e vê só Downloads, MetaBuilders e MetaVoice); **Meus dispositivos** da conta grátis está em Meu Perfil > Segurança.
+- No modo **Observar** a segunda máquina não ganha linha própria: fica só o evento `conflict` (a vaga é uma por tipo). O painel do SuperAdmin e o Meus dispositivos mostram a única sessão ocupada.
+- **Mudanças feitas a partir do teste (commits do dia 16/11):** o item **Workspace** passou a aparecer no avatar da conta grátis; o aviso de Meus dispositivos muda com o modo; o login limpa a sessão local também no erro 429 (um cookie ruim na VM causou loop de renovação de token); quem é derrubado, e quem escolhe "Permanecer lá e sair daqui", volta à **página inicial** (site ou IDE) com aviso amarelo ou azul. Estes dois últimos avisos (F3, C3, C6 e I2) precisam ser revistos depois do deploy.
+- Duas máquinas parecidas (mesmo navegador, mesma cidade) aparecem iguais na tela de escolha ("Chrome · Windows, Belo Horizonte"); só o horário as distingue. Se incomodar, dá para acrescentar o nome do computador.
