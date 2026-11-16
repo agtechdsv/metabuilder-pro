@@ -14,6 +14,7 @@ import { useI18n } from '@/i18n/I18nContext'
 import { startAuthentication } from '@simplewebauthn/browser'
 import { isTauri, openExternalUrl } from '@/utils/tauriUtils'
 import { onOpenUrl } from '@tauri-apps/plugin-deep-link'
+import { isStaleRefreshError } from '@/lib/auth/staleToken'
 interface LoginFormProps {
   error?: string
   className?: string
@@ -204,10 +205,7 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
     // Isso evita que o usuário veja "Erro ao processar autenticação" quando a sessão
     // simplesmente expirou ou foi invalidada por race condition entre abas.
     supabase.auth.getSession().then(async ({ data: { session }, error }: any) => {
-      const isInvalidRefreshToken =
-        error?.message?.toLowerCase().includes('invalid refresh token') ||
-        error?.message?.toLowerCase().includes('refresh token not found') ||
-        error?.status === 400
+      const isInvalidRefreshToken = isStaleRefreshError(error)
       if (isInvalidRefreshToken && !session) {
         try {
           // Limpa os cookies podres localmente sem chamar o servidor
@@ -224,11 +222,7 @@ export function LoginForm({ error: serverError, className, disableAutoRedirectOn
         // Se o token de refresh é inválido/expirado, limpa a sessão local silenciosamente
         // sem mostrar nenhum erro — o formulário já está visível e pronto para novo login
         if (userError && !user) {
-          const isStaleToken =
-            userError?.message?.toLowerCase().includes('invalid refresh token') ||
-            userError?.message?.toLowerCase().includes('refresh token not found') ||
-            userError?.status === 400
-          if (isStaleToken) {
+          if (isStaleRefreshError(userError)) {
             supabase.auth.signOut({ scope: 'local' }).catch(() => {})
             return
           }
