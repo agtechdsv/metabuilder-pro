@@ -56,7 +56,7 @@ export function DeviceSessionsPanel() {
       </div>
 
       {mode !== 'enforce' && (
-        <p className="mb-4 rounded-xl bg-neutral-100 px-4 py-3 text-xs text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">{k('mydev_off_note')}</p>
+        <p className="mb-4 rounded-xl bg-neutral-100 px-4 py-3 text-xs text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">{k(mode === 'off' ? 'mydev_off_note' : 'mydev_observe_note')}</p>
       )}
 
       {loading && !devices ? (

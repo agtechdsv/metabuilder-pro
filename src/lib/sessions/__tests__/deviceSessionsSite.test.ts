@@ -121,11 +121,22 @@ describe('vagas de sessão: textos (pt, en e es)', () => {
     for (const f of files) for (const m of read(f).matchAll(/\bk\('([a-z0-9_]+)'\)/g)) keys.add(m[1])
     // chaves montadas dinamicamente
     for (const r of ['replaced', 'same_device', 'idle', 'logout', 'user', 'admin']) keys.add(`mydev_reason_${r}`)
+    keys.add('mydev_off_note'); keys.add('mydev_observe_note') // escolhidas pelo modo (ternário), por isso não saem da busca acima
     for (const m of read('src/components/auth/ActiveSessionChooser.tsx').matchAll(/'(err_[a-z_]+)'/g)) keys.add(m[1])
     expect(keys.size).toBeGreaterThan(30)
     for (const l of LANGS) for (const key of keys) {
       const v = get(json(l), `device_sessions.${key}`)
       expect(typeof v === 'string' && v.trim().length > 0, `${l}: device_sessions.${key}`).toBe(true)
+    }
+  })
+
+  it('o aviso de "Meus dispositivos" muda com o modo: desligado explica a lista vazia, observar diz que só registra', () => {
+    const panel = read('src/components/workspace/DeviceSessionsPanel.tsx')
+    expect(panel).toContain("mode === 'off' ? 'mydev_off_note' : 'mydev_observe_note'")
+    for (const l of LANGS) {
+      const d = json(l).device_sessions
+      expect(d.mydev_off_note, l).not.toBe(d.mydev_observe_note)
+      expect(d.mydev_off_note, l).not.toMatch(/Você já vê|already see|ya puedes ver/i)
     }
   })
 
