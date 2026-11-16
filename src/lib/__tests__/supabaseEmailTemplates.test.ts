@@ -77,9 +77,13 @@ describe('modelos de e-mail do Supabase em 3 idiomas', () => {
     const subjects = read(path.join(dir, 'assuntos.md'))
     for (const name of NAMES) expect(subjects, name).toContain(`## ${name}`)
     const block = subjects.split('```')[1].trim()
-    expect(render(block, { lang: 'en' })).toBe('Confirm your MetaBuilder PRO sign-up')
-    expect(render(block, null)).toBe('Confirme o seu cadastro no MetaBuilder PRO')
-    expect(render(block, { lang: 'es' })).toBe('Confirme su registro en MetaBuilder PRO')
+    expect(render(block, { lang: 'en' })).toBe('MetaBuilder PRO: Confirm your sign-up')
+    expect(render(block, null)).toBe('MetaBuilder PRO: Confirme o seu cadastro')
+    expect(render(block, { lang: 'es' })).toBe('MetaBuilder PRO: Confirme su registro')
+    // o Supabase recusa assunto com mais de 255 caracteres ("Too big"): todos os blocos têm de caber
+    const blocks = subjects.split('```').filter((_, i) => i % 2 === 1).map(b => b.trim())
+    expect(blocks.length).toBe(NAMES.length)
+    for (const b of blocks) expect(b.length, b.slice(0, 60)).toBeLessThanOrEqual(255)
     for (const name of NAMES) {
       const tpl = read(path.join(dir, `${name}.html`))
       expect(tpl, name).toContain('suporte@metabuilderpro.com')

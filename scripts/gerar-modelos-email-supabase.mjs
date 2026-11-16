@@ -12,6 +12,9 @@ const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace
 const outDir = path.join(root, 'docs', 'emails-supabase')
 
 const SUPPORT = 'suporte@metabuilderpro.com'
+/** Início de todo assunto (uma vez só, fora do texto nos 3 idiomas, para caber nos 255 caracteres que o Supabase aceita no campo Subject). */
+const BRAND = 'MetaBuilder PRO: '
+const SUBJECT_MAX = 255
 // Mesmo número de src/lib/contact.ts (um teste confere que os dois batem). Só os modelos com `whatsapp: true` mostram o contato.
 const WHATSAPP = '5531989560146'
 const WHATSAPP_SHOWN = '(31) 98956-0146'
@@ -103,7 +106,7 @@ function build({ title, intro, boxLabel, boxText, button, note, why, code, whats
 const TEMPLATES = {
   'confirm-signup': {
     whatsapp: true,
-    subject: { pt: 'Confirme o seu cadastro no MetaBuilder PRO', en: 'Confirm your MetaBuilder PRO sign-up', es: 'Confirme su registro en MetaBuilder PRO' },
+    subject: { pt: 'Confirme o seu cadastro', en: 'Confirm your sign-up', es: 'Confirme su registro' },
     title: { pt: 'Confirme o seu e-mail', en: 'Confirm your e-mail', es: 'Confirme su e-mail' },
     intro: { pt: 'Olá! Falta só um passo para ativar a sua conta no <strong>MetaBuilder PRO</strong>. Confirme que este e-mail é seu clicando no botão abaixo.', en: 'Hello! Just one more step to activate your <strong>MetaBuilder PRO</strong> account. Confirm this e-mail is yours by clicking the button below.', es: '¡Hola! Falta solo un paso para activar su cuenta en <strong>MetaBuilder PRO</strong>. Confirme que este e-mail es suyo haciendo clic en el botón de abajo.' },
     boxLabel: { pt: 'Último passo', en: 'Last step', es: 'Último paso' },
@@ -114,7 +117,7 @@ const TEMPLATES = {
   },
   'invite-user': {
     whatsapp: true,
-    subject: { pt: 'Você foi convidado para o MetaBuilder PRO', en: 'You have been invited to MetaBuilder PRO', es: 'Lo invitaron a MetaBuilder PRO' },
+    subject: { pt: 'Você foi convidado', en: 'You have been invited', es: 'Lo invitaron' },
     title: { pt: 'Você foi convidado!', en: 'You have been invited!', es: '¡Lo invitaron!' },
     intro: { pt: 'Olá! Preparamos tudo para você. Alguém acabou de te dar acesso à equipe e aos projetos no <strong>MetaBuilder PRO</strong>.', en: 'Hello! We have everything ready for you. Someone just gave you access to the team and projects on <strong>MetaBuilder PRO</strong>.', es: '¡Hola! Preparamos todo para usted. Alguien acaba de darle acceso al equipo y a los proyectos en <strong>MetaBuilder PRO</strong>.' },
     boxLabel: { pt: 'Acesso garantido', en: 'Access granted', es: 'Acceso garantizado' },
@@ -124,7 +127,7 @@ const TEMPLATES = {
     why: { pt: 'Você recebeu este e-mail devido ao seu convite na plataforma.', en: 'You received this e-mail because of your invitation to the platform.', es: 'Recibió este e-mail por su invitación a la plataforma.' },
   },
   'magic-link': {
-    subject: { pt: 'Seu link de acesso ao MetaBuilder PRO', en: 'Your MetaBuilder PRO sign-in link', es: 'Su enlace de acceso a MetaBuilder PRO' },
+    subject: { pt: 'Seu link de acesso', en: 'Your sign-in link', es: 'Su enlace de acceso' },
     title: { pt: 'Entre no MetaBuilder PRO', en: 'Sign in to MetaBuilder PRO', es: 'Ingrese a MetaBuilder PRO' },
     intro: { pt: 'Use o botão abaixo para entrar na sua conta sem digitar a senha. O link vale uma única vez.', en: 'Use the button below to sign in to your account without typing your password. The link works only once.', es: 'Use el botón de abajo para ingresar a su cuenta sin escribir la contraseña. El enlace vale una sola vez.' },
     boxLabel: { pt: 'Acesso seguro', en: 'Secure access', es: 'Acceso seguro' },
@@ -134,7 +137,7 @@ const TEMPLATES = {
     why: { pt: 'Você recebeu este e-mail devido a um pedido de acesso na plataforma.', en: 'You received this e-mail because of an access request on the platform.', es: 'Recibió este e-mail por una solicitud de acceso en la plataforma.' },
   },
   'change-email': {
-    subject: { pt: 'Confirme a troca do seu e-mail no MetaBuilder PRO', en: 'Confirm your MetaBuilder PRO e-mail change', es: 'Confirme el cambio de su e-mail en MetaBuilder PRO' },
+    subject: { pt: 'Confirme a troca de e-mail', en: 'Confirm your e-mail change', es: 'Confirme el cambio de e-mail' },
     title: { pt: 'Confirmar o novo e-mail', en: 'Confirm your new e-mail', es: 'Confirme su nuevo e-mail' },
     intro: { pt: 'Recebemos um pedido para trocar o e-mail da sua conta de <strong>{{ .Email }}</strong> para <strong>{{ .NewEmail }}</strong>. Confirme clicando no botão abaixo.', en: 'We received a request to change your account e-mail from <strong>{{ .Email }}</strong> to <strong>{{ .NewEmail }}</strong>. Confirm by clicking the button below.', es: 'Recibimos una solicitud para cambiar el e-mail de su cuenta de <strong>{{ .Email }}</strong> a <strong>{{ .NewEmail }}</strong>. Confirme haciendo clic en el botón de abajo.' },
     boxLabel: { pt: 'Segurança da conta', en: 'Account security', es: 'Seguridad de la cuenta' },
@@ -144,7 +147,7 @@ const TEMPLATES = {
     why: { pt: 'Você recebeu este e-mail devido a um pedido de troca de e-mail na plataforma.', en: 'You received this e-mail because of an e-mail change request on the platform.', es: 'Recibió este e-mail por una solicitud de cambio de e-mail en la plataforma.' },
   },
   'reset-password': {
-    subject: { pt: 'Redefina a sua senha do MetaBuilder PRO', en: 'Reset your MetaBuilder PRO password', es: 'Restablezca su contraseña de MetaBuilder PRO' },
+    subject: { pt: 'Redefina a sua senha', en: 'Reset your password', es: 'Restablezca su contraseña' },
     title: { pt: 'Redefinir a sua senha', en: 'Reset your password', es: 'Restablecer su contraseña' },
     intro: { pt: 'Olá! Recebemos uma solicitação para redefinir a senha da sua conta no <strong>MetaBuilder PRO</strong>. O link vale por 1 hora.', en: 'Hello! We received a request to reset the password of your <strong>MetaBuilder PRO</strong> account. The link is valid for 1 hour.', es: '¡Hola! Recibimos una solicitud para restablecer la contraseña de su cuenta en <strong>MetaBuilder PRO</strong>. El enlace vale por 1 hora.' },
     boxLabel: { pt: 'Acesso de segurança', en: 'Security access', es: 'Acceso de seguridad' },
@@ -154,7 +157,7 @@ const TEMPLATES = {
     why: { pt: 'Você recebeu este e-mail devido a uma solicitação de redefinição de senha na plataforma.', en: 'You received this e-mail because of a password reset request on the platform.', es: 'Recibió este e-mail por una solicitud de restablecimiento de contraseña en la plataforma.' },
   },
   reauthentication: {
-    subject: { pt: 'Seu código de confirmação do MetaBuilder PRO', en: 'Your MetaBuilder PRO confirmation code', es: 'Su código de confirmación de MetaBuilder PRO' },
+    subject: { pt: 'Seu código de confirmação', en: 'Your confirmation code', es: 'Su código de confirmación' },
     title: { pt: 'Confirme que é você', en: 'Confirm it is you', es: 'Confirme que es usted' },
     intro: { pt: 'Para continuar com uma operação sensível na sua conta do <strong>MetaBuilder PRO</strong>, digite o código abaixo.', en: 'To continue with a sensitive operation on your <strong>MetaBuilder PRO</strong> account, enter the code below.', es: 'Para continuar con una operación sensible en su cuenta de <strong>MetaBuilder PRO</strong>, escriba el código de abajo.' },
     boxLabel: { pt: 'Código de confirmação', en: 'Confirmation code', es: 'Código de confirmación' },
@@ -169,8 +172,12 @@ fs.mkdirSync(outDir, { recursive: true })
 const subjects = []
 for (const [name, t] of Object.entries(TEMPLATES)) {
   fs.writeFileSync(path.join(outDir, `${name}.html`), build(t))
-  subjects.push(`## ${name}\n\n\`\`\`\n${DECLARE}${T(t.subject)}\n\`\`\`\n`)
+  const subject = `${DECLARE}${BRAND}${T(t.subject)}`
+  // o campo Subject do Supabase recusa mais de 255 caracteres ("Failed to validate template: subject: Too big"): por isso a marca fica fora
+  // das três versões do texto e o gerador para se algum assunto passar do limite
+  if (subject.length > SUBJECT_MAX) { console.error(`ERRO: o assunto de ${name} tem ${subject.length} caracteres (máximo ${SUBJECT_MAX}). Encurte o texto.`); process.exitCode = 1 }
+  subjects.push(`## ${name}\n\n\`\`\`\n${subject}\n\`\`\`\n`)
   console.log('ok docs/emails-supabase/' + name + '.html')
 }
-fs.writeFileSync(path.join(outDir, 'assuntos.md'), `# Assuntos dos e-mails do Supabase (GERADO por scripts/gerar-modelos-email-supabase.mjs)\n\nCole cada bloco no campo **Subject** do modelo de mesmo nome. Cada um escolhe o idioma pelo cadastro do usuário.\n\n${subjects.join('\n')}`)
+fs.writeFileSync(path.join(outDir, 'assuntos.md'), `# Assuntos dos e-mails do Supabase (GERADO por scripts/gerar-modelos-email-supabase.mjs)\n\nCole cada bloco no campo **Subject** do modelo de mesmo nome. Cada um escolhe o idioma pelo cadastro do usuário. O Supabase aceita no máximo 255 caracteres neste campo (todos os blocos abaixo cabem).\n\n${subjects.join('\n')}`)
 console.log('ok docs/emails-supabase/assuntos.md')
