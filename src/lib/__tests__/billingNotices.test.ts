@@ -154,7 +154,7 @@ describe('avisos de cobrança: ligação no sistema', () => {
     // desligado: não envia avisos de cobrança (só os de repasse a parceiros, que não dependem do interruptor)
     expect(svc).toContain("if (!cfg.enabled) query = query.in('kind', [...ALWAYS_SEND_KINDS])")
     expect(read('vercel.json')).toContain('/api/cron/billing-notices')
-    expect(read('src/app/api/cron/billing-notices/route.ts')).toContain('CRON_SECRET')
+    expect(read('src/app/api/cron/billing-notices/route.ts')).toContain('isCronAuthorized(req)')
   })
 
   it('o checkout grava o idioma e cancela a assinatura antiga ANTES de criar a nova (limpando o vínculo primeiro)', () => {

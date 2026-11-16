@@ -1,15 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { isCronAuthorized } from '@/lib/cronAuth'
 
 export async function GET(req: Request) {
   try {
     // 1. Verify Vercel Cron authentication to ensure this is only called securely
     // In production, Vercel sends an authorization header.
-    const authHeader = req.headers.get('authorization')
-    if (process.env.NODE_ENV === 'production') {
-      if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
+    if (!isCronAuthorized(req)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // 2. We use the Supabase Service Role Key to bypass RLS and delete files/rows securely

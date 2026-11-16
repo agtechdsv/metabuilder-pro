@@ -124,7 +124,7 @@ describe('cron da lixeira', () => {
     expect(vercel.crons.some((c: any) => c.path === '/api/cron/empty-trash')).toBe(true)
     const route = readFileSync('src/app/api/cron/empty-trash/route.ts', 'utf8')
     expect(route).toContain("'trash_retention_hours'")
-    expect(route).toContain('CRON_SECRET')
+    expect(route).toContain('isCronAuthorized(req)')
   })
   it('só o SuperAdmin grava o prazo (a ação confere o perfil)', () => {
     const src = readFileSync('src/app/actions/admin.ts', 'utf8').replace(/\r\n/g, '\n')

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { isCronAuthorized } from '@/lib/cronAuth'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,7 +9,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(req: Request) {
   try {
-    if (process.env.NODE_ENV === 'production' && req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!isCronAuthorized(req)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
