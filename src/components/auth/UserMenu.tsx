@@ -7,6 +7,7 @@ import { isCurrentUserPartner } from '@/app/actions/partners'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { canSeeWorkspaceMenu } from '@/lib/auth/menuAccess'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { ProfileDrawer } from '@/components/profile/ProfileDrawer'
@@ -202,7 +203,7 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
               </div>
 
               <div className="p-3">
-                {(localProfile?.is_super_admin || localProfile?.subscription_status === 'active' || localProfile?.subscription_status === 'canceled') && (
+                {canSeeWorkspaceMenu(localProfile) && (
                   <Link
                     href="/workspace"
                     onClick={() => {
