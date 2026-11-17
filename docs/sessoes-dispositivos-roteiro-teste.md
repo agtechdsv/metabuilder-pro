@@ -98,10 +98,10 @@ Provoque a tela (por exemplo, C7).
 
 ## E. Todos os caminhos de login levam à mesma tela
 Com a vaga web ocupada por C1, tente entrar com U1 em C2 por cada caminho (faça logout em C2 entre os testes):
-- [ ] **E1.** E-mail e senha.
-- [ ] **E2.** Google.
-- [ ] **E3.** Passkey (biometria), se U1 tiver uma.
-- [ ] **E4.** Com MFA obrigatório (`enforce_mfa`): digita a senha, o código do app e **depois** vê a escolha (nunca antes do MFA).
+- [x] **E1.** E-mail e senha. *(16/11: coberto pelos testes C1, C3 e C6, com o note e a VM entrando por e-mail e senha e vendo a tela de escolha. Não foi repetido com dois navegadores na mesma máquina; isso fica no C2.)*
+- [x] **E2.** Google. *(17/11: conta agtechtrade, C1 no note e C2 na VM em **janela anônima**: depois do Google a VM viu a tela de escolha, mostrando o note com "conectado desde" e "última atividade". Na aba normal da VM o Google falhou duas vezes (429 e "PKCE code verifier not found"): ver as anotações de 17/11.)*
+- [ ] **E3.** Passkey (biometria), se U1 tiver uma. *(17/11: o note entrou três vezes por biometria e a vaga foi ocupada normalmente; falta o teste com a vaga já ocupada por outro dispositivo.)*
+- [x] **E4.** Com MFA obrigatório (`enforce_mfa`): digita a senha, o código do app e **depois** vê a escolha (nunca antes do MFA). *(17/11: na VM, Google mais código do app do agtechtrade e só depois a tela de escolha, segundo o relato do teste.)*
 - [ ] **E5.** Na **IDE**: senha e Google (o Google abre o navegador e volta pela IDE): na I2, com I1 logada, vê a escolha.
 - [ ] **E6.** Link de convite ou de recuperação de senha: abre, define a senha e cai na regra normalmente.
 
@@ -227,3 +227,11 @@ Em /client/dashboard > Segurança (e no perfil, aba Segurança):
 - **Contador de trocas:** só **Encerrar a outra sessão e entrar aqui** conta (evento `takeover`); "Permanecer lá e sair daqui" não conta. A janela é de 24 horas móveis, por usuário, somando web e IDE. As trocas que passaram pelo código por e-mail também entram na conta.
 - Ao fim da rodada, o modo continua **Valer** e os ajustes estão em 15, 3 e 60 (padrão). Lembre de voltar para **Observar** até a revisão dos Termos e da Privacidade.
 - Duas máquinas parecidas (mesmo navegador, mesma cidade) aparecem iguais na tela de escolha ("Chrome · Windows, Belo Horizonte"); só o horário as distingue. Se incomodar, dá para acrescentar o nome do computador.
+
+## Anotações da rodada de 17/11/2026 (E, com a conta agtechtrade)
+**Passou:** E2 (Google) e E4 (Google com MFA), com o note como C1 e a VM como C2 em janela anônima. O painel do SuperAdmin acompanhou: entrada, saída e nova entrada do agtechtrade, e cada tentativa da VM como "Tentativa em 2ª máquina" (evento `conflict`, sem contar para o limite de trocas).
+
+**Achados em aberto:**
+1. **Loop de renovação de token na aba normal da VM.** O log do Supabase mostrou perto de 1.100 pedidos `refresh_token` por minuto (quase todos 429), de um Chrome, durante os testes de Google, e a aba normal da VM também mostrou "PKCE code verifier not found in storage". Fechar o Chrome da VM parou o loop; a janela anônima funcionou. O limite do Supabase é por IP e o note e a VM saem pelo mesmo IP, então o loop da VM bloqueou o login do note (erro 429). Causa exata ainda não achada no código; a suspeita é um cookie ou armazenamento antigo na VM (consequência de sessões derrubadas ao longo do dia). Para reproduzir: aba normal da VM com sessão antiga e DevTools > Network (coluna Initiator).
+2. **Vaga "presa" depois de sair no note.** O agtechtrade saiu pelo avatar no note, mas o painel do SuperAdmin seguiu mostrando a sessão como ativa (desde 12:26:18, última atividade 12:26:24, sem encerramento) e a VM ainda via a escolha pedindo para derrubar uma sessão que já não tinha mais batimento. No banco, nenhuma liberação (`mb_release_device_slot`) atingiu essa sessão; as liberações vistas no log foram as da VM ("Permanecer lá e sair daqui"). Fica a investigar se o logout do avatar chegou a rodar nesse caso (a sessão tinha entrado por biometria, seis segundos antes do último batimento). Enquanto isso a vaga só se libera por ociosidade (15 minutos), e o painel lista sessões sem encerramento mesmo quando estão ociosas. **Correção feita (17/11, a testar depois do deploy):** o logout agora libera também pelo cookie do dispositivo quando o servidor não lê o id da sessão, e o painel do SuperAdmin marca como "ociosa" a sessão sem batimento além do limite. *Teste novo:* entre com U1 no navegador, saia pelo avatar e confira no painel que a sessão some na hora (e que o evento `logout` aparece).
+3. **E3** (biometria com a vaga ocupada) e **E5** (IDE) seguem pendentes, assim como **E6**.

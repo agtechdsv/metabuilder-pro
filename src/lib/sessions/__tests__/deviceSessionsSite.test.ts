@@ -58,6 +58,25 @@ describe('vagas de sessão: script SQL', () => {
 })
 
 describe('vagas de sessão: ligação no código', () => {
+  it('o logout libera a vaga pelo id da sessão e, de reserva, pelo cookie do dispositivo', () => {
+    const actions = read('src/app/auth/actions.ts')
+    const signOut = actions.slice(actions.indexOf('export async function signOut'), actions.indexOf('export async function getPostLoginRedirectPath'))
+    expect(signOut).toContain('releaseSlot(await currentSessionId()')
+    expect(signOut).toContain('releaseSlotByDevice(')
+    expect(signOut).toContain('DEVICE_COOKIE')
+    // a reserva roda antes de apagar os cookies de login
+    expect(signOut.indexOf('releaseSlotByDevice(')).toBeLessThan(signOut.indexOf('supabase.auth.signOut'))
+    const svc = read('src/lib/sessions/slotService.ts')
+    expect(svc).toContain('export async function releaseSlotByDevice')
+    expect(svc).toContain(".eq('device_id', deviceId)")
+    expect(svc).toContain(".is('revoked_at', null)")
+  })
+
+  it('o painel do SuperAdmin marca como ociosa a sessão sem batimento além do limite, nos 3 idiomas', () => {
+    expect(read('src/components/admin/DeviceSessionsAdmin.tsx')).toContain("k('idle_tag')")
+    for (const l of LANGS) expect(typeof get(json(l), 'admin_devices.idle_tag'), l).toBe('string')
+  })
+
   it('o proxy aplica o portão e o matcher cobre exatamente as rotas de API protegidas', () => {
     const proxy = read('src/proxy.ts')
     expect(proxy).toContain('applySlotGate(')

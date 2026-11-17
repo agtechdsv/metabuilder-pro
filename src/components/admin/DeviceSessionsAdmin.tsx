@@ -142,7 +142,7 @@ export function DeviceSessionsAdmin({ refreshKey = 0 }: { refreshKey?: number } 
               <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-[10px] uppercase tracking-widest text-neutral-400"><tr><th className="py-2">{k('th_user')}</th><th>{k('th_type')}</th><th>{k('th_device')}</th><th>{k('th_where')}</th><th>{k('th_since')}</th><th>{k('th_last')}</th><th /></tr></thead>
                 <tbody>{overview.active.map(a => (
                   <tr key={a.id} className="border-t border-neutral-100 dark:border-neutral-800">
-                    <td className="py-2 font-semibold">{a.email || a.user_id}</td><td>{kindLabel(a.kind)}</td><td>{a.label || '-'}</td><td>{placeText(a, '-')}</td><td>{when(a.created_at)}</td><td>{when(a.last_seen_at)}</td>
+                    <td className="py-2 font-semibold">{a.email || a.user_id}</td><td>{kindLabel(a.kind)}</td><td>{a.label || '-'}</td><td>{placeText(a, '-')}</td><td>{when(a.created_at)}</td><td>{when(a.last_seen_at)}{Date.now() - new Date(a.last_seen_at).getTime() > overview.settings.idleMinutes * 60_000 && <span className="mt-0.5 block text-[10px] font-bold text-amber-600 dark:text-amber-400">{k('idle_tag')}</span>}</td>
                     <td className="text-right"><button type="button" onClick={() => revoke(a.id, a.email || a.user_id)} className="rounded-lg border border-red-300 px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:hover:bg-red-500/10">{k('end_btn')}</button></td>
                   </tr>))}</tbody></table></div>
             )}

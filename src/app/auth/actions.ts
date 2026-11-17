@@ -4,8 +4,8 @@ import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { currentSessionId } from '@/lib/sessions/currentSlot'
-import { releaseSlot } from '@/lib/sessions/slotService'
-import { SLOT_COOKIE } from '@/lib/sessions/slotCore'
+import { releaseSlot, releaseSlotByDevice } from '@/lib/sessions/slotService'
+import { DEVICE_COOKIE, KIND_COOKIE, SLOT_COOKIE, parseKind } from '@/lib/sessions/slotCore'
 import { currentMailLang } from '@/lib/auth/mailLangServer'
 import { sendWelcomeIfNew } from '@/lib/billing/billingService'
 
@@ -391,6 +391,11 @@ export async function signOut() {
   const supabase = await createClient()
   // libera a vaga de sessão (1 IDE + 1 navegador por usuário) antes de sair; nunca impede o logout
   try { await releaseSlot(await currentSessionId(), 'logout') } catch { /* o logout segue */ }
+  // reserva: se o servidor não leu a sessão (sem id acima), libera pela identidade do navegador, senão a vaga fica presa até a ociosidade
+  try {
+    const jar = await cookies()
+    await releaseSlotByDevice(jar.get(DEVICE_COOKIE)?.value, parseKind(jar.get(KIND_COOKIE)?.value), 'logout')
+  } catch { /* o logout segue */ }
   // 'local': sai só deste dispositivo. O padrão do Supabase ('global') encerraria TAMBÉM a sessão da outra máquina (a que o usuário escolheu manter).
   await supabase.auth.signOut({ scope: 'local' })
   const cookieStore = await cookies()

@@ -115,7 +115,7 @@ Os avisos nasceram **desligados** e já foram **ligados**. Resumo do que foi fei
    ```
    Esperado: `payment_received` com `sent`.
 - [ ] **C5.** **Vencida e carência** (aguardando as datas). Conta de teste **LGPD**: fatura de **R$ 5,00** em Pix, vencimento **16/11/2026**, **sem pagar**. A conta está `pending` com 0 licenças (nunca foi assinante ativa): observe se a suspensão se comporta como a de um assinante que atrasou.
-   - [ ] **C5a. 17/11 (manhã, a rotina roda às 8h de Brasília e pode atrasar até 1 hora):** chega o aviso de **vencida** (1 dia) no e-mail da conta, aparece o **banner vermelho** na tela do cliente com a data da suspensão, e a conta **não** é suspensa.
+   - [ ] **C5a. 17/11 (manhã, a rotina roda às 8h de Brasília e pode atrasar até 1 hora):** chega o aviso de **vencida** (1 dia) no e-mail da conta, aparece o **banner vermelho** na tela do cliente com a data da suspensão, e a conta **não** é suspensa. *(17/11: chegaram o e-mail ao cliente "Sua fatura do MetaBuilder PRO está vencida" (R$ 5,00, vencida em 16/11, pagar até 20/11), o aviso interno "Cobrança vencida: LGPD" na pasta Admin e o "Resumo diário de cobranças" (1 vencida em aberto, 0 suspensas). Falta ver o banner vermelho na tela e conferir que a conta segue sem suspensão.)*
    - [ ] **C5b. 19/11:** chega o **aviso final** (3 dias).
    - [ ] **C5c. 20/11:** ao fim da carência a conta é **suspensa**, com e-mail de suspensão.
    - [ ] **C5d.** Depois disso, **pague o Pix de R$ 5,00**: o acesso volta e chega o recibo **"restabelecido"**.

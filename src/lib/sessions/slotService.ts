@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import {
   DEVICE_COOKIE, KIND_COOKIE, clientIp, describeClient, geoFromHeaders, hashIp, isUuid, parseKind, sessionIdFromJwt, slotSecret,
-  type SlotInput, type SlotOther, type SlotResult,
+  type SlotInput, type SlotKind, type SlotOther, type SlotResult,
 } from './slotCore'
 
 /**
@@ -111,6 +111,26 @@ export async function releaseSlot(sessionId: string | null, reason: 'logout' | '
     await db.rpc('mb_release_device_slot', { p_session: sessionId, p_reason: reason })
   } catch (e) {
     console.error('[vagas] falha ao liberar a vaga:', (e as Error)?.message)
+  }
+}
+
+/**
+ * Reserva do logout: libera as vagas abertas deste navegador (cookie do dispositivo) e deste tipo (web ou IDE).
+ * Serve quando o servidor não consegue ler a sessão na hora de sair (não há id para liberar) e a vaga ficaria
+ * presa até a ociosidade. Reaproveita a função mb_release_device_slot, então o evento `logout` é registrado igual.
+ */
+export async function releaseSlotByDevice(deviceId: string | null | undefined, kind: SlotKind, reason: 'logout' | 'user' | 'admin' = 'logout'): Promise<number> {
+  if (!isUuid(deviceId)) return 0
+  const db = adminDb()
+  if (!db) return 0
+  try {
+    const { data } = await db.from('mb_device_sessions').select('auth_session_id').eq('device_id', deviceId).eq('kind', kind).is('revoked_at', null)
+    const ids = (data ?? []).map((r: { auth_session_id: string | null }) => r.auth_session_id).filter((v): v is string => isUuid(v))
+    for (const id of ids) await db.rpc('mb_release_device_slot', { p_session: id, p_reason: reason })
+    return ids.length
+  } catch (e) {
+    console.error('[vagas] falha ao liberar a vaga do dispositivo:', (e as Error)?.message)
+    return 0
   }
 }
 

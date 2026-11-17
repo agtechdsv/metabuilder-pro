@@ -6028,6 +6028,7 @@
     "th_where": "Where",
     "th_since": "Since",
     "th_last": "Last activity",
+    "idle_tag": "idle: the slot is freed on the next sign-in",
     "end_btn": "End",
     "events_title": "Recent events (7 days)",
     "none_events": "No events.",
