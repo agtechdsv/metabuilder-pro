@@ -5988,6 +5988,10 @@
     "settings_saved": "Partner settings saved.",
     "settings_note": "The commission is calculated on the amount the referred customer paid (gross, before Asaas fees) on every payment, and only becomes available after the waiting period. Changing the default % applies to future commissions; those already generated do not change."
   },
+  "admin_section": {
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
   "admin_devices": {
     "title": "Sessions and devices",
     "subtitle": "One IDE session and one browser session per user. The SuperAdmin does not take a slot.",

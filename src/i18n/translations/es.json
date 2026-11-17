@@ -6076,6 +6076,10 @@
     "settings_saved": "Ajustes de los socios guardados.",
     "settings_note": "La comisión se calcula sobre el valor que el cliente referido pagó (bruto, sin descontar las tarifas de Asaas) en cada pago, y solo queda disponible después de la carencia. Cambiar el % predeterminado vale para las próximas comisiones; las ya generadas no cambian."
   },
+  "admin_section": {
+    "expand": "Expandir",
+    "collapse": "Contraer"
+  },
   "admin_devices": {
     "title": "Sesiones y dispositivos",
     "subtitle": "Una sesión de IDE y una de navegador por usuario. El SuperAdmin no ocupa cupo.",

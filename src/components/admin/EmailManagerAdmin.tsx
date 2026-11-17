@@ -5,6 +5,7 @@ import { Loader2, Mail, RefreshCw, Save, Send } from 'lucide-react'
 import { getEmailRoutingAdmin, saveEmailRouting, sendEmailRoutingTest, type EmailRoutingErrorCode, type EmailRoutingOverview } from '@/app/actions/emailRouting'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
+import { SectionToggle } from './SectionToggle'
 import { EMAIL_TOPICS, resolveRoute, type EmailRouting, type EmailTopic } from '@/lib/email/routing'
 
 const inputCls = 'w-full rounded-xl border border-neutral-200 bg-transparent px-3 py-2 text-sm font-bold dark:border-neutral-700'
@@ -35,6 +36,7 @@ export function EmailManagerAdmin({ refreshKey = 0 }: { refreshKey?: number } = 
   const [overview, setOverview] = useState<EmailRoutingOverview | null>(null)
   const [form, setForm] = useState<Form>(emptyForm())
   const [testTo, setTestTo] = useState('')
+  const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [testing, setTesting] = useState<EmailTopic | null>(null)
@@ -80,22 +82,29 @@ export function EmailManagerAdmin({ refreshKey = 0 }: { refreshKey?: number } = 
   return (
     <section className="space-y-5 rounded-[2rem] border border-neutral-200 bg-white p-8 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-50 text-sky-600 dark:bg-sky-500/10"><Mail className="h-6 w-6" /></div>
-          <div>
+        <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls="email-manager-body" className="flex min-w-0 flex-1 items-center gap-3 text-left">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600 dark:bg-sky-500/10"><Mail className="h-6 w-6" /></div>
+          <div className="min-w-0">
             <h3 className="text-lg font-black uppercase tracking-wider">{k('title')}</h3>
             <p className="mt-1 text-xs font-medium text-neutral-500">{k('subtitle')}</p>
           </div>
-        </div>
-        <button type="button" onClick={load} disabled={loading} title={k('refresh')} aria-label={k('refresh')} className="rounded-xl p-2 text-neutral-400 hover:text-indigo-600 disabled:opacity-50">
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
+        <div className="flex shrink-0 items-center">
+          {open && (
+            <button type="button" onClick={load} disabled={loading} title={k('refresh')} aria-label={k('refresh')} className="rounded-xl p-2 text-neutral-400 hover:text-indigo-600 disabled:opacity-50">
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+          <SectionToggle open={open} onToggle={() => setOpen(o => !o)} controls="email-manager-body" />
+        </div>
       </div>
 
+      {/* erro de carga aparece mesmo recolhido, para não ficar escondido */}
       {error && <p role="alert" className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">{error}</p>}
-      {loading && !overview && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-neutral-400" /></div>}
+      {open && loading && !overview && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-neutral-400" /></div>}
 
-      {overview && (
+      {open && overview && (
+        <div id="email-manager-body" className="space-y-5">
         <>
           {!overview.smtpConfigured && <p role="alert" className="rounded-xl bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">{k('no_smtp_banner')}</p>}
           <p className="rounded-2xl bg-neutral-50 px-4 py-3 text-xs text-neutral-600 dark:bg-neutral-950 dark:text-neutral-300">
@@ -149,6 +158,7 @@ export function EmailManagerAdmin({ refreshKey = 0 }: { refreshKey?: number } = 
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {k('save')}
           </button>
         </>
+        </div>
       )}
     </section>
   )

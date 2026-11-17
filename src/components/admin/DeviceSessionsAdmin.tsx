@@ -6,6 +6,7 @@ import { adminDeviceOverviewAction, adminRevokeDeviceAction, adminSaveDeviceSett
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
 import { askDialog } from '@/utils/askDialog'
+import { SectionToggle } from './SectionToggle'
 import { placeText } from '@/lib/sessions/slotCore'
 import { DEFAULT_DEVICE_SETTINGS, type AdminDeviceOverview, type DeviceErrorCode, type DeviceSettingsDto } from '@/lib/sessions/deviceTypes'
 
@@ -35,6 +36,7 @@ export function DeviceSessionsAdmin({ refreshKey = 0 }: { refreshKey?: number } 
 
   const [overview, setOverview] = useState<AdminDeviceOverview | null>(null)
   const [settings, setSettings] = useState<DeviceSettingsDto>(DEFAULT_DEVICE_SETTINGS)
+  const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -73,22 +75,31 @@ export function DeviceSessionsAdmin({ refreshKey = 0 }: { refreshKey?: number } 
   return (
     <section className="space-y-6 rounded-[2rem] border border-neutral-200 bg-white p-8 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10"><MonitorSmartphone className="h-6 w-6" /></div>
-          <div>
+        <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls="device-sessions-body" className="flex min-w-0 flex-1 items-center gap-3 text-left">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10"><MonitorSmartphone className="h-6 w-6" /></div>
+          <div className="min-w-0">
             <h3 className="text-lg font-black uppercase tracking-wider">{k('title')}</h3>
             <p className="mt-1 text-xs font-medium text-neutral-500">{k('subtitle')}</p>
           </div>
-        </div>
-        <button type="button" onClick={load} disabled={loading} title={k('refresh')} aria-label={k('refresh')} className="rounded-xl p-2 text-neutral-400 hover:text-indigo-600 disabled:opacity-50">
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
+        {/* resumo só com o cartão recolhido: o modo em vigor e quantas sessões estão ativas, sem abrir */}
+        {!open && overview && <span className={`mt-3 shrink-0 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest ${overview.settings.mode === 'enforce' ? 'bg-indigo-500/10 text-indigo-600' : 'bg-neutral-500/10 text-neutral-500'}`}>{k(`mode_${overview.settings.mode}`)} · {overview.totals.active} {k('stat_active')}</span>}
+        <div className="flex shrink-0 items-center">
+          {open && (
+            <button type="button" onClick={load} disabled={loading} title={k('refresh')} aria-label={k('refresh')} className="rounded-xl p-2 text-neutral-400 hover:text-indigo-600 disabled:opacity-50">
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+          <SectionToggle open={open} onToggle={() => setOpen(o => !o)} controls="device-sessions-body" />
+        </div>
       </div>
 
+      {/* erro de carga aparece mesmo recolhido, para não ficar escondido */}
       {error && <p role="alert" className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">{error}</p>}
-      {loading && !overview && <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-neutral-400" /></div>}
+      {open && loading && !overview && <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-neutral-400" /></div>}
 
-      {overview && (
+      {open && overview && (
+        <div id="device-sessions-body" className="space-y-6">
         <>
           <div className="grid gap-4 md:grid-cols-4">
             <div className="md:col-span-4">
@@ -159,6 +170,7 @@ export function DeviceSessionsAdmin({ refreshKey = 0 }: { refreshKey?: number } 
             )}
           </div>
         </>
+        </div>
       )}
     </section>
   )

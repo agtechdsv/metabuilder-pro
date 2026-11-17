@@ -5988,6 +5988,10 @@
     "settings_saved": "Ajustes dos parceiros salvos.",
     "settings_note": "A comissão é calculada sobre o valor que o cliente indicado pagou (bruto, sem descontar as taxas do Asaas) em cada pagamento, e só fica disponível depois da carência. Mudar o % padrão vale para as próximas comissões; as já geradas não mudam."
   },
+  "admin_section": {
+    "expand": "Expandir",
+    "collapse": "Recolher"
+  },
   "admin_devices": {
     "title": "Sessões e dispositivos",
     "subtitle": "Uma sessão de IDE e uma de navegador por usuário. O SuperAdmin não ocupa vaga.",
