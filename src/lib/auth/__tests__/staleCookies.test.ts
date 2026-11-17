@@ -62,6 +62,13 @@ describe('cookies de login presos', () => {
     expect(jar).toEqual([])
   })
 
+  it('apaga também pelo token de acesso (sessão revogada com o token ainda válido)', () => {
+    const jar: string[] = []
+    const doc = { get cookie() { return asString(chunked('refreshX')) }, set cookie(v: string) { jar.push(v) } }
+    expect(purgeStaleAuthCookies('a.b.c', doc, { hostname: 'www.metabuilderpro.com', protocol: 'https:' })).toBe(2) // 'a.b.c' é o access_token do cookie de teste
+    expect(jar.length).toBeGreaterThan(0)
+  })
+
   it('parseCookieString ignora lixo', () => {
     expect(parseCookieString('a=1; b=2; ; =x; c')).toEqual({ a: '1', b: '2' })
   })

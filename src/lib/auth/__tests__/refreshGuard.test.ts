@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createRefreshGuard, isRefreshRequest } from '../refreshGuard'
+import { createRefreshGuard, isRefreshRequest, isUserRequest } from '../refreshGuard'
 
 const REFRESH = 'https://x.supabase.co/auth/v1/token?grant_type=refresh_token'
 const post = (body = '{"refresh_token":"a"}') => ({ method: 'POST', body })
@@ -70,6 +70,48 @@ describe('disjuntor da renovação de token', () => {
     const r = await guarded('https://x.supabase.co/rest/v1/profiles', { method: 'GET' })
     expect(r.status).toBe(200)
     expect(calls.length).toBe(2)
+  })
+
+  describe('sessão revogada (GET /auth/v1/user 403 session_not_found)', () => {
+    const USER = 'https://x.supabase.co/auth/v1/user'
+    const bearer = (t: string) => ({ method: 'GET', headers: { Authorization: `Bearer ${t}` } })
+    const respond = (status: number, body: object) => async () => new Response(JSON.stringify(body), { status })
+
+    it('avisa com o token de acesso, uma vez por token, e devolve a resposta original', async () => {
+      const seen: string[] = []
+      const guarded = createRefreshGuard(respond(403, { code: 403, error_code: 'session_not_found', msg: 'Session from session_id claim in JWT does not exist' }), { now: () => 0, onSessionGone: i => seen.push(i.accessToken) })
+      const r = await guarded(USER, bearer('jwtA'))
+      expect(r.status).toBe(403)
+      expect((await r.json()).error_code).toBe('session_not_found') // o corpo continua legível para quem chamou
+      await guarded(USER, bearer('jwtA'))
+      await guarded(USER, bearer('jwtB'))
+      expect(seen).toEqual(['jwtA', 'jwtB'])
+    })
+
+    it('lê o token também de Headers e de lista de pares', async () => {
+      const seen: string[] = []
+      const guarded = createRefreshGuard(respond(403, { error_code: 'session_not_found' }), { now: () => 0, onSessionGone: i => seen.push(i.accessToken) })
+      await guarded(USER, { method: 'GET', headers: new Headers({ authorization: 'Bearer h1' }) })
+      await guarded(USER, { method: 'GET', headers: [['AUTHORIZATION', 'Bearer h2']] })
+      expect(seen).toEqual(['h1', 'h2'])
+    })
+
+    it('não age em outros 403, em 401 nem em outra rota', async () => {
+      const seen: string[] = []
+      const opts = { now: () => 0, onSessionGone: (i: { accessToken: string }) => seen.push(i.accessToken) }
+      await createRefreshGuard(respond(403, { error_code: 'user_banned' }), opts)(USER, bearer('t1'))
+      await createRefreshGuard(respond(401, { error_code: 'session_not_found' }), opts)(USER, bearer('t2'))
+      await createRefreshGuard(respond(403, { error_code: 'session_not_found' }), opts)('https://x.supabase.co/rest/v1/profiles', bearer('t3'))
+      await createRefreshGuard(respond(403, { error_code: 'session_not_found' }), opts)(USER, { method: 'GET' }) // sem token
+      expect(seen).toEqual([])
+    })
+
+    it('isUserRequest só reconhece o GET de /auth/v1/user', () => {
+      expect(isUserRequest(USER, { method: 'GET' })).toBe(true)
+      expect(isUserRequest(USER + '?x=1', { method: 'GET' })).toBe(true)
+      expect(isUserRequest(USER, { method: 'PUT' })).toBe(false)
+      expect(isUserRequest('https://x.supabase.co/auth/v1/user/identities', { method: 'GET' })).toBe(false)
+    })
   })
 
   it('avisa uma vez por pausa', async () => {

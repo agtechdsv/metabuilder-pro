@@ -16,6 +16,11 @@ function guardedFetch() {
         const cleared = status === 400 ? purgeStaleAuthCookies(refreshToken) : 0
         console.warn(`[auth] renovação de token recusada (${status}): pausando novas tentativas desta página.${cleared ? ` Cookies de login antigos limpos: ${cleared}.` : ''}`)
       },
+      // 403 session_not_found em /auth/v1/user: a sessão foi revogada com o token de acesso ainda válido (ex.: outro dispositivo assumiu a vaga); apaga os cookies que ainda a carregam
+      onSessionGone: ({ accessToken }) => {
+        const cleared = purgeStaleAuthCookies(accessToken)
+        console.warn(`[auth] sessão encerrada no servidor.${cleared ? ` Cookies de login antigos limpos: ${cleared}.` : ''}`)
+      },
     })
   }
   return refreshGuardedFetch

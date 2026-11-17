@@ -66,7 +66,7 @@ export function expireStrings(names: string[], hostname: string, secure: boolean
   return names.flatMap(n => [...scopes].map(s => `${n}=${s}${tail}`))
 }
 
-/** Apaga, no navegador, os cookies de login que ainda carregam o refresh token recusado. Devolve quantos nomes foram limpos. */
+/** Apaga, no navegador, os cookies de login que ainda carregam este token (refresh ou de acesso). Devolve quantos nomes foram limpos. */
 export function purgeStaleAuthCookies(
   refreshToken: string,
   doc: { cookie: string } = document,

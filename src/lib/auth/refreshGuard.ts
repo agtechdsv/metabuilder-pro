@@ -8,6 +8,8 @@
  * O que faz (só para renovação; qualquer outra chamada passa direto):
  * - pedidos iguais ao mesmo tempo viram um só (mesmo refresh token no corpo);
  * - depois de um 429 ou 400, novos pedidos de renovação recebem na hora uma resposta 429 local, sem ir à rede, até o fim da pausa.
+ * - além disso, se GET /auth/v1/user responder 403 session_not_found (sessão revogada com o token de acesso ainda válido), avisa quem
+ *   chamou (onSessionGone) para limpar os cookies presos: sem isso a limpeza só acontecia quando o token vencesse e a renovação desse 400.
  * Nunca lança erro: no pior caso o usuário espera a pausa e tenta de novo.
  */
 export interface RefreshGuardOptions {
@@ -18,6 +20,11 @@ export interface RefreshGuardOptions {
   now?: () => number
   /** chamado uma vez por pausa, com o motivo (diagnóstico) */
   onBlock?: (info: { status: number; until: number; refreshToken: string }) => void
+  /**
+   * chamado (uma vez por token) quando GET /auth/v1/user responde 403 session_not_found: a sessão deste token de acesso foi revogada
+   * (outro dispositivo assumiu a vaga, logout em outro lugar...). Quem chama apaga os cookies que ainda carregam esse token.
+   */
+  onSessionGone?: (info: { accessToken: string }) => void
 }
 
 type FetchFn = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -41,6 +48,30 @@ const tokenOf = (init?: RequestInit): string => {
   }
 }
 
+/** GET /auth/v1/user (a consulta de "quem sou eu" que o supabase-js faz no getUser) */
+export const isUserRequest = (input: RequestInfo | URL, init?: RequestInit): boolean => {
+  const url = urlOf(input)
+  if (!/\/auth\/v1\/user(\?|$)/.test(url)) return false
+  const method = (init?.method || (typeof input === 'object' && 'method' in input ? (input as Request).method : 'GET') || 'GET').toUpperCase()
+  return method === 'GET'
+}
+
+/** o token de acesso (Bearer) enviado neste pedido */
+export const bearerOf = (input: RequestInfo | URL, init?: RequestInit): string => {
+  try {
+    const h = init?.headers ?? (typeof input === 'object' && 'headers' in input ? (input as Request).headers : undefined)
+    let auth: string | null | undefined
+    if (!h) auth = undefined
+    else if (typeof (h as Headers).get === 'function') auth = (h as Headers).get('authorization')
+    else if (Array.isArray(h)) auth = h.find(([k]) => k.toLowerCase() === 'authorization')?.[1]
+    else auth = Object.entries(h as Record<string, string>).find(([k]) => k.toLowerCase() === 'authorization')?.[1]
+    const m = /^Bearer\s+(\S+)$/i.exec(auth ?? '')
+    return m ? m[1] : ''
+  } catch {
+    return ''
+  }
+}
+
 const localLimited = () =>
   new Response(JSON.stringify({ code: 429, error_code: 'over_request_rate_limit', msg: 'Request rate limit reached' }), {
     status: 429,
@@ -53,9 +84,25 @@ export function createRefreshGuard(realFetch: FetchFn, opts: RefreshGuardOptions
   const now = opts.now ?? Date.now
   let blockedUntil = 0
   const inflight = new Map<string, Promise<Response>>()
+  const goneSeen = new Set<string>()
 
   return async (input, init) => {
-    if (!isRefreshRequest(input, init)) return realFetch(input, init)
+    if (!isRefreshRequest(input, init)) {
+      const res = await realFetch(input, init)
+      if (opts.onSessionGone && res.status === 403 && isUserRequest(input, init)) {
+        const accessToken = bearerOf(input, init)
+        if (accessToken && !goneSeen.has(accessToken)) {
+          try {
+            const body = await res.clone().json()
+            if (body?.error_code === 'session_not_found') {
+              goneSeen.add(accessToken)
+              opts.onSessionGone({ accessToken })
+            }
+          } catch { /* corpo ilegível: não faz nada */ }
+        }
+      }
+      return res
+    }
 
     if (now() < blockedUntil) return localLimited()
 
