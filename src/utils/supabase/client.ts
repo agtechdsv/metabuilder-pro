@@ -3,6 +3,7 @@ import { patchChannelForRelay, tunnelTopicFor } from '@/lib/tunnel/relayClient'
 import { installDemoGuards } from '@/lib/demo/demoMode'
 import { shouldSkipUrlSessionDetection } from '@/lib/auth/callbackExchange'
 import { createRefreshGuard } from '@/lib/auth/refreshGuard'
+import { purgeStaleAuthCookies } from '@/lib/auth/staleCookies'
 
 // Um disjuntor por página, compartilhado por todos os clientes: corta a avalanche de renovações de token depois de um 429 (limite por IP).
 let refreshGuardedFetch: ((input: RequestInfo | URL, init?: RequestInit) => Promise<Response>) | undefined
@@ -10,7 +11,11 @@ function guardedFetch() {
   if (typeof window === 'undefined') return undefined
   if (!refreshGuardedFetch) {
     refreshGuardedFetch = createRefreshGuard((input, init) => fetch(input, init), {
-      onBlock: ({ status }) => console.warn(`[auth] renovação de token recusada (${status}): pausando novas tentativas desta página. Origem da chamada:`, new Error().stack),
+      onBlock: ({ status, refreshToken }) => {
+        // 400 = o servidor diz que esta sessão morreu: apaga o cookie preso em todos os escopos (se ainda carrega este token), senão ele volta a ser lido sem parar
+        const cleared = status === 400 ? purgeStaleAuthCookies(refreshToken) : 0
+        console.warn(`[auth] renovação de token recusada (${status}): pausando novas tentativas desta página.${cleared ? ` Cookies de login antigos limpos: ${cleared}.` : ''}`)
+      },
     })
   }
   return refreshGuardedFetch

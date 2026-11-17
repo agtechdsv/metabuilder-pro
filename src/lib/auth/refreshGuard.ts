@@ -17,7 +17,7 @@ export interface RefreshGuardOptions {
   cooldown400Ms?: number
   now?: () => number
   /** chamado uma vez por pausa, com o motivo (diagnóstico) */
-  onBlock?: (info: { status: number; until: number }) => void
+  onBlock?: (info: { status: number; until: number; refreshToken: string }) => void
 }
 
 type FetchFn = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -29,6 +29,16 @@ export const isRefreshRequest = (input: RequestInfo | URL, init?: RequestInit): 
   if (!url.includes('/auth/v1/token') || !url.includes('grant_type=refresh_token')) return false
   const method = (init?.method || (typeof input === 'object' && 'method' in input ? (input as Request).method : 'GET') || 'GET').toUpperCase()
   return method === 'POST'
+}
+
+/** o refresh token que foi enviado neste pedido (para saber qual cookie ficou preso) */
+const tokenOf = (init?: RequestInit): string => {
+  try {
+    const t = JSON.parse(typeof init?.body === 'string' ? init.body : '{}')?.refresh_token
+    return typeof t === 'string' ? t : ''
+  } catch {
+    return ''
+  }
 }
 
 const localLimited = () =>
@@ -61,7 +71,7 @@ export function createRefreshGuard(realFetch: FetchFn, opts: RefreshGuardOptions
         const until = now() + (res.status === 429 ? cooldown429 : cooldown400)
         if (until > blockedUntil) {
           blockedUntil = until
-          opts.onBlock?.({ status: res.status, until })
+          opts.onBlock?.({ status: res.status, until, refreshToken: tokenOf(init) })
         }
       }
       return res
