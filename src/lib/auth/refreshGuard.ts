@@ -72,6 +72,21 @@ export const bearerOf = (input: RequestInfo | URL, init?: RequestInit): string =
   }
 }
 
+/**
+ * Código do erro do Auth numa resposta. A API nova (X-Supabase-Api-Version 2024-01-01) manda o código em `code` (texto) e no cabeçalho
+ * X-Sb-Error-Code; a antiga manda em `error_code` (e `code` é o número HTTP). Vale o cabeçalho; sem ele, o corpo.
+ */
+export async function errorCodeOf(res: Response): Promise<string> {
+  try {
+    const h = res.headers?.get('x-sb-error-code')
+    if (h) return h
+    const body = await res.clone().json()
+    if (typeof body?.error_code === 'string') return body.error_code
+    if (typeof body?.code === 'string') return body.code
+  } catch { /* corpo ilegível: sem código */ }
+  return ''
+}
+
 const localLimited = () =>
   new Response(JSON.stringify({ code: 429, error_code: 'over_request_rate_limit', msg: 'Request rate limit reached' }), {
     status: 429,
@@ -92,13 +107,10 @@ export function createRefreshGuard(realFetch: FetchFn, opts: RefreshGuardOptions
       if (opts.onSessionGone && res.status === 403 && isUserRequest(input, init)) {
         const accessToken = bearerOf(input, init)
         if (accessToken && !goneSeen.has(accessToken)) {
-          try {
-            const body = await res.clone().json()
-            if (body?.error_code === 'session_not_found') {
-              goneSeen.add(accessToken)
-              opts.onSessionGone({ accessToken })
-            }
-          } catch { /* corpo ilegível: não faz nada */ }
+          if (await errorCodeOf(res) === 'session_not_found') {
+            goneSeen.add(accessToken)
+            opts.onSessionGone({ accessToken })
+          }
         }
       }
       return res

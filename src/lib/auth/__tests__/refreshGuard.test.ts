@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createRefreshGuard, isRefreshRequest, isUserRequest } from '../refreshGuard'
+import { createRefreshGuard, errorCodeOf, isRefreshRequest, isUserRequest } from '../refreshGuard'
 
 const REFRESH = 'https://x.supabase.co/auth/v1/token?grant_type=refresh_token'
 const post = (body = '{"refresh_token":"a"}') => ({ method: 'POST', body })
@@ -86,6 +86,25 @@ describe('disjuntor da renovação de token', () => {
       await guarded(USER, bearer('jwtA'))
       await guarded(USER, bearer('jwtB'))
       expect(seen).toEqual(['jwtA', 'jwtB'])
+    })
+
+    it('entende o formato novo da API (code em texto, message, cabeçalho X-Sb-Error-Code), o que o Supabase manda de verdade', async () => {
+      const seen: string[] = []
+      const corpoNovo = { code: 'session_not_found', message: 'Session from session_id claim in JWT does not exist' }
+      // só o corpo no formato novo
+      await createRefreshGuard(respond(403, corpoNovo), { now: () => 0, onSessionGone: i => seen.push(i.accessToken) })(USER, bearer('novo1'))
+      // só o cabeçalho
+      const soCabecalho = async () => new Response('{}', { status: 403, headers: { 'x-sb-error-code': 'session_not_found' } })
+      await createRefreshGuard(soCabecalho, { now: () => 0, onSessionGone: i => seen.push(i.accessToken) })(USER, bearer('novo2'))
+      expect(seen).toEqual(['novo1', 'novo2'])
+    })
+
+    it('errorCodeOf: cabeçalho primeiro, depois error_code, depois code em texto; número HTTP em code não conta', async () => {
+      expect(await errorCodeOf(new Response('{}', { status: 403, headers: { 'x-sb-error-code': 'a' } }))).toBe('a')
+      expect(await errorCodeOf(new Response(JSON.stringify({ error_code: 'b', code: 403 }), { status: 403 }))).toBe('b')
+      expect(await errorCodeOf(new Response(JSON.stringify({ code: 'c' }), { status: 403 }))).toBe('c')
+      expect(await errorCodeOf(new Response(JSON.stringify({ code: 403 }), { status: 403 }))).toBe('')
+      expect(await errorCodeOf(new Response('não é json', { status: 403 }))).toBe('')
     })
 
     it('lê o token também de Headers e de lista de pares', async () => {
