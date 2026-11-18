@@ -28,7 +28,7 @@ Relacionados: `docs/fiscal/` (leiautes e manuais oficiais da NFS-e Nacional), `d
 | Endereço novo no Emissor Nacional | Feito |
 | Conferir se a inscrição municipal 0.933.007/001-4 é a que o Emissor Nacional e o Asaas usam | Pendente (rápido) |
 | Taxa anual da PBH (TFLF): valor e vencimento (10 de maio) | Pendente (ver com o contador ou no Sistema de Emissão de Guias) |
-| Mensagem ao contador (9 perguntas, seção 3.1) | **Pendente (próximo passo)** |
+| Mensagem ao contador (9 perguntas, seção 3.1) | **Enviada; respondida em 18/11 (seção 3.5).** Faltam, por telefone: tributação, IRRF/INSS, exterior, plano anual e cancelamento em chargeback. Antes: checar no Asaas a competência separada da emissão |
 | Decisão do regime de IBS/CBS | Pendente, **até 27/11/2026** |
 | Configuração do Asaas em produção (seção 6) | Pendente |
 | Implementação (seção 5) | Não iniciada |
@@ -127,7 +127,31 @@ O que isso significa na prática:
 - A nota só pode sair 8 dias depois, então ela cai **no mesmo mês do pagamento na maioria dos casos** e no mês seguinte só quando o pagamento é feito nos últimos 7 dias do mês.
 - **Sugestão:** (1) aceitar a competência como o **mês da emissão** (o padrão provável do Asaas, que a API não deixa escolher); (2) perguntar ao **suporte do Asaas** se a competência pode ser informada separada da data de emissão; (3) se o contador disser que a receita vale pelo **recebimento** (caixa), o descompasso é pequeno e só acontece nas viradas de mês; um relatório "pagos x notas" por mês resolve a conciliação.
 - **Evitar:** emitir a nota no ato do pagamento só para "fechar o mês": perde a proteção do arrependimento e obriga a cancelar nota a cada reembolso.
-- A decisão final é do contador (perguntas 1 a 4 da mensagem). A mensagem 3.1 já traz exemplos com datas para ele responder sem ambiguidade.
+- A decisão final é do contador (perguntas 1 a 4 da mensagem). **Respondido em 18/11: ver 3.5** (vale a competência, não existe caixa no Simples; a sugestão acima sobre "caixa" ficou superada e a pendência é a competência das notas dos últimos 7 dias do mês).
+
+### 3.5 Respostas do contador (18/11/2026, por WhatsApp)
+
+Numeração dele, que segue a da mensagem 3.1 (o 3 e o 2 vieram juntos):
+
+| Pergunta | Resposta do contador (resumo fiel) | O que muda no plano |
+|---|---|---|
+| 1. Competência e receita | **Não existe mais regime de caixa para o Simples Nacional**; vale a **competência**. | A receita entra no mês da **competência**, não do recebimento. |
+| 2 e 3. Nota fora do mês / data de competência | O correto é **nota por competência**: o uso de outubro é emitido em outubro (**antes** do pagamento, se pós-pago). Vincular a nota ao pagamento **não é o correto**, mas é o que **mais acontece**. | Ver "Impacto" abaixo. |
+| 4. (na ordem dele, sobre **chargeback de cartão**, segundo o dono, que fez a pergunta) | "Se não houver possibilidade de cancelamento com ressarcimento, faz uma **única nota** fechando com o pagamento." | Interpretação: se a PBH **não** permitir cancelar a nota quando o dinheiro volta (chargeback), emite-se **uma única nota** fechando com o pagamento. Complementa a resposta 8. A pergunta sobre **plano anual/semestral/trimestral** (3.1, nº 4) **ficou sem resposta**: levar à ligação. |
+| 5. Retenção de ISS | Reter ISS **somente se o cliente for de BH e obrigado a reter** (**tem de perguntar ao cliente**). | A retenção é **exceção**: só tomador PJ de BH obrigado a reter. Reforça "PJ fica em revisão". Precisamos de um campo/pergunta "o tomador é obrigado a reter ISS?". Retenções federais (PIS, COFINS, CSLL, IRRF, INSS): **sem resposta**; PIS/COFINS/CSLL já são proibidas para o Simples na API. |
+| 6. NBS, indicador da operação, cClassTrib | "Essa questão da tributação vale uma **conversa à parte, por telefone**." | **Pendente.** Seguir com 111032200 / 100301 / 01.05.01 como hipótese e confirmar na ligação. |
+| 7. Regime de IBS/CBS (prazo 27/11) | **Sim, poderá desistir daquela opção.** | Decisão por **desistir (cancelar a adesão ao regime regular)**, a confirmar na ligação **antes de 27/11**. |
+| 8. Chargeback e DAS | O **DAS vence dia 20 do mês seguinte**, então a questão **se resolve antes**; se o pagamento acontecer (e o dinheiro voltar depois), **podemos compensar ou ressarcir**. | Cancelar a NFS-e continua sendo a nossa parte técnica; o DAS pago a mais é **compensado ou restituído** pelo contador. |
+| 9. Clientes no exterior | **Sem resposta.** | Seguir sem tratar exportação; perguntar na ligação. |
+
+**Impacto da resposta 2 e 3 (a decisão que ainda é nossa):** o contador diz que o **ideal** é a nota **no mês da competência**, e que ligar a nota ao pagamento **não é o correto, embora seja o comum**. O nosso fluxo emite a nota **8 dias depois do pagamento**, o que fica **no mês do pagamento** na maioria dos casos e **no mês seguinte** quando o pagamento ocorre nos últimos 7 dias do mês. Isso leva a:
+- Como a assinatura é **pré-paga** (o cliente paga e usa no período seguinte), a competência da **nota** deve ser a do **mês do pagamento** (início do uso) e não a do mês da emissão. **Se o Asaas não deixar informar a competência separada** da emissão (pergunta ao suporte, ver 3.3), as notas dos pagamentos dos **últimos 7 dias do mês** sairão com competência do mês seguinte. **Levar isto ao contador na ligação** e perguntar se é aceitável (é o mesmo descompasso que ele chamou de "o que mais acontece") ou se ele prefere emitir **no ato do pagamento** nesses casos.
+- A hipótese "mês da emissão" da seção 3.3 **fica como plano B**, e a premissa "caixa" que ela citava **deixa de valer** (não existe caixa no Simples).
+- **Resposta 4:** o dono confirma que a pergunta dele foi sobre **chargeback de cartão**, então a frase "cancelamento com ressarcimento" se refere a isso. Falta saber se a PBH permite cancelar a nota nesse caso (se não, vale a "nota única fechando com o pagamento"). A pergunta sobre **plano anual/semestral/trimestral** (3.1, nº 4) segue **sem resposta**.
+- **Competência separada da emissão:** primeiro **checar se o Asaas aceita** informar a competência separada da data de emissão (suporte do Asaas, ver 3.3). **Se aceitar**, o problema do fim de mês some. **Se não aceitar**, o assunto volta a ser debatido (opções: aceitar a competência do mês seguinte ou emitir no ato do pagamento nesses casos).
+- **Combinado pelo dono:** a tributação (NBS, indicador, cClassTrib) e os itens sem resposta (IRRF/INSS, exterior) serão tratados **por telefone**, de propósito.
+
+**Lista para a ligação com o contador:** (a) NBS, indicador da operação e cClassTrib; (b) regime de IBS/CBS (confirmar a desistência até 27/11); (c) IRRF e INSS; (d) clientes no exterior; (e) competência da nota de pagamentos nos últimos 7 dias do mês (só se o Asaas não aceitar competência separada); (f) plano anual/semestral/trimestral (nota única ou por mês de uso?); (g) se a PBH permite cancelar a nota em caso de chargeback.
 
 ### 3.4 Chargeback, em português claro
 
