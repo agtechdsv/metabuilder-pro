@@ -13,7 +13,7 @@ export default function SessionExpiredPage() {
     if (isTauri) {
       router.replace('/')
     } else {
-      router.replace('/login')
+      router.replace('/?entrar=1') // página inicial com o modal de entrar aberto
     }
   }, [router])
 

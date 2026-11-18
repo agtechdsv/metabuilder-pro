@@ -142,6 +142,16 @@ export function Navbar({ user: initialUser, profile: initialProfile, showLogin =
       setIsAuthOpen(true)
     }
 
+    // /?entrar=1 abre o modal de entrar (usado quando alguém cai numa tela que exige login sem ter sessão)
+    try {
+      const url = new URL(window.location.href)
+      if (url.pathname === '/' && url.searchParams.get('entrar') === '1') {
+        url.searchParams.delete('entrar')
+        window.history.replaceState(null, '', url.toString())
+        setIsAuthOpen(true)
+      }
+    } catch { /* sem URL utilizável: segue sem abrir */ }
+
     window.addEventListener('open-auth-modal', handleOpenAuth)
     return () => window.removeEventListener('open-auth-modal', handleOpenAuth)
   }, [])

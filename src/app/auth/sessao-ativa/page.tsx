@@ -16,7 +16,7 @@ export default async function ActiveSessionPage({ searchParams }: { searchParams
   const target = safeNext(next)
 
   const slot = await currentSlot()
-  if (!slot) redirect('/login')
+  if (!slot) redirect('/?entrar=1') // sem login: página inicial com o modal de entrar aberto
 
   const result = await claimSlot(slot.input)
   // Livre, desligado ou erro nosso: segue para o destino. Encerrada: o portão do proxy trata (limpa o login e avisa).
