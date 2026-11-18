@@ -4,6 +4,7 @@ import { Navbar } from '@/components/layout/Navbar'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { Footer } from '@/components/layout/Footer'
 import ClientDashboardClient from '@/components/client/ClientDashboardClient'
+import { shouldShowSubscribeInvite } from '@/lib/billing/subscribeInvite'
 
 export const dynamic = 'force-dynamic'
 
@@ -133,6 +134,20 @@ export default async function ClientDashboardPage() {
     .eq('owner_id', user.id)
   const ownerGuestsData = ownerGuests || []
 
+  // Convite para assinar: só para quem não tem plano e não foi convidado por outro dono
+  const { data: invitedRecord } = await supabase
+    .from('owner_guests')
+    .select('id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .maybeSingle()
+  const showSubscribeInvite = shouldShowSubscribeInvite({
+    isSuperAdmin: profile?.is_super_admin,
+    subscriptionStatus: profile?.subscription_status,
+    subscriptionLicenses: profile?.subscription_licenses,
+    isInvitedGuest: !!invitedRecord,
+  })
+
   return (
     <div className="min-h-screen flex flex-col pt-16 bg-white dark:bg-[#050505] text-black dark:text-white transition-colors duration-300">
       <Navbar user={user} profile={profile} />
@@ -150,6 +165,7 @@ export default async function ClientDashboardPage() {
           payments={payments || []}
           activityLogs={activityLogsData}
           ownerGuests={ownerGuestsData}
+          showSubscribeInvite={showSubscribeInvite}
         />
       </main>
 

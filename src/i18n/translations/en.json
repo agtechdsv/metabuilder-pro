@@ -6156,6 +6156,11 @@
     "err_invalid_email": "Invalid e-mail.",
     "err_unknown": "Could not complete. Was the scripts/avisos-cobranca.sql script already run?"
   },
+  "subscribe_invite": {
+    "title": "Subscribe to unlock all features",
+    "desc": "You can already explore, but the PRO plan unlocks licenses, workspaces and projects without limits. See the plans and the current campaign.",
+    "button": "See plans"
+  },
   "billing_banner": {
     "soon_title": "Your invoice is due soon",
     "today_title": "Your invoice is due today",

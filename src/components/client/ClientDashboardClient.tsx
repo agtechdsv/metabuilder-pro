@@ -64,6 +64,7 @@ import { TeamDrawer } from '@/components/workspace/TeamDrawer'
 import SecuritySettings from '@/components/workspace/SecuritySettings'
 import { DeviceSessionsPanel } from '@/components/workspace/DeviceSessionsPanel'
 import BillingBanner from '@/components/billing/BillingBanner'
+import SubscribeInviteBanner from '@/components/billing/SubscribeInviteBanner'
 import { useI18n } from '@/i18n/I18nContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -134,6 +135,7 @@ interface ClientDashboardClientProps {
   payments: Payment[]
   activityLogs?: any[]
   ownerGuests?: any[]
+  showSubscribeInvite?: boolean
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -164,6 +166,7 @@ export default function ClientDashboardClient({
   payments,
   activityLogs = [],
   ownerGuests = [],
+  showSubscribeInvite = false,
 }: ClientDashboardClientProps) {
   const { t } = useI18n()
   const [localProfile, setLocalProfile] = useState(profile)
@@ -298,6 +301,9 @@ export default function ClientDashboardClient({
 
       {/* Aviso de cobrança (fatura vencendo, vencida ou cartão recusado): só aparece quando há algo a pagar */}
       {!isGuest && <BillingBanner />}
+
+      {/* Convite para assinar: quem ainda não tem plano (e não foi convidado por outro dono) */}
+      {isGuest && showSubscribeInvite && <SubscribeInviteBanner />}
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

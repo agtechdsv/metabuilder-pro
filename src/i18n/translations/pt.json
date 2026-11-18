@@ -6156,6 +6156,11 @@
     "err_invalid_email": "E-mail inválido.",
     "err_unknown": "Não foi possível concluir. O script scripts/avisos-cobranca.sql já foi rodado?"
   },
+  "subscribe_invite": {
+    "title": "Assine para liberar todos os recursos",
+    "desc": "Você já pode explorar, mas o plano PRO libera licenças, workspaces e projetos sem limite. Veja os planos e a campanha vigente.",
+    "button": "Ver planos"
+  },
   "billing_banner": {
     "soon_title": "Sua fatura vence em breve",
     "today_title": "Sua fatura vence hoje",

@@ -15,6 +15,8 @@ import { Navbar } from '@/components/layout/Navbar'
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { WorkspaceManager } from '@/components/workspace/WorkspaceManager'
 import { Footer } from '@/components/layout/Footer'
+import SubscribeInviteBanner from '@/components/billing/SubscribeInviteBanner'
+import { shouldShowSubscribeInvite } from '@/lib/billing/subscribeInvite'
 import { WorkspaceTunnelControl } from '@/components/workspace/WorkspaceTunnelControl'
 
 import { getStudioTeamData } from '@/app/actions/workspace'
@@ -192,6 +194,9 @@ export default async function GlobalDashboard() {
 
       <main className="w-full mx-auto px-10 pt-4 pb-4 space-y-6 flex-grow">
         
+        {/* Quem ainda não tem plano (e não é convidado de outro dono) vê o convite para assinar */}
+        {shouldShowSubscribeInvite({ isSuperAdmin, subscriptionStatus: profile?.subscription_status, subscriptionLicenses: profile?.subscription_licenses, isInvitedGuest: isGuest }) && <SubscribeInviteBanner />}
+
         {/* Gerenciador de Workspaces (Lista + Drawers) */}
         <WorkspaceManager 
           initialWorkspaces={workspaces || []} 
