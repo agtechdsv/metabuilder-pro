@@ -50,7 +50,7 @@ describe('alertas da chave de API do Asaas', () => {
     const hook = read('supabase/functions/asaas-webhook/index.ts')
     const i = hook.indexOf('event.startsWith("ACCESS_TOKEN_")')
     expect(i).toBeGreaterThan(0)
-    const block = hook.slice(i, i + 900)
+    const block = hook.slice(i, i + 1800)
     expect(block).toContain('queuePayoutNotice(supabase, {')
     expect(block).toContain('kind: "admin_key_alert"')
     expect(block).toContain('keyName: str(tok.name)')

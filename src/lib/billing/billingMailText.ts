@@ -130,6 +130,8 @@ export interface AdminBillingData {
   /** alerta da chave de API do Asaas: nome da chave e quando expira (o que o Asaas informar; nunca o valor da chave) */
   keyName?: string | null
   expiresAt?: string | null
+  /** a conta do Asaas tem mais de um app: a chave é nossa ("own"), de outro app cadastrado ("other") ou desconhecida ("unknown"); vazio = como antes */
+  keyScope?: 'own' | 'other' | 'unknown' | null
   appUrl: string
 }
 
@@ -163,8 +165,17 @@ export function adminBillingMail(kind: string, d: AdminBillingData): MailContent
     rows = [row('Vencidas em aberto', d.digest.overdue), row('Vencem nos próximos 7 dias', d.digest.dueSoon), row('Suspensas hoje', d.digest.suspendedToday), row('Pagamentos nas últimas 24 h', d.digest.received24h), row('Avisos com falha de envio', d.digest.failedNotices)]
   } else if (kind === 'admin_key_alert' && d.event && KEY_ALERTS[d.event]) {
     const a = KEY_ALERTS[d.event]
-    title = a.title; intro = a.intro
-    rows = [row('Evento', d.event), row('Chave', d.keyName || '-'), row('Expira em', d.expiresAt || '-'), row('O que fazer', a.todo)]
+    if (d.keyScope === 'other') {
+      // chave de OUTRO app que usa a mesma conta do Asaas: informativo, sem urgência e sem mandar mexer nos Secrets do MetaBuilder
+      title = `${a.title} (outro app)`
+      intro = `O Asaas avisou sobre uma chave cadastrada como de OUTRO app que usa a mesma conta (${d.keyName || 'sem nome'}). Isso não afeta o checkout nem os repasses do MetaBuilder.`
+      rows = [row('Evento', d.event), row('Chave', d.keyName || '-'), row('Expira em', d.expiresAt || '-'), row('O que fazer', 'Nada no MetaBuilder. Avise o responsável pelo outro app, se for o caso.')]
+    } else {
+      title = a.title; intro = a.intro
+      rows = [row('Evento', d.event), row('Chave', d.keyName || '-'), row('Expira em', d.expiresAt || '-'), row('O que fazer', a.todo)]
+      // nome que não está cadastrado em "Apps neste Asaas": pode ser de outro app; pede para cadastrar e, assim, deixar de receber alerta de urgência
+      if (d.keyScope === 'unknown') rows.push(row('Chave cadastrada?', 'Não. Se for de outro app, cadastre o nome em Sistema > Avisos de cobrança > Apps neste Asaas; se for a do MetaBuilder, cadastre como "nossa".'))
+    }
   } else return null
   const html = mailShell(title, `<p style="margin:0 0 20px 0;">${esc(intro)}</p>` + infoBox('Detalhes', rows) + button('Abrir o painel', url),
     `© ${new Date().getFullYear()} METABUILDER PRO · Alerta de cobrança para a equipe.`, false)

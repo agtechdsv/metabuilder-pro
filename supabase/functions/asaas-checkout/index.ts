@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
 import { campaignFromProfile, findEligibleCampaign, referralPercentFor } from "../_shared/iclub.ts";
 import { CYCLE_MONTHS, chargeBreakdown, isCycle, isCycleEnabled, nextChargeValue, type CampaignTerms } from "../_shared/pricing.ts";
+import { isOwnCustomerRef, ownCustomerRef } from "../_shared/asaasApps.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -166,30 +167,47 @@ serve(async (req) => {
     // Clean CPF/CNPJ
     const cleanCpfCnpj = billingCpfCnpj.replace(/[^\d]/g, "");
 
-    // 2. Search or Create Customer in Asaas
+    // 2. Cliente no Asaas. A conta do Asaas pode ser compartilhada com OUTROS apps (ex.: TraderMasterPRO), então NUNCA se procura o cliente só pelo
+    // e-mail: ele poderia ser de outro app, e aí mexeríamos no cadastro dele (inclusive desligando as notificações). Só se usa cliente que é NOSSO:
+    //  1) o que já está ligado ao perfil deste usuário (se ainda existir no Asaas e não for marcado como de outro app);
+    //  2) o marcado com a nossa referência externa (mb_<id do usuário>);
+    //  3) senão, cria um novo, já com a marca. (A API do Asaas permite clientes duplicados.)
+    const ownCustomerRefValue = ownCustomerRef(user.id);
     let asaasCustomerId = "";
-    const searchUrl = `${ASAAS_URL}/customers?email=${encodeURIComponent(billingEmail)}`;
-    const searchRes = await fetch(searchUrl, {
-      headers: { "access_token": ASAAS_API_KEY }
-    });
 
-    if (searchRes.ok) {
-      const searchData = await searchRes.json();
-      if (searchData.data && searchData.data.length > 0) {
-        asaasCustomerId = searchData.data[0].id;
-        
-        // Garantir que as notificações estão desativadas no Asaas para este cliente existente
-        await fetch(`${ASAAS_URL}/customers/${asaasCustomerId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "access_token": ASAAS_API_KEY
-          },
-          body: JSON.stringify({
-            notificationDisabled: true
-          })
-        });
+    const linkedCustomerId = typeof prevProfile?.asaas_customer_id === "string" ? prevProfile.asaas_customer_id.trim() : "";
+    if (linkedCustomerId) {
+      const linkedRes = await fetch(`${ASAAS_URL}/customers/${encodeURIComponent(linkedCustomerId)}`, { headers: { "access_token": ASAAS_API_KEY } });
+      if (linkedRes.ok) {
+        const linked = await linkedRes.json().catch(() => null);
+        const linkedRef = linked?.externalReference;
+        // sem marca = cliente antigo do MetaBuilder (nós adotamos e marcamos); com marca que não é nossa = é de outro app: não usa
+        if (linked && !linked.deleted && (!linkedRef || isOwnCustomerRef(linkedRef))) asaasCustomerId = linkedCustomerId;
       }
+    }
+
+    if (!asaasCustomerId) {
+      const taggedRes = await fetch(`${ASAAS_URL}/customers?externalReference=${encodeURIComponent(ownCustomerRefValue)}&limit=1`, { headers: { "access_token": ASAAS_API_KEY } });
+      if (taggedRes.ok) {
+        const tagged = await taggedRes.json().catch(() => null);
+        const first = tagged?.data?.[0];
+        if (first?.id && !first.deleted && first.externalReference === ownCustomerRefValue) asaasCustomerId = first.id;
+      }
+    }
+
+    if (asaasCustomerId) {
+      // Cliente NOSSO: garante a marca e as notificações do Asaas desativadas (os avisos de cobrança são do MetaBuilder)
+      await fetch(`${ASAAS_URL}/customers/${asaasCustomerId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "access_token": ASAAS_API_KEY
+        },
+        body: JSON.stringify({
+          notificationDisabled: true,
+          externalReference: ownCustomerRefValue
+        })
+      });
     }
 
     if (!asaasCustomerId) {
@@ -206,7 +224,8 @@ serve(async (req) => {
           cpfCnpj: cleanCpfCnpj,
           phone: phone,
           mobilePhone: phone,
-          notificationDisabled: true
+          notificationDisabled: true,
+          externalReference: ownCustomerRefValue
         })
       });
 

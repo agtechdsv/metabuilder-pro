@@ -301,6 +301,7 @@ Os nomes de menu mudam; se algo divergir, vale a Central de Ajuda do Asaas ("Con
 - [ ] Dados fiscais da empresa: regime Simples Nacional, inscrição municipal, **endereço novo**, CNAE.
 - [ ] Cadastrar o serviço (código 01.05.01, NBS, indicador da operação, cClassTrib conforme o contador); **alíquota de ISS: ver 3.2** (sem retenção, a regra oficial não pede alíquota; deixar como o Asaas permitir e anotar o que ele exigiu). "Atualizar para novas e agendadas" quando o Asaas perguntar.
 - [ ] **Desligar o envio da nota por e-mail pelo Asaas** (nós enviamos, para não chegar duplicado).
+- [ ] **Conta compartilhada com outro app (TraderMasterPRO):** a **emissão automática por assinatura** deve ficar **desligada nas assinaturas do MetaBuilder** (nós emitimos pela API, depois do prazo de arrependimento); pode ficar ligada nas do outro app. A configuração fiscal do Asaas é da conta, então cada nota nossa leva código de serviço e valores explícitos. Os eventos `INVOICE_*` chegam de todos os apps; o webhook já ignora o que não é nosso. Regras completas em `docs/asaas-varios-apps.md`.
 - [ ] **Chave de API de produção**: conferir se tem permissão para notas fiscais; se criar uma nova, trocar a atual nos segredos da Edge Function, sem colar no chat.
 - [ ] **Webhook:** no webhook que já aponta para `asaas-webhook`, **ligar os eventos de nota fiscal** (autorizada, com erro, cancelamento em processo, cancelada, cancelamento negado), mantendo o token de autenticação atual.
 - [ ] Anotar o **custo por nota** do seu contrato (R$ 0,49 é o preço público).

@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { BellRing, Loader2, RefreshCw, Save } from 'lucide-react'
 import { getBillingNoticesAdmin, saveBillingNoticesSettings } from '@/app/actions/billingNotices'
+import { getAsaasApps, saveAsaasApps } from '@/app/actions/asaasApps'
+import { MAX_ASAAS_APPS, MAX_ASAAS_APP_NAME, type AsaasApp, type AsaasAppsSettings } from '../../../supabase/functions/_shared/asaasApps'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
 import { askDialog } from '@/utils/askDialog'
@@ -25,16 +27,21 @@ export function BillingNoticesAdmin({ refreshKey = 0 }: { refreshKey?: number } 
   const [graceDays, setGraceDays] = useState('3')
   const [adminEmail, setAdminEmail] = useState('')
   const [open, setOpen] = useState(false)
+  // apps que usam a mesma conta do Asaas (cadastrados pelo nome da chave de API)
+  const [apps, setApps] = useState<AsaasApp[]>([])
+  const [otherAlerts, setOtherAlerts] = useState<AsaasAppsSettings['otherKeyAlerts']>('info')
+  const [appsBusy, setAppsBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
-    const r = await getBillingNoticesAdmin()
+    const [r, a] = await Promise.all([getBillingNoticesAdmin(), getAsaasApps()])
     if (r.success) {
       setOverview(r.overview); setEnabled(r.overview.settings.enabled); setGraceDays(String(r.overview.settings.graceDays)); setAdminEmail(r.overview.settings.adminEmail); setError(null)
     } else setError(errText(r.code))
+    if (a.success) { setApps(a.settings.apps); setOtherAlerts(a.settings.otherKeyAlerts) }
     setLoading(false)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load() }, [load])
@@ -49,6 +56,13 @@ export function BillingNoticesAdmin({ refreshKey = 0 }: { refreshKey?: number } 
     const r = await saveBillingNoticesSettings({ enabled, graceDays: Number(graceDays), adminEmail })
     setBusy(false)
     if (r.success) { toast(k('saved'), 'success'); await load() } else toast(errText(r.code), 'error')
+  }
+
+  const saveApps = async () => {
+    setAppsBusy(true)
+    const r = await saveAsaasApps({ apps: apps.map(a => ({ name: a.name.trim(), own: a.own })), otherKeyAlerts: otherAlerts })
+    setAppsBusy(false)
+    if (r.success) { toast(k('apps_saved'), 'success'); await load() } else toast(k(`err_${r.code}`), 'error')
   }
 
   return (
@@ -109,6 +123,38 @@ export function BillingNoticesAdmin({ refreshKey = 0 }: { refreshKey?: number } 
             </div>
           </div>
           <p className="text-[11px] text-neutral-500">{k('cadence')}</p>
+
+          {/* Apps que usam a mesma conta do Asaas: o webhook é da conta inteira; o nome da chave diz de quem é cada alerta */}
+          <div className="space-y-3 rounded-2xl border border-neutral-200 p-4 dark:border-neutral-800">
+            <div>
+              <p className="text-sm font-black">{k('apps_title')}</p>
+              <p className="mt-1 text-xs text-neutral-500">{k('apps_hint')}</p>
+            </div>
+            {apps.length === 0 && <p className="text-xs text-neutral-400">{k('apps_empty')}</p>}
+            {apps.map((a, i) => (
+              <div key={i} className="grid gap-2 md:grid-cols-[1fr_220px_auto]">
+                <input className={inputCls} value={a.name} maxLength={MAX_ASAAS_APP_NAME} placeholder={k('apps_name_ph')} onChange={e => setApps(list => list.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
+                <select className={inputCls} value={a.own ? 'own' : 'other'} onChange={e => setApps(list => list.map((x, j) => (j === i ? { ...x, own: e.target.value === 'own' } : x)))}>
+                  <option value="own">{k('apps_own')}</option>
+                  <option value="other">{k('apps_other')}</option>
+                </select>
+                <button type="button" onClick={() => setApps(list => list.filter((_, j) => j !== i))} className="rounded-xl border border-neutral-200 px-3 py-2 text-xs font-bold text-neutral-500 hover:text-red-600 dark:border-neutral-700">{k('apps_remove')}</button>
+              </div>
+            ))}
+            <div className="flex flex-wrap items-end gap-3">
+              <button type="button" disabled={apps.length >= MAX_ASAAS_APPS} onClick={() => setApps(list => [...list, { name: '', own: list.length === 0 }])} className="rounded-xl border border-neutral-300 px-3 py-2 text-xs font-bold hover:bg-neutral-50 disabled:opacity-40 dark:border-neutral-700 dark:hover:bg-neutral-800">+ {k('apps_add')}</button>
+              <div className="min-w-[240px]">
+                <label className={labelCls}>{k('apps_alerts')}</label>
+                <select className={inputCls} value={otherAlerts} onChange={e => setOtherAlerts(e.target.value === 'none' ? 'none' : 'info')}>
+                  <option value="info">{k('apps_alerts_info')}</option>
+                  <option value="none">{k('apps_alerts_none')}</option>
+                </select>
+              </div>
+              <button type="button" onClick={saveApps} disabled={appsBusy} className="flex items-center gap-2 rounded-xl bg-neutral-900 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50 dark:bg-white dark:text-black">
+                {appsBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {k('save')}
+              </button>
+            </div>
+          </div>
         </>
         </div>
       )}

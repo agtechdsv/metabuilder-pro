@@ -225,7 +225,7 @@ export async function processQueue(admin: Admin, cfg: BillingSettings): Promise<
           const { data: prof } = await admin.from('profiles').select('email, full_name').eq('id', p.userId).maybeSingle()
           customerName = prof?.full_name || null; customerEmail = prof?.email || null
         }
-        const mail = adminBillingMail(it.kind, { customerName, customerEmail, amount: p.amount ?? null, dueDate: p.dueDate ?? null, event: p.event ?? null, paymentId: p.paymentId ?? null, digest: p.digest ?? null, keyName: p.keyName ?? null, expiresAt: p.expiresAt ?? null, appUrl: appUrl() })
+        const mail = adminBillingMail(it.kind, { customerName, customerEmail, amount: p.amount ?? null, dueDate: p.dueDate ?? null, event: p.event ?? null, paymentId: p.paymentId ?? null, digest: p.digest ?? null, keyName: p.keyName ?? null, expiresAt: p.expiresAt ?? null, keyScope: p.scope ?? null, appUrl: appUrl() })
         if (!mail) { await mark('failed', 'tipo desconhecido'); out.failed++; continue }
         if (await sendTeamNoticeFor('billing_team', mail.subject, mail.text, mail.html, cfg.adminEmail || null)) { await mark('sent'); out.sent++ } else { await mark('failed', 'o SMTP recusou ou não está configurado'); out.failed++ }
       }

@@ -5,6 +5,7 @@ import { CYCLE_MONTHS, isCycle } from "../_shared/pricing.ts";
 import { applyTransferEvent, cancelPartnerReferral, recordPartnerCommission, revokePartnerCommissionForPayment } from "../_shared/partners.ts";
 import { billingSettings, pingNotify, queueNotice, queuePayoutNotice } from "../_shared/billing.ts";
 import { noticeRef, payoutIsFinal, type NoticeKind } from "../_shared/billingCore.ts";
+import { isForeignAsaasEvent, isOwnPaymentRef, keyAlertDecision, loadAsaasApps } from "../_shared/asaasApps.ts";
 
 serve(async (req) => {
   if (req.method !== "POST") {
@@ -41,6 +42,29 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       serviceRoleKey
     );
+
+    // O webhook do Asaas é da CONTA INTEIRA: também chegam aqui os eventos de pagamento, assinatura e nota dos OUTROS apps que usam a mesma conta
+    // (ex.: TraderMasterPRO). Evento de pagamento/assinatura/nota cuja referência externa NÃO tem o formato do MetaBuilder e que NÃO está no nosso
+    // banco é de outro app: ignora (200, para o Asaas não reenviar) em vez de gerar "pagamento sem cliente identificado" ou aviso de estorno.
+    // Sem referência externa não dá para saber: segue o fluxo normal (e o alerta de não identificado continua valendo). Falha aqui nunca derruba o evento.
+    if (typeof event === "string" && /^(PAYMENT|SUBSCRIPTION|INVOICE)_/.test(event)) {
+      try {
+        const invoice = (body.invoice || {}) as Record<string, any>;
+        const ref = payment?.externalReference ?? subscription?.externalReference ?? invoice.externalReference;
+        if (typeof ref === "string" && ref.trim() && !isOwnPaymentRef(ref)) {
+          const payId = payment?.id ?? invoice.payment;
+          const subId = payment?.subscription || subscription?.id;
+          const [knownPay, knownSub] = await Promise.all([
+            payId ? supabase.from("payments").select("id").eq("asaas_payment_id", payId).maybeSingle() : Promise.resolve({ data: null }),
+            subId ? supabase.from("profiles").select("id").eq("asaas_subscription_id", subId).maybeSingle() : Promise.resolve({ data: null }),
+          ]);
+          if (isForeignAsaasEvent({ externalReference: ref, isKnownPayment: !!knownPay.data, isKnownSubscription: !!knownSub.data })) {
+            console.log(`[app-externo] ${event} ignorado: a referência "${String(ref).slice(0, 40)}" não é do MetaBuilder (outro app na mesma conta do Asaas)`);
+            return new Response(JSON.stringify({ success: true, ignored: "other_app" }), { status: 200, headers: { "Content-Type": "application/json" } });
+          }
+        }
+      } catch (e) { console.error("[app-externo] erro ao conferir o dono do evento (segue o fluxo normal):", e); }
+    }
 
     // Avisos de cobranca (e-mail e tela) feitos pelo MetaBuilder: desligados por padrao (aí tudo se comporta como antes).
     // Enfileira o aviso; no fim do webhook o site é chamado para enviar na hora (se não responder, a rotina diária envia).
@@ -417,10 +441,13 @@ serve(async (req) => {
       try {
         const tok = (body.accessToken || body.apiKey || {}) as Record<string, unknown>;
         const str = (v: unknown) => (typeof v === "string" || typeof v === "number" ? String(v).slice(0, 120) : null);
-        if (await queuePayoutNotice(supabase, {
+        // A conta tem mais de um app: a chave é nossa (urgente), de outro app cadastrado (aviso discreto ou nenhum) ou desconhecida (avisa, pedindo para cadastrar)?
+        const { send, scope } = keyAlertDecision(str(tok.name), await loadAsaasApps(supabase));
+        if (!send) console.log(`[chave-api] ${event} da chave de outro app ("${str(tok.name)}"): aviso desligado nos ajustes`);
+        else if (await queuePayoutNotice(supabase, {
           kind: "admin_key_alert",
           ref: noticeRef([typeof body.id === "string" && body.id ? body.id : `${event}:${new Date().toISOString().slice(0, 13)}`]),
-          payload: { event, keyName: str(tok.name), expiresAt: str(tok.expirationDate ?? tok.expiresAt) },
+          payload: { event, keyName: str(tok.name), expiresAt: str(tok.expirationDate ?? tok.expiresAt), scope },
         })) queuedAny = true;
       } catch (e) { console.error("[chave-api] erro ao enfileirar o alerta:", e); }
     }

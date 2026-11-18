@@ -12,7 +12,7 @@ const fnDir = path.join(root, 'supabase', 'functions')
 const outDir = path.join(root, 'supabase', 'functions-dashboard')
 const FUNCTIONS = ['admin-cancel-billing', 'asaas-cancel', 'asaas-checkout', 'asaas-update-subscription', 'asaas-webhook', 'iclub-release', 'partner-payout', 'partner-transfer-validation']
 
-const SHARED_ORDER = ['pricing', 'iclub', 'partnerCommission', 'partners', 'billingCore', 'billing', 'adminCancel']
+const SHARED_ORDER = ['pricing', 'iclub', 'partnerCommission', 'partners', 'billingCore', 'billing', 'adminCancel', 'asaasApps']
 const read = f => fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n')
 const sharedImport = /^import [^;]*?from ["']\.\.\/_shared\/([\w-]+)\.ts["'];?\s*$/gm
 const anyImport = /^import [^;]*?from ["']\.\/(\w+)\.ts["'];?\s*$/gm
