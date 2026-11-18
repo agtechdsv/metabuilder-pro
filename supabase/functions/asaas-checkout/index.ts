@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
 import { campaignFromProfile, findEligibleCampaign, referralPercentFor } from "../_shared/iclub.ts";
 import { CYCLE_MONTHS, chargeBreakdown, isCycle, isCycleEnabled, nextChargeValue, type CampaignTerms } from "../_shared/pricing.ts";
-import { isOwnCustomerRef, ownCustomerRef } from "../_shared/asaasApps.ts";
+import { buildPaymentRef, isOwnCustomerRef, ownCustomerRef } from "../_shared/familyRefs.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -271,13 +271,10 @@ serve(async (req) => {
     }
     const nextDueDate = d.toISOString().split("T")[0];
 
-    // External reference structure (shortened to fit under Asaas 100-char limit)
+    // Referência externa no padrão da Família PRO (mb_ws_<workspace>_<l|u>_<licenças>_cy_<ciclo>_t_<timestamp>; ~64 caracteres, limite do Asaas: 100).
+    // Upgrade usa "u" no lugar de "l". Ver supabase/functions/_shared/familyRefs.ts e docs/familia-pro-referencias.md.
     const cycleCode = cycle === "monthly" ? "mo" : cycle === "quarterly" ? "qu" : cycle === "semiannual" ? "se" : "ye";
-    const cleanWorkspaceId = workspaceId.replace(/-/g, "");
-    const timestamp = Math.floor(Date.now() / 1000);
-    // Para upgrades, usamos o prefixo _u_ em vez de _l_
-    const prefix = isUpgrade ? "u" : "l";
-    const externalReference = `w_${cleanWorkspaceId}_${prefix}_${licenses}_c_${cycleCode}_${timestamp}`;
+    const externalReference = buildPaymentRef({ workspaceId, licenses: Number(licenses), upgrade: !!isUpgrade, cycleCode, timestamp: Math.floor(Date.now() / 1000) });
 
     // Setup card details if applicable
     let creditCardPayload = {};

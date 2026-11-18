@@ -5,7 +5,8 @@ import { CYCLE_MONTHS, isCycle } from "../_shared/pricing.ts";
 import { applyTransferEvent, cancelPartnerReferral, recordPartnerCommission, revokePartnerCommissionForPayment } from "../_shared/partners.ts";
 import { billingSettings, pingNotify, queueNotice, queuePayoutNotice } from "../_shared/billing.ts";
 import { noticeRef, payoutIsFinal, type NoticeKind } from "../_shared/billingCore.ts";
-import { isForeignAsaasEvent, isOwnPaymentRef, keyAlertDecision, loadAsaasApps } from "../_shared/asaasApps.ts";
+import { isForeignAsaasEvent, keyAlertDecision, loadAsaasApps } from "../_shared/asaasApps.ts";
+import { appOfRef, isOwnRef, parsePaymentRef } from "../_shared/familyRefs.ts";
 
 serve(async (req) => {
   if (req.method !== "POST") {
@@ -51,15 +52,15 @@ serve(async (req) => {
       try {
         const invoice = (body.invoice || {}) as Record<string, any>;
         const ref = payment?.externalReference ?? subscription?.externalReference ?? invoice.externalReference;
-        if (typeof ref === "string" && ref.trim() && !isOwnPaymentRef(ref)) {
+        if (typeof ref === "string" && ref.trim() && !isOwnRef(ref)) {
           const payId = payment?.id ?? invoice.payment;
           const subId = payment?.subscription || subscription?.id;
           const [knownPay, knownSub] = await Promise.all([
             payId ? supabase.from("payments").select("id").eq("asaas_payment_id", payId).maybeSingle() : Promise.resolve({ data: null }),
             subId ? supabase.from("profiles").select("id").eq("asaas_subscription_id", subId).maybeSingle() : Promise.resolve({ data: null }),
           ]);
-          if (isForeignAsaasEvent({ externalReference: ref, isKnownPayment: !!knownPay.data, isKnownSubscription: !!knownSub.data })) {
-            console.log(`[app-externo] ${event} ignorado: a referência "${String(ref).slice(0, 40)}" não é do MetaBuilder (outro app na mesma conta do Asaas)`);
+          if (isForeignAsaasEvent({ externalReference: ref, isOwnFormat: isOwnRef(ref), isKnownPayment: !!knownPay.data, isKnownSubscription: !!knownSub.data })) {
+            console.log(`[app-externo] ${event} ignorado: a referência "${String(ref).slice(0, 40)}" não é do MetaBuilder (app da família: ${appOfRef(ref) ?? "fora do padrão"})`);
             return new Response(JSON.stringify({ success: true, ignored: "other_app" }), { status: 200, headers: { "Content-Type": "application/json" } });
           }
         }
@@ -75,16 +76,10 @@ serve(async (req) => {
     };
 
     // -----------------------------------------------------------------------
-    // resolveContext: Try 3 strategies to find user_id, plan_id, cycle, etc.
+    // resolveContext: acha user_id, ciclo etc. por 2 caminhos do nosso banco (pagamento, assinatura).
     // We CANNOT rely solely on payment.externalReference — Asaas sometimes
     // omits it in PAYMENT_RECEIVED payloads for subscription payments.
     // -----------------------------------------------------------------------
-    const formatUUID = (str: string): string => {
-      if (!str || str.includes("-")) return str;
-      if (str.length !== 32) return str;
-      return `${str.slice(0, 8)}-${str.slice(8, 12)}-${str.slice(12, 16)}-${str.slice(16, 20)}-${str.slice(20)}`;
-    };
-
     interface Context {
       userId: string;
       cycle: string;
@@ -95,13 +90,9 @@ serve(async (req) => {
     // 0 = a referência não informa as licenças (renovações do Asaas às vezes vêm sem ela): quem chama NÃO deve sobrescrever as licenças do perfil
     const extractLicensesFromExtRef = (extRef: string): number => {
       if (!extRef) return 0;
-      const parts = extRef.split("_");
-      let lIndex = parts.indexOf("l");
-      if (lIndex === -1) lIndex = parts.indexOf("u");
-      if (lIndex !== -1 && parts[lIndex + 1]) {
-        return parseInt(parts[lIndex + 1], 10) || 1;
-      }
-      return 0;
+      // lê pelo padrão da Família PRO (familyRefs.ts), e não pela posição das letras
+      const parsed = parsePaymentRef(extRef);
+      return parsed ? parsed.licenses || 1 : 0;
     };
 
     const resolveContext = async (): Promise<Context | null> => {
@@ -155,43 +146,8 @@ serve(async (req) => {
         console.log("[S2] No profile found for this subscription ID");
       }
 
-      // --- Strategy 3: Parse externalReference (legacy/fallback) ---
-      const extRef = payment?.externalReference || subscription?.externalReference;
-      if (extRef && (extRef.startsWith("w_") || extRef.startsWith("ws_"))) {
-        console.log(`[S3] Parsing externalReference=${extRef}`);
-        const parts = extRef.split("_");
-        let userId = "";
-        let cycleRaw = "";
-
-        let licenses = 1;
-
-        if ((extRef.includes("_l_") || extRef.includes("_u_")) && extRef.includes("_c_")) {
-          let lIndex = parts.indexOf("l");
-          if (lIndex === -1) lIndex = parts.indexOf("u");
-          if (lIndex !== -1 && parts[lIndex + 1]) licenses = parseInt(parts[lIndex + 1]) || 1;
-          const cIndex = parts.indexOf("c");
-          if (cIndex !== -1 && parts[cIndex + 1]) cycleRaw = parts[cIndex + 1];
-        } else {
-          if (parts[0] === "u") {
-            userId = parts[1]; cycleRaw = parts[7];
-          } else {
-            cycleRaw = parts[5];
-          }
-        }
-
-        userId = formatUUID(userId);
-
-        let cycle = cycleRaw;
-        if (cycleRaw === "mo") cycle = "monthly";
-        else if (cycleRaw === "qu") cycle = "quarterly";
-        else if (cycleRaw === "se") cycle = "semiannual";
-        else if (cycleRaw === "ye") cycle = "yearly";
-
-        if (userId) {
-          console.log(`[S3] Success: user_id=${userId}`);
-          return { userId, cycle, licenses, externalReference: extRef };
-        }
-      }
+      // (A antiga "Strategy 3" lia o usuário da própria referência externa, mas a referência traz o WORKSPACE, não o usuário: nunca resolvia nada.
+      // Foi removida. O usuário sai sempre do nosso banco: S1 pelo pagamento, S2 pela assinatura.)
 
       console.warn("[ALL] Could not resolve payment context from any strategy");
       return null;
@@ -221,7 +177,7 @@ serve(async (req) => {
       const expirationDate = new Date();
       expirationDate.setMonth(expirationDate.getMonth() + monthsToAdd);
 
-      const isUpgradePayment = ctx.externalReference?.includes("_u_");
+      const isUpgradePayment = parsePaymentRef(ctx.externalReference)?.upgrade === true;
       
       // estava suspenso? (o aviso de pagamento recebido diz que o acesso foi restabelecido)
       const { data: before } = await supabase.from("profiles").select("subscription_status").eq("id", ctx.userId).maybeSingle();

@@ -1,23 +1,26 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import {
-  DEFAULT_ASAAS_APPS, MAX_ASAAS_APPS, MAX_ASAAS_APP_NAME, classifyKey, isForeignAsaasEvent, isOwnCustomerRef, isOwnPaymentRef, keyAlertDecision,
-  loadAsaasApps, ownCustomerRef, parseAsaasApps,
+  DEFAULT_ASAAS_APPS, MAX_ASAAS_APPS, MAX_ASAAS_APP_NAME, classifyKey, isForeignAsaasEvent, keyAlertDecision, loadAsaasApps, parseAsaasApps,
 } from '../../../supabase/functions/_shared/asaasApps'
+import { isOwnCustomerRef, isOwnRef as isOwnPaymentRef, ownCustomerRef } from '../../../supabase/functions/_shared/familyRefs'
 import { adminBillingMail } from '../billing/billingMailText'
 
 const read = (p: string) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n')
 
 // Vários apps na mesma conta do Asaas (MetaBuilderPRO e TraderMasterPRO): o webhook é da conta, então cada app tem de reconhecer o que é seu.
 describe('referências: o que é do MetaBuilder', () => {
-  it('pagamentos e assinaturas nossos começam com w_, ws_ ou u_; o resto não é nosso', () => {
-    for (const ref of ['w_abc_l_1_c_mo_1700000000', 'ws_x', 'u_1234']) expect(isOwnPaymentRef(ref), ref).toBe(true)
-    for (const ref of ['tmp_123', 'TM-77', 'mb_x', '', null, undefined, 42]) expect(isOwnPaymentRef(ref), String(ref)).toBe(false)
+  it('pagamentos e assinaturas nossos começam com mb_ (e o formato legado w_, ws_, u_); o resto não é nosso', () => {
+    for (const ref of ['mb_ws_abc_l_1_cy_mo_t_1', 'mb_x', 'w_abc_l_1_c_mo_1700000000', 'ws_x', 'u_1234']) expect(isOwnPaymentRef(ref), ref).toBe(true)
+    // referências de OUTROS apps da família e de apps fora do padrão
+    for (const ref of ['tm_ws_x', 'vt_x', 'tmp_123', 'TM-77', '', null, undefined, 42]) expect(isOwnPaymentRef(ref), String(ref)).toBe(false)
   })
 
-  it('clientes nossos levam mb_<id do usuário>', () => {
-    expect(ownCustomerRef('uuid-1')).toBe('mb_uuid-1')
+  it('clientes nossos levam mb_us_<id do usuário>; a referência de um pagamento não vale como marca de cliente', () => {
+    expect(ownCustomerRef('uuid-1')).toBe('mb_us_uuid-1')
     expect(isOwnCustomerRef(ownCustomerRef('uuid-1'))).toBe(true)
+    expect(isOwnCustomerRef('mb_ws_abc_l_1_cy_mo_t_1')).toBe(false)
+    expect(isOwnCustomerRef('tm_us_9')).toBe(false)
     expect(isOwnCustomerRef('tmp_9')).toBe(false)
     expect(isOwnCustomerRef(undefined)).toBe(false)
   })
@@ -69,14 +72,18 @@ describe('apps cadastrados (nomes das chaves de API)', () => {
 
 describe('evento de pagamento: é de outro app?', () => {
   it('só quando a referência existe, não é nossa e o pagamento/assinatura não está no nosso banco', () => {
-    expect(isForeignAsaasEvent({ externalReference: 'tmp_1', isKnownPayment: false, isKnownSubscription: false })).toBe(true)
+    // o formato da referência (isOwnFormat) vem do padrão da Família PRO (familyRefs.ts)
+    const ev = (ref: unknown, pay = false, sub = false) => isForeignAsaasEvent({ externalReference: ref, isOwnFormat: isOwnPaymentRef(ref), isKnownPayment: pay, isKnownSubscription: sub })
+    expect(ev('tmp_1')).toBe(true)
+    expect(ev('tm_ws_x_l_1_cy_mo_t_1')).toBe(true) // referência de outro app da família
     // já está no nosso banco: é nosso mesmo com referência estranha
-    expect(isForeignAsaasEvent({ externalReference: 'tmp_1', isKnownPayment: true, isKnownSubscription: false })).toBe(false)
-    expect(isForeignAsaasEvent({ externalReference: 'tmp_1', isKnownPayment: false, isKnownSubscription: true })).toBe(false)
-    // formato nosso: nunca é de outro app, mesmo sem estar no banco (cai no alerta de "não identificado")
-    expect(isForeignAsaasEvent({ externalReference: 'w_abc_l_1_c_mo_1', isKnownPayment: false, isKnownSubscription: false })).toBe(false)
+    expect(ev('tmp_1', true, false)).toBe(false)
+    expect(ev('tmp_1', false, true)).toBe(false)
+    // formato nosso (novo ou legado): nunca é de outro app, mesmo sem estar no banco (cai no alerta de "não identificado")
+    expect(ev('mb_ws_abc_l_1_cy_mo_t_1')).toBe(false)
+    expect(ev('w_abc_l_1_c_mo_1')).toBe(false)
     // sem referência: não dá para saber, então NÃO ignora
-    for (const ref of [undefined, null, '', '   ']) expect(isForeignAsaasEvent({ externalReference: ref, isKnownPayment: false, isKnownSubscription: false }), String(ref)).toBe(false)
+    for (const ref of [undefined, null, '', '   ']) expect(ev(ref), String(ref)).toBe(false)
   })
 })
 
@@ -115,7 +122,7 @@ describe('código das Edge Functions e da tela', () => {
     expect(guard).toBeLessThan(hook.indexOf('"admin_unresolved"'))
     expect(guard).toBeLessThan(hook.indexOf('"admin_refund"'))
     const block = hook.slice(hook.lastIndexOf('try {', guard), hook.indexOf('} catch (e) { console.error("[app-externo]', guard))
-    expect(block).toContain('isOwnPaymentRef(ref)') // só consulta o banco quando a referência não tem o formato nosso
+    expect(block).toContain('!isOwnRef(ref)') // só consulta o banco quando a referência não tem o formato nosso
     expect(block).toContain('from("payments")') // e confere se o pagamento já é nosso
     expect(block).toContain('from("profiles")') // ou a assinatura
     expect(block).toContain('ignored: "other_app"')
