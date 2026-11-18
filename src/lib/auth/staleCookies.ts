@@ -51,6 +51,15 @@ export function authSessionTexts(cookies: Record<string, string>): { base: strin
   })
 }
 
+/** O navegador tem algum cookie de login do Supabase (sb-<ref>-auth-token)? Só olha os nomes. */
+export function hasAuthCookie(doc: { cookie: string } = document): boolean {
+  try {
+    return Object.keys(parseCookieString(doc.cookie)).some(n => AUTH_COOKIE_RE.test(n))
+  } catch {
+    return false
+  }
+}
+
 /** Nomes dos cookies de login que ainda carregam este refresh token. */
 export function cookiesHoldingToken(cookies: Record<string, string>, refreshToken: string): string[] {
   if (!refreshToken) return []

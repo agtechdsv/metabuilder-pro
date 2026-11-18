@@ -6,6 +6,7 @@ import { LogOut } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import { signOut } from '@/app/auth/actions'
 import { isTauri } from '@/utils/tauriUtils'
+import { hasAuthCookie } from '@/lib/auth/staleCookies'
 import { KIND_COOKIE, chooseUrl, isProtectedPath, placeText, revokedUrl, type SlotOther } from '@/lib/sessions/slotCore'
 
 const BEAT_MS = 60_000
@@ -23,6 +24,7 @@ export function SessionGuard() {
   const [revoked, setRevoked] = useState<SlotOther | null | false>(false)
   const [leaving, setLeaving] = useState(false)
   const lastBeat = useRef(0)
+  const lastPeek = useRef(0)
 
   useEffect(() => {
     if (!isTauri()) return
@@ -59,6 +61,36 @@ export function SessionGuard() {
     return () => {
       stopped = true
       window.clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
+  }, [pathname, revoked])
+
+  // Página inicial pública: ela não tem a conferência de vaga das áreas protegidas, então um navegador com login antigo (vaga liberada por
+  // ociosidade ou troca) continuava mostrando o avatar. Se ainda há cookie de login, só PERGUNTA se a vaga desta sessão foi encerrada
+  // (?peek=1: não ocupa vaga, não renova atividade, não grava cookie) e mostra o mesmo aviso. Sem batimento periódico: ao abrir e ao voltar o foco.
+  useEffect(() => {
+    if (pathname !== '/' || revoked !== false || !hasAuthCookie()) return
+    let stopped = false
+    const peek = async () => {
+      const now = Date.now()
+      if (stopped || now - lastPeek.current < MIN_GAP_MS) return
+      lastPeek.current = now
+      try {
+        const res = await fetch('/api/session/heartbeat?peek=1', { cache: 'no-store', credentials: 'same-origin' })
+        if (!res.ok) return
+        const body = await res.json() as { status?: string; by?: SlotOther | null }
+        if (!stopped && body.status === 'revoked') setRevoked(body.by ?? null)
+      } catch {
+        // sem rede: não mostra nada
+      }
+    }
+    void peek()
+    const onVisible = () => { if (document.visibilityState === 'visible') void peek() }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      stopped = true
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', onVisible)
     }

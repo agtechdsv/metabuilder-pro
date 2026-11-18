@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import {
-  DEVICE_COOKIE, KIND_COOKIE, clientIp, describeClient, geoFromHeaders, hashIp, isUuid, parseKind, sessionIdFromJwt, slotSecret,
-  type SlotInput, type SlotKind, type SlotOther, type SlotResult,
+  DEVICE_COOKIE, KIND_COOKIE, clientIp, decidePeek, describeClient, geoFromHeaders, hashIp, isUuid, parseKind, parseMode, sessionIdFromJwt, slotSecret,
+  type PeekResult, type SlotInput, type SlotKind, type SlotOther, type SlotResult,
 } from './slotCore'
 
 /**
@@ -68,6 +68,34 @@ export async function claimSlot(input: SlotInput): Promise<SlotResult | null> {
     return isResult(data) ? data : null
   } catch (e) {
     console.error('[vagas] falha ao conferir a vaga:', (e as Error)?.message)
+    return null
+  }
+}
+
+/**
+ * Só lê: a vaga desta sessão foi encerrada (troca, ociosidade, admin)? Não ocupa vaga nem renova atividade.
+ * Devolve null em qualquer falha: quem chama não mostra nada (nunca incomodamos o usuário por erro nosso).
+ */
+export async function peekSlot(sessionId: string): Promise<PeekResult | null> {
+  const db = adminDb()
+  if (!db || !isUuid(sessionId)) return null
+  try {
+    const { data: setting } = await db.from('platform_settings').select('value').eq('key', 'device_slot_mode').maybeSingle()
+    const mode = parseMode((setting?.value as { mode?: unknown } | null)?.mode)
+    if (mode !== 'enforce') return decidePeek(mode, null, null)
+
+    const { data: mine } = await db.from('mb_device_sessions').select('revoked_at, revoked_reason, replaced_by')
+      .eq('auth_session_id', sessionId).order('created_at', { ascending: false }).limit(1).maybeSingle()
+    if (!mine) return decidePeek(mode, null, null)
+
+    let by: SlotOther | null = null
+    if (mine.revoked_at && mine.replaced_by) {
+      const { data: b } = await db.from('mb_device_sessions').select('id, kind, label, city, region, country, created_at').eq('id', mine.replaced_by).maybeSingle()
+      if (b) by = { id: b.id, kind: b.kind, label: b.label, city: b.city, region: b.region, country: b.country, since: b.created_at }
+    }
+    return decidePeek(mode, mine, by)
+  } catch (e) {
+    console.error('[vagas] falha ao consultar a vaga:', (e as Error)?.message)
     return null
   }
 }

@@ -259,5 +259,24 @@ export function revokedUrl(by?: SlotOther | null): string {
   return `/?${q.toString()}`
 }
 
+/**
+ * Consulta SÓ DE LEITURA da vaga desta sessão (a página inicial pública usa para trocar o avatar pelo aviso de sessão encerrada).
+ * Não ocupa vaga, não renova atividade e não grava cookie. Só fala em "revoked" no modo Valer e se a vaga desta sessão foi encerrada.
+ */
+export type PeekResult =
+  | { status: 'off' | 'none' | 'ok' }
+  | { status: 'revoked'; reason: string | null; by: SlotOther | null }
+
+export function decidePeek(
+  mode: SlotMode,
+  mine: { revoked_at: string | null; revoked_reason: string | null } | null,
+  by: SlotOther | null,
+): PeekResult {
+  if (mode !== 'enforce') return { status: 'off' }
+  if (!mine) return { status: 'none' }
+  if (!mine.revoked_at) return { status: 'ok' }
+  return { status: 'revoked', reason: mine.revoked_reason, by }
+}
+
 /** Códigos de erro que as ações devolvem à tela. */
 export type SlotErrorCode = 'not_authenticated' | 'session_revoked' | 'invalid_code' | 'code_expired' | 'too_many_attempts' | 'too_soon' | 'mail_failed' | 'unknown'

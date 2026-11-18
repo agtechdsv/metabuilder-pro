@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { currentSlot, writeSlotCookies } from '@/lib/sessions/currentSlot'
-import { claimSlot } from '@/lib/sessions/slotService'
+import { claimSlot, peekSlot } from '@/lib/sessions/slotService'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,9 +9,15 @@ export const dynamic = 'force-dynamic'
  * Mantém a vaga viva (atividade) e avisa se esta sessão foi encerrada por outro login.
  * Respostas: anonymous | unknown | off | exempt | ok | claimed | occupied | revoked.
  */
-export async function GET() {
+export async function GET(request: Request) {
   const slot = await currentSlot()
   if (!slot) return NextResponse.json({ status: 'anonymous' }, { headers: { 'Cache-Control': 'no-store' } })
+
+  // ?peek=1: só olha se a vaga desta sessão foi encerrada (página inicial pública). Não ocupa vaga, não renova atividade, não grava cookie.
+  if (new URL(request.url).searchParams.get('peek') === '1') {
+    const peeked = await peekSlot(slot.input.sessionId)
+    return NextResponse.json(peeked ?? { status: 'unknown' }, { headers: { 'Cache-Control': 'no-store' } })
+  }
 
   const result = await claimSlot(slot.input)
   if (!result) return NextResponse.json({ status: 'unknown' }, { headers: { 'Cache-Control': 'no-store' } })
