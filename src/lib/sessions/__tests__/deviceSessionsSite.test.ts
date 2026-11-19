@@ -62,8 +62,11 @@ describe('vagas de sessão: script SQL', () => {
   it('o painel marca a sessão do SuperAdmin e o texto novo existe nos 3 idiomas', () => {
     expect(read('src/components/admin/DeviceSessionsAdmin.tsx')).toContain("k('super_tag')")
     expect(read('src/app/actions/deviceSessions.ts')).toContain("', user_id, exempt'")
+    // as do SuperAdmin ficam no topo, em grupo próprio
+    expect(read('src/app/actions/deviceSessions.ts')).toContain('active.sort((x, y) => Number(!!y.exempt) - Number(!!x.exempt))')
+    expect(read('src/components/admin/DeviceSessionsAdmin.tsx')).toContain("k(a.exempt ? 'group_super' : 'group_users')")
     for (const l of LANGS) {
-      for (const key of ['super_tag', 'idle_tag_super']) expect(typeof get(json(l), `admin_devices.${key}`), `${l} ${key}`).toBe('string')
+      for (const key of ['super_tag', 'idle_tag_super', 'group_super', 'group_users']) expect(typeof get(json(l), `admin_devices.${key}`), `${l} ${key}`).toBe('string')
       expect(get(json(l), 'admin_devices.subtitle'), l).not.toMatch(/não ocupa|does not take|no ocupa/)
     }
   })

@@ -5996,6 +5996,8 @@
     "title": "Sessões e dispositivos",
     "subtitle": "Uma sessão de IDE e uma de navegador por usuário. O SuperAdmin não tem limite, mas as sessões dele aparecem aqui e podem ser encerradas.",
     "super_tag": "SuperAdmin",
+    "group_super": "Suas sessões (SuperAdmin)",
+    "group_users": "Demais usuários",
     "idle_tag_super": "sem atividade há um tempo (a sessão segue válida até você encerrar)",
     "refresh": "Atualizar",
     "mode": "Modo",

@@ -207,6 +207,8 @@ export async function adminDeviceOverviewAction(): Promise<DeviceActionResult<{ 
   const active: AdminActiveDto[] = activeRows.map(({ auth_session_id: _drop, ...r }) => ({
     ...r, email: byId.get(r.user_id)?.email ?? null, full_name: byId.get(r.user_id)?.full_name ?? null,
   }))
+  // as sessões do SuperAdmin vêm primeiro; dentro de cada grupo segue a ordem da consulta (atividade mais recente primeiro; o sort é estável)
+  active.sort((x, y) => Number(!!y.exempt) - Number(!!x.exempt))
   const events: AdminEventDto[] = eventRows.map(r => ({ ...r, email: byId.get(r.user_id)?.email ?? null, meta: (r.meta || {}) as Record<string, unknown> }))
 
   const swap = new Map<string, AdminSwapperDto>()

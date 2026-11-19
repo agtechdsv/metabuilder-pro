@@ -5996,6 +5996,8 @@
     "title": "Sessions and devices",
     "subtitle": "One IDE session and one browser session per user. The SuperAdmin has no limit, but their sessions are listed here and can be ended.",
     "super_tag": "SuperAdmin",
+    "group_super": "Your sessions (SuperAdmin)",
+    "group_users": "Other users",
     "idle_tag_super": "no activity for a while (the session stays valid until you end it)",
     "refresh": "Refresh",
     "mode": "Mode",
