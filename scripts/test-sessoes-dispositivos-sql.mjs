@@ -113,8 +113,28 @@ try {
 
   console.log('\nSuperAdmin')
   const adm = await mk(true)
-  eq((await claim(adm, 'web', 'devA', await uuid())).status, 'exempt', 'SuperAdmin não ocupa vaga')
-  eq((await claim(adm, 'web', 'devB', await uuid())).status, 'exempt', 'nem conflita')
+  const [a1, a2, a3, a4] = [await uuid(), await uuid(), await uuid(), await uuid()]
+  eq((await claim(adm, 'web', 'devA', a1)).status, 'exempt', 'SuperAdmin entra sem escolha')
+  eq((await claim(adm, 'web', 'devB', a2)).status, 'exempt', 'em outra máquina web também, sem conflito')
+  eq((await claim(adm, 'ide', 'devA', a3)).status, 'exempt', 'e na IDE')
+  eq((await db.query(`select count(*)::int n from public.mb_device_sessions where user_id=$1 and revoked_at is null and exempt`, [adm])).rows[0].n, 3, 'as 3 sessões ficam registradas (isentas) e ativas')
+  eq((await events(adm, 'takeover')) + (await events(adm, 'conflict')) + (await events(adm, 'cap_reached')), 0, 'sem troca, conflito nem limite de trocas')
+  eq((await claim(adm, 'web', 'devA', a1)).status, 'exempt', 'a mesma sessão só renova')
+  eq((await db.query(`select count(*)::int n from public.mb_device_sessions where auth_session_id=$1`, [a1])).rows[0].n, 1, 'sem linha duplicada')
+  // novo login na mesma máquina: a anterior dela sai da lista (same_device), as outras seguem
+  eq((await claim(adm, 'web', 'devA', a4)).status, 'exempt', 'novo login do SuperAdmin na mesma máquina')
+  eq((await db.query(`select revoked_reason r from public.mb_device_sessions where auth_session_id=$1`, [a1])).rows[0].r, 'same_device', 'a anterior da mesma máquina sai da lista')
+  eq((await db.query(`select count(*)::int n from public.mb_device_sessions where user_id=$1 and revoked_at is null`, [adm])).rows[0].n, 3, 'continuam 3 ativas')
+  // encerrar uma máquina pelo painel (motivo admin) derruba só aquela
+  const idB = (await db.query(`select id from public.mb_device_sessions where auth_session_id=$1`, [a2])).rows[0].id
+  eq((await db.query('select public.mb_revoke_device_session($1, $2) r', [idB, 'admin'])).rows[0].r, true, 'o admin encerra a máquina B do SuperAdmin')
+  const killed = await claim(adm, 'web', 'devB', a2)
+  eq([killed.status, killed.reason], ['revoked', 'admin'], 'a máquina encerrada descobre, com o motivo admin')
+  eq((await claim(adm, 'web', 'devA', a4)).status, 'exempt', 'as outras máquinas seguem normais')
+  // o SuperAdmin não atrapalha a vaga de um usuário comum
+  const u9 = await mk()
+  eq((await claim(u9, 'web', 'devA', await uuid())).status, 'claimed', 'usuário comum continua ocupando a vaga normalmente')
+  eq((await claim(u9, 'web', 'devB', await uuid())).status, 'occupied', 'e a regra de uma vaga por usuário segue valendo')
 
   console.log('\nmodo observar')
   await setMode('observe')

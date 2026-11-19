@@ -186,7 +186,7 @@ export async function adminDeviceOverviewAction(): Promise<DeviceActionResult<{ 
 
   const [settingsRes, activeRes, eventsRes] = await Promise.all([
     db.rpc('mb_device_settings'),
-    db.from('mb_device_sessions').select(DEVICE_COLS + ', user_id').is('revoked_at', null).order('last_seen_at', { ascending: false }).limit(300),
+    db.from('mb_device_sessions').select(DEVICE_COLS + ', user_id, exempt').is('revoked_at', null).order('last_seen_at', { ascending: false }).limit(300),
     db.from('mb_device_events').select('id, user_id, event, kind, label, city, region, created_at, meta')
       .in('event', ['takeover', 'conflict', 'cap_reached', 'code_failed']).gte('created_at', since).order('created_at', { ascending: false }).limit(400),
   ])

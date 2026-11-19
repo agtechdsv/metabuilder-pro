@@ -26,6 +26,8 @@ export interface DeviceSettingsDto {
 export const DEFAULT_DEVICE_SETTINGS: DeviceSettingsDto = { mode: 'off', idleMinutes: 15, takeoverCap: 3, ttlSeconds: 60 }
 
 export interface AdminActiveDto extends Omit<DeviceRowDto, 'current'> {
+  /** sessão de SuperAdmin: sem limite de quantidade, mas listada para poder ser encerrada */
+  exempt?: boolean
   user_id: string
   email: string | null
   full_name: string | null

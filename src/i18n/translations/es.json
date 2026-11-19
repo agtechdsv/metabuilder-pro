@@ -6082,7 +6082,9 @@
   },
   "admin_devices": {
     "title": "Sesiones y dispositivos",
-    "subtitle": "Una sesión de IDE y una de navegador por usuario. El SuperAdmin no ocupa cupo.",
+    "subtitle": "Una sesión de IDE y una de navegador por usuario. El SuperAdmin no tiene límite, pero sus sesiones aparecen aquí y se pueden cerrar.",
+    "super_tag": "SuperAdmin",
+    "idle_tag_super": "sin actividad desde hace un tiempo (la sesión sigue válida hasta que la cierres)",
     "refresh": "Actualizar",
     "mode": "Modo",
     "mode_off": "Apagado",

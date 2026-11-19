@@ -41,8 +41,31 @@ describe('vagas de sessão: script SQL', () => {
     }
   })
 
-  it('o banco garante no máximo uma sessão ativa por usuário e tipo', () => {
-    expect(sql).toMatch(/create unique index if not exists mb_device_sessions_one_active on public\.mb_device_sessions \(user_id, kind\) where revoked_at is null/)
+  it('o banco garante no máximo uma sessão ativa por usuário e tipo, menos as do SuperAdmin (isentas)', () => {
+    expect(sql).toMatch(/create unique index if not exists mb_device_sessions_one_active on public\.mb_device_sessions \(user_id, kind\) where revoked_at is null and not exempt/)
+    expect(sql).toContain('add column if not exists exempt boolean not null default false')
+    expect(sql).toContain('drop index if exists public.mb_device_sessions_one_active')
+  })
+
+  it('o SuperAdmin é registrado como isento: sem escolha, sem disputar a vaga, e a conferência de encerrada vale para ele', () => {
+    const claim = sql.slice(sql.indexOf('function public.mb_claim_device_slot('), sql.indexOf('function public.mb_take_over_slot('))
+    const superBranch = claim.slice(claim.indexOf('if coalesce(v_super, false) then'), claim.indexOf("-- 1) esta sessao ja tem registro?"))
+    expect(superBranch).toContain('exempt')
+    expect(superBranch).toContain("'revoked'")                 // sessão encerrada pelo admin derruba também o SuperAdmin
+    expect(superBranch).toMatch(/values \([^)]*\btrue\)/)       // a linha nasce isenta
+    expect(superBranch).not.toContain("'occupied'")             // nunca disputa a vaga
+    expect(superBranch).not.toContain("'takeover'")
+    // quem não é SuperAdmin nunca enxerga linhas isentas como ocupantes da vaga
+    expect((sql.match(/revoked_at is null and not exempt/g) || []).length).toBeGreaterThanOrEqual(4)
+  })
+
+  it('o painel marca a sessão do SuperAdmin e o texto novo existe nos 3 idiomas', () => {
+    expect(read('src/components/admin/DeviceSessionsAdmin.tsx')).toContain("k('super_tag')")
+    expect(read('src/app/actions/deviceSessions.ts')).toContain("', user_id, exempt'")
+    for (const l of LANGS) {
+      for (const key of ['super_tag', 'idle_tag_super']) expect(typeof get(json(l), `admin_devices.${key}`), `${l} ${key}`).toBe('string')
+      expect(get(json(l), 'admin_devices.subtitle'), l).not.toMatch(/não ocupa|does not take|no ocupa/)
+    }
   })
 
   it('os eventos e motivos que o código TypeScript grava existem nos CHECK do banco', () => {
@@ -73,7 +96,7 @@ describe('vagas de sessão: ligação no código', () => {
   })
 
   it('o painel do SuperAdmin marca como ociosa a sessão sem batimento além do limite, nos 3 idiomas', () => {
-    expect(read('src/components/admin/DeviceSessionsAdmin.tsx')).toContain("k('idle_tag')")
+    expect(read('src/components/admin/DeviceSessionsAdmin.tsx')).toContain("k(a.exempt ? 'idle_tag_super' : 'idle_tag')")
     for (const l of LANGS) expect(typeof get(json(l), 'admin_devices.idle_tag'), l).toBe('string')
   })
 

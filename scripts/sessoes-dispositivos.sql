@@ -40,8 +40,12 @@ create table if not exists public.mb_device_sessions (
   auth_deleted_at timestamptz                 -- quando a sessao do Supabase Auth foi apagada (impede renovar o token)
 );
 
--- no maximo UMA sessao ativa por usuario e tipo: se dois logins chegarem juntos, o banco recusa o segundo
-create unique index if not exists mb_device_sessions_one_active on public.mb_device_sessions (user_id, kind) where revoked_at is null;
+-- sessoes do SuperAdmin: sem limite de quantidade, mas registradas para ele ver e encerrar uma maquina por seguranca
+alter table public.mb_device_sessions add column if not exists exempt boolean not null default false;
+
+-- no maximo UMA sessao ativa por usuario e tipo (menos as do SuperAdmin, que sao isentas): se dois logins chegarem juntos, o banco recusa o segundo
+drop index if exists public.mb_device_sessions_one_active;
+create unique index if not exists mb_device_sessions_one_active on public.mb_device_sessions (user_id, kind) where revoked_at is null and not exempt;
 create index if not exists mb_device_sessions_auth_session on public.mb_device_sessions (auth_session_id);
 create index if not exists mb_device_sessions_user_recent on public.mb_device_sessions (user_id, created_at desc);
 create index if not exists mb_device_sessions_pending_auth on public.mb_device_sessions (revoked_at) where revoked_at is not null and auth_deleted_at is null;
@@ -155,6 +159,22 @@ begin
 
   select coalesce(is_super_admin, false) into v_super from public.profiles where id = p_user;
   if coalesce(v_super, false) then
+    -- SuperAdmin: sem limite de sessoes nem escolha, mas cada uma fica registrada (exempt) para ele poder encerrar uma maquina
+    perform pg_advisory_xact_lock(hashtextextended(p_user::text || ':' || p_kind, 0));
+    select * into mine from public.mb_device_sessions where auth_session_id = p_session order by created_at desc limit 1;
+    if found then
+      if mine.revoked_at is not null then
+        return jsonb_build_object('status', 'revoked', 'mode', v_mode, 'ttl', v_ttl, 'reason', mine.revoked_reason, 'by', null, 'revoked_at', mine.revoked_at);
+      end if;
+      update public.mb_device_sessions set last_seen_at = now() where id = mine.id;
+      return jsonb_build_object('status', 'exempt', 'mode', v_mode, 'ttl', v_ttl);
+    end if;
+    -- a mesma maquina entrando de novo: a sessao anterior dela sai da lista (nao apaga o login do Auth: motivo same_device)
+    update public.mb_device_sessions set revoked_at = now(), revoked_reason = 'same_device'
+      where user_id = p_user and kind = p_kind and device_id = p_device and exempt and revoked_at is null;
+    insert into public.mb_device_sessions (user_id, kind, device_id, auth_session_id, label, city, region, country, ip_hash, exempt)
+    values (p_user, p_kind, p_device, p_session, p_label, p_city, p_region, p_country, p_ip_hash, true);
+    perform public.mb_device_log(p_user, 'claimed', p_kind, p_device, p_session, p_label, p_city, p_region, p_country, jsonb_build_object('exempt', true));
     return jsonb_build_object('status', 'exempt', 'mode', v_mode, 'ttl', v_ttl);
   end if;
 
@@ -182,7 +202,7 @@ begin
     end if;
     -- a IDE pode ter entrado antes de o cookie de tipo existir (foi vista como navegador): se a vaga certa esta livre, corrige
     if mine.kind <> p_kind and not exists (
-      select 1 from public.mb_device_sessions where user_id = p_user and kind = p_kind and revoked_at is null
+      select 1 from public.mb_device_sessions where user_id = p_user and kind = p_kind and revoked_at is null and not exempt
     ) then
       begin
         update public.mb_device_sessions set kind = p_kind where id = mine.id;
@@ -194,7 +214,7 @@ begin
   end if;
 
   -- 2) quem esta na vaga agora?
-  select * into cur from public.mb_device_sessions where user_id = p_user and kind = p_kind and revoked_at is null;
+  select * into cur from public.mb_device_sessions where user_id = p_user and kind = p_kind and revoked_at is null and not exempt;
 
   if found then
     if cur.device_id = p_device then
@@ -277,7 +297,7 @@ begin
     raise exception 'session_revoked';
   end if;
 
-  select * into cur from public.mb_device_sessions where user_id = p_user and kind = p_kind and revoked_at is null;
+  select * into cur from public.mb_device_sessions where user_id = p_user and kind = p_kind and revoked_at is null and not exempt;
 
   if found then
     select count(*) into v_count from public.mb_device_events

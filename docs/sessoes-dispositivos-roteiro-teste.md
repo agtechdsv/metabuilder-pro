@@ -208,13 +208,23 @@ Em /client/dashboard > Segurança (e no perfil, aba Segurança):
 - [x] Checkout e Asaas (não deve ser tocado). · [x] Programa de parceiros: /parceiro e /parceiros.
 - [x] Lixeiras e Central de Downloads. · [x] Idiomas pt, en e es nas telas novas.
 
-## Pendência para depois dos testes: sessões do SuperAdmin
+## S. Sessões do SuperAdmin (codado em 19/11; falta rodar o SQL, fazer o deploy e testar)
+**Feito no código:** coluna `exempt` e índice `mb_device_sessions_one_active ... and not exempt`; ramo do SuperAdmin em `mb_claim_device_slot` (registra e renova sem limite, nunca disputa vaga nem gera conflito; a sessão encerrada pelo admin derruba também ele); a mesma máquina entrando de novo tira a sessão anterior dela da lista (`same_device`); painel com a etiqueta **SuperAdmin**, aviso de ociosa próprio e texto novo nos 3 idiomas. Testes: `deviceSessionsSite` (SQL e painel) e o teste de SQL em PostgreSQL local (`node scripts/test-sessoes-dispositivos-sql.mjs`: 67 verificações, incluindo a seção do SuperAdmin e rodar o script duas vezes).
+**Ordem de publicação:** primeiro rodar `scripts/sessoes-dispositivos.sql` no SQL Editor (é aditivo e o código antigo continua funcionando com ele), **depois** o deploy (o painel passa a ler a coluna `exempt`; sem o SQL rodado a tela avisa "O script … já foi rodado?").
+- [ ] **S1.** SuperAdmin em 2 Chrome (um normal e um anônimo) e 2 IDEs: entra **sem escolha** e sem derrubar ninguém; no painel as 4 sessões aparecem com a etiqueta **SuperAdmin**.
+- [ ] **S2.** **Encerrar** uma delas pelo painel (com confirmação): em até ~1 min aquela máquina mostra "Sua sessão foi encerrada" e as outras seguem normais; o histórico registra o encerramento pelo administrador.
+- [ ] **S3.** Sair (logout) em uma máquina do SuperAdmin tira só a sessão dela da lista. Entrar de novo na mesma máquina não deixa linha duplicada.
+- [ ] **S4.** Regressão rápida com usuário comum (F, G e I): uma vaga por tipo, escolha, troca, ociosidade e logout seguem como antes; as sessões do SuperAdmin não aparecem na escolha do usuário comum.
+- [ ] **S5.** Uma sessão do SuperAdmin parada há mais que o limite mostra o aviso "sem atividade há um tempo", e **não** é derrubada sozinha.
+**Limite conhecido:** sem a vaga única, nada libera sessões esquecidas do SuperAdmin (navegador fechado sem sair): elas ficam listadas (com o aviso de inativa) até ele encerrar ou sair; só a mesma máquina entrando de novo as limpa.
+
+### Registro da decisão (antes do código)
 Hoje o SuperAdmin é isento (`mb_claim_device_slot` devolve `exempt` antes de gravar), então suas sessões não aparecem e ele não pode encerrar uma máquina dele por segurança. **Decisão (19/11):** registrar as sessões do SuperAdmin **sem limite de quantidade** e permitir **Encerrar** pelo mesmo painel. O que muda: coluna `exempt` em `mb_device_sessions` e índice único `mb_device_sessions_one_active` que a ignore; ramo próprio do SuperAdmin na função (registra e renova, nunca disputa vaga nem derruba outro); a conferência de "sessão encerrada" passa a valer para ele; textos ("o SuperAdmin não ocupa vaga") e totais do painel; testes. Rodar o SQL de novo em produção. **Teste:** SuperAdmin em 2 Chrome e 2 IDEs sem escolha, encerrar um pelo painel (cai em até ~1 min com o aviso) e regressão rápida de F, G e I com usuário comum. Fazer só depois de fechar a rodada, para não alterar a função no meio dos testes.
 
-## R. Ao terminar
-- [ ] Voltei os ajustes para **ociosidade 15**, **trocas 3** e **conferência 60**.
-- [ ] Deixei o modo no valor que quero para o uso real (sugestão: **Observar** por alguns dias; **Valer** depois da revisão dos Termos e da Privacidade com o advogado).
-- [ ] Anotei os desvios e me passou o que falhou (com a tela e, se possível, a consulta das vagas e dos eventos).
+## R. Ao terminar — finalizado em 19/11 (informado pelo dono)
+- [x] Voltei os ajustes para **ociosidade 15**, **trocas 3** e **conferência 60**.
+- [x] Deixei o modo no valor que quero para o uso real (sugestão: **Observar** por alguns dias; **Valer** depois da revisão dos Termos e da Privacidade com o advogado).
+- [x] Anotei os desvios e me passou o que falhou (com a tela e, se possível, a consulta das vagas e dos eventos).
 
 ---
 
