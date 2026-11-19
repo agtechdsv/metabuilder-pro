@@ -83,14 +83,17 @@ describe('zoom da IDE: ligação', () => {
     expect(read('src-tauri/capabilities/desktop.json')).toContain('core:webview:allow-set-webview-zoom')
   })
 
-  it('o host fica nos Providers, o controle no cabeçalho logo depois do avatar (não mais dentro do menu), e ambos só agem dentro do Tauri', () => {
-    expect(read('src/components/Providers.tsx')).toContain('<IdeZoomHost />')
+  it('o host e a barra ficam nos Providers, o ícone da lupa no cabeçalho depois do avatar, e tudo só age dentro do Tauri', () => {
+    const providers = read('src/components/Providers.tsx')
+    expect(providers).toContain('<IdeZoomHost />')
+    expect(providers).toContain('<IdeZoomBar />')
     const header = read('src/components/layout/HeaderActions.tsx')
-    expect(header).toContain('<IdeZoomControl />')
-    expect(header.indexOf('<UserMenu')).toBeLessThan(header.indexOf('<IdeZoomControl />'))
-    expect(read('src/components/auth/UserMenu.tsx')).not.toContain('IdeZoomControl')
+    expect(header).toContain('<IdeZoomToggle />')
+    expect(header.indexOf('<UserMenu')).toBeLessThan(header.indexOf('<IdeZoomToggle />'))
+    expect(read('src/components/auth/UserMenu.tsx')).not.toContain('IdeZoom')
     expect(read('src/components/tauri/IdeZoomHost.tsx')).toContain('if (!isTauri()) return')
-    expect(read('src/components/tauri/IdeZoomControl.tsx')).toContain('if (!desktop) return null')
+    expect(read('src/components/tauri/IdeZoomToggle.tsx')).toContain('if (!desktop) return null')
+    expect(read('src/components/tauri/IdeZoomBar.tsx')).toContain('if (!desktop || !bar.open || !vp.w) return null')
     expect(read('src/utils/ideZoom.ts')).toContain('if (!isTauri()) return z')
     // zoom de verdade do webview, não CSS (o CSS zoom desalinha o mouse em editores)
     expect(read('src/utils/ideZoom.ts')).toContain('getCurrentWebview().setZoom(z)')
@@ -103,7 +106,7 @@ describe('zoom da IDE: ligação', () => {
   it('os textos existem nos 3 idiomas', () => {
     for (const l of ['pt', 'en', 'es']) {
       const j = JSON.parse(read(`src/i18n/translations/${l}.json`))
-      for (const k of ['label', 'out', 'in', 'reset']) expect(typeof j.ide_zoom?.[k], `${l} ${k}`).toBe('string')
+      for (const k of ['label', 'out', 'in', 'reset', 'bar_show', 'bar_hide', 'bar_close', 'drag']) expect(typeof j.ide_zoom?.[k], `${l} ${k}`).toBe('string')
     }
   })
 })

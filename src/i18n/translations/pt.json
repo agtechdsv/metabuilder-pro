@@ -6170,7 +6170,11 @@
     "label": "Zoom",
     "out": "Diminuir o zoom (Ctrl -)",
     "in": "Aumentar o zoom (Ctrl +)",
-    "reset": "Voltar a 100% (Ctrl 0)"
+    "reset": "Voltar a 100% (Ctrl 0)",
+    "bar_show": "Mostrar a barra de zoom",
+    "bar_hide": "Ocultar a barra de zoom",
+    "bar_close": "Fechar a barra de zoom",
+    "drag": "Arraste para mover a barra"
   },
   "subscribe_invite": {
     "title": "Assine para liberar todos os recursos",

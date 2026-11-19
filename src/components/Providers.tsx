@@ -4,6 +4,7 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { ProgressBarProvider } from './ProgressBarProvider'
 import { AutoUpdater } from '@/components/tauri/AutoUpdater'
 import { IdeZoomHost } from '@/components/tauri/IdeZoomHost'
+import { IdeZoomBar } from '@/components/tauri/IdeZoomBar'
 import { GlobalDesktopListener } from './layout/GlobalDesktopListener'
 import { UpgradeModalProvider } from '@/context/UpgradeModalContext'
 import { PreviewProvider } from '@/contexts/PreviewContext'
@@ -29,6 +30,7 @@ export function Providers({
                 <ProgressBarProvider />
                 <AutoUpdater />
                 <IdeZoomHost />
+                <IdeZoomBar />
                 <GlobalDesktopListener />
                 <SessionGuard />
                 <AskDialogHost />

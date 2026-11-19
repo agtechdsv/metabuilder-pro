@@ -6170,7 +6170,11 @@
     "label": "Zoom",
     "out": "Zoom out (Ctrl -)",
     "in": "Zoom in (Ctrl +)",
-    "reset": "Reset to 100% (Ctrl 0)"
+    "reset": "Reset to 100% (Ctrl 0)",
+    "bar_show": "Show the zoom bar",
+    "bar_hide": "Hide the zoom bar",
+    "bar_close": "Close the zoom bar",
+    "drag": "Drag to move the bar"
   },
   "subscribe_invite": {
     "title": "Subscribe to unlock all features",

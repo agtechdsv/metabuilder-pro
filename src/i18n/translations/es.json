@@ -6258,7 +6258,11 @@
     "label": "Zoom",
     "out": "Reducir el zoom (Ctrl -)",
     "in": "Aumentar el zoom (Ctrl +)",
-    "reset": "Volver al 100% (Ctrl 0)"
+    "reset": "Volver al 100% (Ctrl 0)",
+    "bar_show": "Mostrar la barra de zoom",
+    "bar_hide": "Ocultar la barra de zoom",
+    "bar_close": "Cerrar la barra de zoom",
+    "drag": "Arrastra para mover la barra"
   },
   "subscribe_invite": {
     "title": "Suscríbase para liberar todas las funciones",

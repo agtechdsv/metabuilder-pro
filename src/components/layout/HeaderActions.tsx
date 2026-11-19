@@ -7,7 +7,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useEffect, useState } from 'react'
 import { ReleaseNotes } from '@/components/tauri/ReleaseNotes'
 import { PlatformHelpButton } from '@/components/platformHelp/PlatformHelpButton'
-import { IdeZoomControl } from '@/components/tauri/IdeZoomControl'
+import { IdeZoomToggle } from '@/components/tauri/IdeZoomToggle'
 
 interface HeaderActionsProps {
   user?: any
@@ -82,8 +82,8 @@ export function HeaderActions({
         <UserMenu user={user} profile={profile} />
       )}
 
-      {/* zoom da IDE (−, %, +), logo depois do avatar: só aparece dentro da IDE */}
-      <IdeZoomControl />
+      {/* ícone da lupa depois do avatar: liga e desliga a barra flutuante de zoom (só aparece dentro da IDE) */}
+      <IdeZoomToggle />
     </div>
   )
 }
