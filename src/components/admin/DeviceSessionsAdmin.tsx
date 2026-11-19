@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
-import { Loader2, MonitorSmartphone, RefreshCw, Save } from 'lucide-react'
-import { adminDeviceOverviewAction, adminRevokeDeviceAction, adminSaveDeviceSettingsAction } from '@/app/actions/deviceSessions'
+import { ChevronDown, ChevronRight, Loader2, MonitorSmartphone, RefreshCw, Save } from 'lucide-react'
+import { adminDeviceOverviewAction, adminRevokeDeviceAction, adminRevokeDevicesAction, adminSaveDeviceSettingsAction } from '@/app/actions/deviceSessions'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
 import { askDialog } from '@/utils/askDialog'
@@ -28,7 +28,7 @@ export function DeviceSessionsAdmin({ refreshKey = 0 }: { refreshKey?: number } 
   const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const when = (iso: string) => new Date(iso).toLocaleString(locale)
   const kindLabel = (kind: string | null) => k(kind === 'ide' ? 'kind_ide' : 'kind_web')
-  const errText = (code: DeviceErrorCode) => (code === 'forbidden' || code === 'invalid_settings' ? k(`err_${code}`) : k('err_unknown'))
+  const errText = (code: DeviceErrorCode) => (code === 'forbidden' || code === 'invalid_settings' ? k(`err_${code}`) : code === 'cannot_end_current' ? k('err_cannot_end') : k('err_unknown'))
   /** O conflito pode ser uma 2ª máquina tentando entrar ou a mesma sessão de login aparecendo em outro dispositivo (cookies copiados?). */
   const eventLabel = (e: { event: string; meta: Record<string, unknown> }) =>
     e.event === 'conflict' && e.meta?.reason === 'same_session_other_device' ? k('ev_same_session')
@@ -40,6 +40,8 @@ export function DeviceSessionsAdmin({ refreshKey = 0 }: { refreshKey?: number } 
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // o grupo do SuperAdmin raramente é mexido: começa recolhido; o dos demais usuários, aberto
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ super: true })
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -68,6 +70,15 @@ export function DeviceSessionsAdmin({ refreshKey = 0 }: { refreshKey?: number } 
     if (!(await askDialog(k('revoke_confirm', { who }), { kind: 'warning', okLabel: k('end_btn'), cancelLabel: k('cancel') }))) return
     const r = await adminRevokeDeviceAction(id)
     if (r.success) { toast(k('revoked'), 'success'); await load() } else toast(errText(r.code), 'error')
+  }
+
+  /** Encerra todas as sessões de um grupo, menos a desta tela. */
+  const endAll = async (key: string, rows: { id: string; isCurrent?: boolean }[]) => {
+    const ids = rows.filter(r => !r.isCurrent).map(r => r.id)
+    if (!ids.length) return
+    if (!(await askDialog(k(key === 'super' ? 'end_all_confirm_super' : 'end_all_confirm_users', { n: ids.length }), { kind: 'warning', okLabel: k('end_all_btn'), cancelLabel: k('cancel') }))) return
+    const r = await adminRevokeDevicesAction(ids)
+    if (r.success) { toast(k('ended_n', { n: r.ended }), 'success'); await load() } else toast(errText(r.code), 'error')
   }
 
   const num = (v: string) => Math.trunc(Number(v) || 0)
@@ -151,16 +162,39 @@ export function DeviceSessionsAdmin({ refreshKey = 0 }: { refreshKey?: number } 
             <h4 className="mb-3 text-sm font-black uppercase tracking-widest">{k('active_title')}</h4>
             {overview.active.length === 0 ? <p className="text-sm text-neutral-500">{k('none_active')}</p> : (
               <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-[10px] uppercase tracking-widest text-neutral-400"><tr><th className="py-2">{k('th_user')}</th><th>{k('th_type')}</th><th>{k('th_device')}</th><th>{k('th_where')}</th><th>{k('th_since')}</th><th>{k('th_last')}</th><th /></tr></thead>
-                <tbody>{overview.active.map((a, i) => (
-                  <React.Fragment key={a.id}>
-                  {overview.active.some(x => x.exempt) && (i === 0 || !!a.exempt !== !!overview.active[i - 1].exempt) && (
-                    <tr><td colSpan={7} className="pb-1 pt-4 text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-300">{k(a.exempt ? 'group_super' : 'group_users')}</td></tr>
+                <tbody>{(() => {
+                  const hasSuper = overview.active.some(x => x.exempt)
+                  const groups = hasSuper
+                    ? [{ key: 'super', rows: overview.active.filter(x => x.exempt) }, { key: 'users', rows: overview.active.filter(x => !x.exempt) }]
+                    : [{ key: 'users', rows: overview.active }]
+                  return groups.map(g => (
+                  <React.Fragment key={g.key}>
+                  {hasSuper && (
+                    <tr><td colSpan={7} className="pb-1 pt-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <button type="button" onClick={() => setCollapsed(c => ({ ...c, [g.key]: !c[g.key] }))} aria-expanded={!collapsed[g.key]}
+                          className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-300">
+                          {collapsed[g.key] ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                          {k(g.key === 'super' ? 'group_super' : 'group_users')} ({g.rows.length})
+                        </button>
+                        {g.rows.some(r => !r.isCurrent) && (
+                          <button type="button" onClick={() => endAll(g.key, g.rows)}
+                            className="rounded-lg border border-red-300 px-3 py-1 text-[10px] font-bold text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:hover:bg-red-500/10">
+                            {k('end_all_btn')} ({g.rows.filter(r => !r.isCurrent).length})
+                          </button>
+                        )}
+                      </div>
+                    </td></tr>
                   )}
-                  <tr className="border-t border-neutral-100 dark:border-neutral-800">
+                  {!collapsed[g.key] && g.rows.map(a => (
+                  <tr key={a.id} className="border-t border-neutral-100 dark:border-neutral-800">
                     <td className="py-2 font-semibold">{a.email || a.user_id}{a.exempt && <span className="ml-2 rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-black uppercase text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">{k('super_tag')}</span>}</td><td>{kindLabel(a.kind)}</td><td>{a.label || '-'}</td><td>{placeText(a, '-')}</td><td>{when(a.created_at)}</td><td>{when(a.last_seen_at)}{Date.now() - new Date(a.last_seen_at).getTime() > overview.settings.idleMinutes * 60_000 && <span className="mt-0.5 block text-[10px] font-bold text-amber-600 dark:text-amber-400">{k(a.exempt ? 'idle_tag_super' : 'idle_tag')}</span>}</td>
-                    <td className="text-right"><button type="button" onClick={() => revoke(a.id, a.email || a.user_id)} className="rounded-lg border border-red-300 px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:hover:bg-red-500/10">{k('end_btn')}</button></td>
-                  </tr>
-                  </React.Fragment>))}</tbody></table></div>
+                    <td className="text-right">{a.isCurrent
+                      ? <span className="text-[10px] font-black uppercase text-neutral-400">{k('current_tag')}</span>
+                      : <button type="button" onClick={() => revoke(a.id, a.email || a.user_id)} className="rounded-lg border border-red-300 px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:hover:bg-red-500/10">{k('end_btn')}</button>}</td>
+                  </tr>))}
+                  </React.Fragment>))
+                })()}</tbody></table></div>
             )}
           </div>
 

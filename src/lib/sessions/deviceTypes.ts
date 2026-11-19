@@ -28,6 +28,8 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettingsDto = { mode: 'off', idleMin
 export interface AdminActiveDto extends Omit<DeviceRowDto, 'current'> {
   /** sessão de SuperAdmin: sem limite de quantidade, mas listada para poder ser encerrada */
   exempt?: boolean
+  /** é a sessão que está abrindo esta tela (não pode ser encerrada por aqui) */
+  isCurrent?: boolean
   user_id: string
   email: string | null
   full_name: string | null

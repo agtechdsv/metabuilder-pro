@@ -59,12 +59,34 @@ describe('vagas de sessão: script SQL', () => {
     expect((sql.match(/revoked_at is null and not exempt/g) || []).length).toBeGreaterThanOrEqual(4)
   })
 
+  it('encerrar todos de um grupo: só SuperAdmin, poupa a sessão desta tela, e os grupos recolhem', () => {
+    const actions = read('src/app/actions/deviceSessions.ts')
+    const bulk = actions.slice(actions.indexOf('export async function adminRevokeDevicesAction'))
+    expect(bulk.slice(0, 400)).toContain('requireSuperAdmin()')
+    expect(bulk).toContain('.filter(isUuid)')
+    expect(bulk).toContain('r.auth_session_id !== mySession')
+    expect(bulk).toContain(".slice(0, 300)")
+    // o encerrar de uma linha também recusa a sessão desta tela
+    const one = actions.slice(actions.indexOf('export async function adminRevokeDeviceAction'), actions.indexOf('export async function adminRevokeDevicesAction'))
+    expect(one).toContain("fail('cannot_end_current')")
+    const ui = read('src/components/admin/DeviceSessionsAdmin.tsx')
+    expect(ui).toContain('aria-expanded={!collapsed[g.key]}')
+    expect(ui).toContain('useState<Record<string, boolean>>({ super: true })') // SuperAdmin recolhido, demais usuários abertos
+    expect(ui).toContain('adminRevokeDevicesAction(ids)')
+    expect(ui).toContain('rows.filter(r => !r.isCurrent)')
+    for (const l of LANGS) {
+      for (const key of ['current_tag', 'end_all_btn', 'end_all_confirm_super', 'end_all_confirm_users', 'ended_n', 'err_cannot_end']) {
+        expect(typeof get(json(l), `admin_devices.${key}`), `${l} ${key}`).toBe('string')
+      }
+    }
+  })
+
   it('o painel marca a sessão do SuperAdmin e o texto novo existe nos 3 idiomas', () => {
     expect(read('src/components/admin/DeviceSessionsAdmin.tsx')).toContain("k('super_tag')")
     expect(read('src/app/actions/deviceSessions.ts')).toContain("', user_id, exempt'")
     // as do SuperAdmin ficam no topo, em grupo próprio
     expect(read('src/app/actions/deviceSessions.ts')).toContain('active.sort((x, y) => Number(!!y.exempt) - Number(!!x.exempt))')
-    expect(read('src/components/admin/DeviceSessionsAdmin.tsx')).toContain("k(a.exempt ? 'group_super' : 'group_users')")
+    expect(read('src/components/admin/DeviceSessionsAdmin.tsx')).toContain("k(g.key === 'super' ? 'group_super' : 'group_users')")
     for (const l of LANGS) {
       for (const key of ['super_tag', 'idle_tag_super', 'group_super', 'group_users']) expect(typeof get(json(l), `admin_devices.${key}`), `${l} ${key}`).toBe('string')
       expect(get(json(l), 'admin_devices.subtitle'), l).not.toMatch(/não ocupa|does not take|no ocupa/)

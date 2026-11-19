@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/server'
 import { currentSlot, writeSlotCookies, type CurrentSlot } from '@/lib/sessions/currentSlot'
 import { slotAdminDb, takeOverSlot, type TakeOverOutcome } from '@/lib/sessions/slotService'
 import {
-  CODE_RESEND_SECONDS, CODE_TTL_MINUTES, MAX_CODE_ATTEMPTS, codeMatches, generateCode, hashCode, parseMode, placeText, slotSecret,
+  CODE_RESEND_SECONDS, CODE_TTL_MINUTES, MAX_CODE_ATTEMPTS, codeMatches, generateCode, hashCode, isUuid, parseMode, placeText, slotSecret,
   type SlotOther,
 } from '@/lib/sessions/slotCore'
 import {
@@ -204,8 +204,9 @@ export async function adminDeviceOverviewAction(): Promise<DeviceActionResult<{ 
   const profiles = ids.length ? (await db.from('profiles').select('id, email, full_name').in('id', ids)).data || [] : []
   const byId = new Map<string, { email: string | null; full_name: string | null }>(profiles.map((p: any) => [p.id as string, { email: p.email ?? null, full_name: p.full_name ?? null }]))
 
-  const active: AdminActiveDto[] = activeRows.map(({ auth_session_id: _drop, ...r }) => ({
-    ...r, email: byId.get(r.user_id)?.email ?? null, full_name: byId.get(r.user_id)?.full_name ?? null,
+  const mySession = (await currentSlot())?.input.sessionId
+  const active: AdminActiveDto[] = activeRows.map(({ auth_session_id, ...r }) => ({
+    ...r, isCurrent: !!mySession && auth_session_id === mySession, email: byId.get(r.user_id)?.email ?? null, full_name: byId.get(r.user_id)?.full_name ?? null,
   }))
   // as sessões do SuperAdmin vêm primeiro; dentro de cada grupo segue a ordem da consulta (atividade mais recente primeiro; o sort é estável)
   active.sort((x, y) => Number(!!y.exempt) - Number(!!x.exempt))
@@ -255,6 +256,24 @@ export async function adminSaveDeviceSettingsAction(input: DeviceSettingsDto): P
 export async function adminRevokeDeviceAction(id: string): Promise<DeviceActionResult> {
   const ctx = await requireSuperAdmin()
   if (!ctx) return fail('forbidden')
+  // a sessão desta própria tela sai pelo botão normal de sair, nunca por aqui
+  const { data: row } = await ctx.db.from('mb_device_sessions').select('auth_session_id').eq('id', id).maybeSingle()
+  if (row && row.auth_session_id === (await currentSlot())?.input.sessionId) return fail('cannot_end_current')
   const { error } = await ctx.db.rpc('mb_revoke_device_session', { p_id: id, p_reason: 'admin' })
   return error ? fail('unknown', error.message) : { success: true }
+}
+
+/** Encerra várias sessões de uma vez (um grupo da lista). A sessão desta tela é sempre poupada. */
+export async function adminRevokeDevicesAction(ids: string[]): Promise<DeviceActionResult<{ ended: number; skipped: number }>> {
+  const ctx = await requireSuperAdmin()
+  if (!ctx) return fail('forbidden')
+  const list = [...new Set((Array.isArray(ids) ? ids : []).filter(isUuid))].slice(0, 300)
+  if (!list.length) return { success: true, ended: 0, skipped: 0 }
+  const mySession = (await currentSlot())?.input.sessionId
+  const { data: rows, error } = await ctx.db.from('mb_device_sessions').select('id, auth_session_id').in('id', list).is('revoked_at', null)
+  if (error) return fail('unknown', error.message)
+  const targets = (rows || []).filter((r: { id: string; auth_session_id: string }) => r.auth_session_id !== mySession)
+  const results = await Promise.all(targets.map((r: { id: string }) => ctx.db.rpc('mb_revoke_device_session', { p_id: r.id, p_reason: 'admin' })))
+  const ended = results.filter(r => !r.error && r.data === true).length
+  return { success: true, ended, skipped: list.length - ended }
 }
