@@ -89,12 +89,12 @@ Mude para **Valer** e salve. Recomece U1 (consulta de apoio) e faça logout em t
 ## D. A tela de escolha
 Provoque a tela (por exemplo, C7).
 - [x] **D1.** *(visto em português, no navegador e na IDE)* Mostra **dispositivo** (navegador e sistema), **onde** (cidade e região; fora da Vercel aparece "Local desconhecido"), **conectado desde** e **última atividade**, no seu idioma.
-- [ ] **D2.** Digitar a URL de /auth/sessao-ativa **sem estar logado**: vai para o login (a tela não revela nada antes de autenticar).
-- [ ] **D3.** Trocar o idioma (pt, en, es): todos os textos acompanham.
+- [x] **D2.** Digitar a URL de /auth/sessao-ativa **sem estar logado**: vai para a página inicial com o modal de entrar aberto (a tela não revela nada antes de autenticar). *(18/11: antes ia à tela /login; mudado e aprovado, ver I6.)*
+- [x] **D3.** *(19/11: bloco D inteiro aprovado pelo dono, D3 e D5 a D7 incluídos, com o resultado descrito.)* Trocar o idioma (pt, en, es): todos os textos acompanham.
 - [x] **D4.** Tema claro e escuro: legível. *(visto nos dois temas)*
-- [ ] **D5.** Atualizar a página (F5) na tela de escolha: continua nela, sem erro.
-- [ ] **D6.** Tentar abrir /client/dashboard à mão estando na escolha: volta para a tela de escolha.
-- [ ] **D7.** `next` seguro: abra `/auth/sessao-ativa?next=https://evil.com` já autenticado: depois de escolher você vai para o **dashboard**, nunca para o outro site.
+- [x] **D5.** Atualizar a página (F5) na tela de escolha: continua nela, sem erro.
+- [x] **D6.** Tentar abrir /client/dashboard à mão estando na escolha: volta para a tela de escolha.
+- [x] **D7.** `next` seguro: abra `/auth/sessao-ativa?next=https://evil.com` já autenticado: depois de escolher você vai para o **dashboard**, nunca para o outro site.
 
 ## E. Todos os caminhos de login levam à mesma tela
 Com a vaga web ocupada por C1, tente entrar com U1 em C2 por cada caminho (faça logout em C2 entre os testes):
@@ -147,46 +147,46 @@ Faça **três trocas** seguidas entre C1, C2 e E1 (cada uma em "Encerrar a outra
 - [x] **I3.** O menu do usuário > Sair (navegador e IDE) funciona e libera a vaga. *(17/11: navegador OK, a vaga sumiu do painel na hora e o banco registrou `logout`. **18/11, IDE: passou**: ao entrar na IDE com a LGPD o painel mostrou 1 sessão IDE; ao sair pelo menu, o painel atualizado ficou com 0 sessões ativas.)*
 - [ ] **I4.** Na tela de login com sessão a retomar, o botão **"Não sou eu — entrar como outro usuário"** sai só deste dispositivo.
 - [ ] **I5.** Sair numa tela com `passkey_authenticated` ativo (login por passkey) também limpa tudo.
-- [ ] **I6.** Abrir `/auth/sessao-ativa` à mão. *(18/11: **logado** no Chrome, vai para o painel (certo: não há outra sessão a escolher). **Sem login** (janela anônima), cai na página `/login` sozinha. O dono prefere que não exista tela de login solta: o certo seria a **página inicial com o modal de entrar aberto**. **Ajuste feito (18/11, a testar depois do deploy):** `/auth/sessao-ativa` e `/auth/session-expired` passam a ir para `/?entrar=1`, que abre a página inicial com o modal de entrar (o parâmetro some da URL). *Teste:* em janela anônima, abra `/auth/sessao-ativa`: deve aparecer a home com o modal. Na IDE nada muda (já vai à página inicial da IDE).)*
+- [x] **I6.** *(18/11, ~22:28, janela anônima depois do deploy: `/auth/sessao-ativa` abriu a página inicial com o modal de entrar e a URL ficou limpa, só `metabuilderpro.com`. Passou.)* Abrir `/auth/sessao-ativa` à mão. *(18/11: **logado** no Chrome, vai para o painel (certo: não há outra sessão a escolher). **Sem login** (janela anônima), cai na página `/login` sozinha. O dono prefere que não exista tela de login solta: o certo seria a **página inicial com o modal de entrar aberto**. **Ajuste feito (18/11, a testar depois do deploy):** `/auth/sessao-ativa` e `/auth/session-expired` passam a ir para `/?entrar=1`, que abre a página inicial com o modal de entrar (o parâmetro some da URL). *Teste:* em janela anônima, abra `/auth/sessao-ativa`: deve aparecer a home com o modal. Na IDE nada muda (já vai à página inicial da IDE).)*
 
 ## J. Meus dispositivos (usuário comum)
 Em /client/dashboard > Segurança (e no perfil, aba Segurança):
 - [x] **J1.** Lista as sessões ativas (tipo, dispositivo, cidade, desde, última atividade) com o selo **Este dispositivo** na atual.
-- [ ] **J2.** Na sessão de outro dispositivo, **Encerrar** pede confirmação (modal do app, também na IDE) e encerra; o outro dispositivo cai em até ~1 minuto com o aviso.
+- [x] **J2.** *(19/11: bloco J inteiro aprovado pelo dono, J2, J5 e J6 incluídos, com o resultado descrito. J4 segue só com o motivo "Saiu" visto.)* Na sessão de outro dispositivo, **Encerrar** pede confirmação (modal do app, também na IDE) e encerra; o outro dispositivo cai em até ~1 minuto com o aviso.
 - [x] **J3.** Na sessão atual **não** há botão de encerrar.
 - [x] **J4.** *(visto só o motivo "Saiu"; os outros motivos ainda não)* **Histórico recente** (recolhido) mostra as encerradas com o motivo (substituída, inativa, saiu, encerrada por você, pelo administrador, novo login no mesmo dispositivo).
-- [ ] **J5.** Botão de atualizar funciona; sem sessões, mostra "Nenhuma sessão ativa registrada".
-- [ ] **J6.** Idiomas pt, en e es.
+- [x] **J5.** Botão de atualizar funciona; sem sessões, mostra "Nenhuma sessão ativa registrada".
+- [x] **J6.** Idiomas pt, en e es.
 
 ## K. SuperAdmin
-- [ ] **K1.** SA entra em C1, C2 e I1 ao mesmo tempo: **sem escolha** e sem derrubar (isento). Consulta: nenhuma vaga de SA.
+- [x] **K1.** *(19/11: passou; o SA entrou em mais de um Chrome e mais de uma IDE sem escolha e sem derrubar. K3 e K5 também passaram.)* SA entra em C1, C2 e I1 ao mesmo tempo: **sem escolha** e sem derrubar (isento). Consulta: nenhuma vaga de SA.
 - [x] **K2.** A tela mostra os totais, "Quem trocou mais", "Sessões ativas agora" (com e-mail) e "Eventos recentes".
-- [ ] **K3.** **Encerrar** uma sessão de U1 pela tela: pede confirmação; U1 cai em até ~1 minuto; motivo "Encerrada pelo administrador" no histórico de U1.
-- [ ] **K4.** Valores inválidos (0, 99999, vazio) são recusados com a mensagem de valores fora do permitido; os válidos salvam e a tela recarrega com eles.
-- [ ] **K5.** Ao trocar para **Valer**, aparece a pergunta sobre Termos e Privacidade. Cancelar não salva.
-- [ ] **K6.** Um usuário que **não** é SuperAdmin não consegue abrir /admin/platform (e chamar as ações direto também falha).
-- [ ] **K7.** Atualizar a tela mostra dados novos; sem o script SQL rodado a tela avisa para rodá-lo.
+- [x] **K3.** **Encerrar** uma sessão de U1 pela tela: pede confirmação; U1 cai em até ~1 minuto; motivo "Encerrada pelo administrador" no histórico de U1.
+- [x] **K4.** *(19/11: passou com valores fora da faixa (1450, 55 e 650): o campo da tela já não aceita decimais nem vazio, então só restou testar faixas. A mensagem estava genérica ("Valores fora do permitido."); **trocada** para uma que traz as três faixas, nos três idiomas, e o aviso agora fica na tela o tempo de ler. A conferir depois do deploy.)* *(Como fazer: no painel "Sessões e dispositivos", em cada um dos três campos numéricos digite um valor ruim — 0, 99999 ou deixe vazio —, clique **Salvar** e veja a mensagem vermelha "Valores fora do permitido." Faixas aceitas: minutos sem atividade 1 a 1440; trocas por dia 1 a 50; segundos entre conferências 10 a 600. Depois salve valores válidos e a tela recarrega com eles. Atenção: ao terminar os testes, volte a 15/3/60.)* Valores inválidos (0, 99999, vazio) são recusados com a mensagem de valores fora do permitido; os válidos salvam e a tela recarrega com eles.
+- [x] **K5.** Ao trocar para **Valer**, aparece a pergunta sobre Termos e Privacidade. Cancelar não salva.
+- [x] **K6.** *(19/11: passou; o feedback@ abriu /admin/platform e viu "Acesso restrito" com o botão de voltar ao workspace.)* *(Como fazer: **a parte da tela** basta entrar com um usuário comum, como o feedback@, e digitar /admin/platform: deve ser mandado embora. **Chamar as ações direto** não se faz à mão: as três ações do painel (ver, salvar ajustes, encerrar) conferem `is_super_admin` no servidor, e o teste automático `deviceSessionsSite` já trava isso; basta a parte da tela.)* Um usuário que **não** é SuperAdmin não consegue abrir /admin/platform (e chamar as ações direto também falha).
+- [x] **K7.** *(19/11: dado por finalizado pelo dono, coberto pela leitura do código.)* *(Como fazer: o botão de atualizar (as duas setas, no cabeçalho do cartão) deve trazer dados novos; teste entrando e saindo com outra conta e atualizando. "O script" é o `scripts/sessoes-dispositivos.sql`: sem ele rodado, a tela mostra "Não foi possível concluir. O script scripts/sessoes-dispositivos.sql já foi rodado?". Como o script já está rodado em produção, **não vale desfazer para testar**; dê por coberto pela leitura do código.)* Atualizar a tela mostra dados novos; sem o script SQL rodado a tela avisa para rodá-lo.
 
 ## L. Convidados e licenças
-- [ ] **L1.** U1 em C1 e U2 (convidado de U1) em C2 ao mesmo tempo: **sem conflito** (usuários diferentes, vagas diferentes).
-- [ ] **L2.** O painel de licenças de U1 continua mostrando "2 / 2" (a regra não muda a contagem de licenças).
-- [ ] **L3.** U2 em duas máquinas: vê a escolha dele, sem afetar U1.
+- [x] **L1.** U1 em C1 e U2 (convidado de U1) em C2 ao mesmo tempo: **sem conflito** (usuários diferentes, vagas diferentes).
+- [x] **L2.** O painel de licenças de U1 continua mostrando "2 / 2" (a regra não muda a contagem de licenças).
+- [x] **L3.** U2 em duas máquinas: vê a escolha dele, sem afetar U1.
 
 ## M. Áreas dentro e fora da regra
-- [ ] **M1.** **Dentro:** /admin/..., /client/..., /workspace, /ide-local, /bpm, /tunnel-logs, /parceiro. Com a vaga tomada por outro dispositivo, todos redirecionam para a escolha (ou para o aviso de encerrada).
-- [ ] **M2.** **Fora:** home, /features/*, /parceiros, /terms, /privacy, /checkout e /login abrem sem mexer na vaga.
-- [ ] **M3.** **Apps publicados dos clientes** (ex.: `/kika-projetos/vendas-pg/clientes`) e domínios próprios dos clientes: nada muda para o usuário final e **nenhuma vaga é criada** por eles.
-- [ ] **M4.** **APIs sensíveis** (por exemplo, exportar ou compilar): com a sessão encerrada respondem **401** (veja em Rede/DevTools) e a tela mostra o aviso pelo batimento.
-- [ ] **M5.** Túnel e CLI (`/api/tunnel/*`): o Agente CLI continua funcionando **normalmente** (não passa pelas vagas).
-- [ ] **M6.** Cron diário: `GET /api/cron/empty-trash` (com o segredo de cron) responde com `deviceAuthSessions` e `deviceRowsPurged` sem erro.
+- [x] **M1.** **Dentro:** /admin/..., /client/..., /workspace, /ide-local, /bpm, /tunnel-logs, /parceiro. Com a vaga tomada por outro dispositivo, todos redirecionam para a escolha (ou para o aviso de encerrada).
+- [x] **M2.** **Fora:** home, /features/*, /parceiros, /terms, /privacy, /checkout e /login abrem sem mexer na vaga.
+- [x] **M3.** **Apps publicados dos clientes** (ex.: `/kika-projetos/vendas-pg/clientes`) e domínios próprios dos clientes: nada muda para o usuário final e **nenhuma vaga é criada** por eles.
+- [x] **M4.** **APIs sensíveis** (por exemplo, exportar ou compilar): com a sessão encerrada respondem **401** (veja em Rede/DevTools) e a tela mostra o aviso pelo batimento.
+- [x] **M5.** Túnel e CLI (`/api/tunnel/*`): o Agente CLI continua funcionando **normalmente** (não passa pelas vagas).
+- [x] **M6.** Cron diário: `GET /api/cron/empty-trash` (com o segredo de cron) responde com `deviceAuthSessions` e `deviceRowsPurged` sem erro.
 
 ## N. IDE: detalhes
-- [ ] **N1.** IDE **já logada antes do deploy**: abrir a IDE depois de ligar o modo Valer não a derruba nem a coloca na vaga do navegador (depois do primeiro batimento a consulta mostra `kind = ide`).
-- [ ] **N2.** IDE e navegador na mesma máquina, os dois abertos o dia todo: nenhum cai.
-- [ ] **N3.** IDE sem rede por alguns minutos e depois com rede: volta a funcionar sem pedir login (a menos que a vaga tenha sido tomada nesse tempo).
-- [ ] **N4.** Fechar a IDE sem sair e abrir de novo na mesma máquina em menos de 2 minutos: entra direto (mesmo dispositivo).
-- [ ] **N5.** Janelas internas da IDE (preview publicado, popouts da comunidade e downloads): funcionam, sem criar vaga extra.
-- [ ] **N6.** Atualização automática da IDE (AutoUpdater) e deep link do Google: continuam funcionando.
+- [x] **N1.** IDE **já logada antes do deploy**: abrir a IDE depois de ligar o modo Valer não a derruba nem a coloca na vaga do navegador (depois do primeiro batimento a consulta mostra `kind = ide`).
+- [x] **N2.** IDE e navegador na mesma máquina, os dois abertos o dia todo: nenhum cai.
+- [x] **N3.** IDE sem rede por alguns minutos e depois com rede: volta a funcionar sem pedir login (a menos que a vaga tenha sido tomada nesse tempo).
+- [x] **N4.** Fechar a IDE sem sair e abrir de novo na mesma máquina em menos de 2 minutos: entra direto (mesmo dispositivo).
+- [x] **N5.** Janelas internas da IDE (preview publicado, popouts da comunidade e downloads): funcionam, sem criar vaga extra.
+- [x] **N6.** Atualização automática da IDE (AutoUpdater) e deep link do Google: continuam funcionando.
 
 ## O. Tentativas de burlar (para conhecer os limites)
 - [ ] **O1.** **Cookie de tipo forjado:** em C2, no DevTools (Application > Cookies), crie `mb_kind=ide` e atualize. *Esperado:* passa a usar a vaga da IDE (**limite conhecido**: dá no máximo 2 pessoas ao mesmo tempo, nunca 10). Apague o cookie depois.
@@ -207,6 +207,9 @@ Em /client/dashboard > Segurança (e no perfil, aba Segurança):
 - [ ] Dashboard BI, criação de workspace e projeto, Studio, publicar. · [ ] Ejetar e Sincronizar na IDE.
 - [ ] Checkout e Asaas (não deve ser tocado). · [ ] Programa de parceiros: /parceiro e /parceiros.
 - [ ] Lixeiras e Central de Downloads. · [ ] Idiomas pt, en e es nas telas novas.
+
+## Pendência para depois dos testes: sessões do SuperAdmin
+Hoje o SuperAdmin é isento (`mb_claim_device_slot` devolve `exempt` antes de gravar), então suas sessões não aparecem e ele não pode encerrar uma máquina dele por segurança. **Decisão (19/11):** registrar as sessões do SuperAdmin **sem limite de quantidade** e permitir **Encerrar** pelo mesmo painel. O que muda: coluna `exempt` em `mb_device_sessions` e índice único `mb_device_sessions_one_active` que a ignore; ramo próprio do SuperAdmin na função (registra e renova, nunca disputa vaga nem derruba outro); a conferência de "sessão encerrada" passa a valer para ele; textos ("o SuperAdmin não ocupa vaga") e totais do painel; testes. Rodar o SQL de novo em produção. **Teste:** SuperAdmin em 2 Chrome e 2 IDEs sem escolha, encerrar um pelo painel (cai em até ~1 min com o aviso) e regressão rápida de F, G e I com usuário comum. Fazer só depois de fechar a rodada, para não alterar a função no meio dos testes.
 
 ## R. Ao terminar
 - [ ] Voltei os ajustes para **ociosidade 15**, **trocas 3** e **conferência 60**.

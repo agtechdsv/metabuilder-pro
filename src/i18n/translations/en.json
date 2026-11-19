@@ -6046,7 +6046,7 @@
     "ev_code_failed": "Too many wrong codes",
     "ev_same_session": "Same session on another device",
     "err_forbidden": "Only the SuperAdmin can do this.",
-    "err_invalid_settings": "Values out of the allowed range.",
+    "err_invalid_settings": "Could not save: some values are outside the allowed range. Use whole numbers: minutes without activity from 1 to 1440, swaps per day from 1 to 50, and seconds between checks from 10 to 600.",
     "err_unknown": "Could not complete. Was the scripts/sessoes-dispositivos.sql script already run?"
   },
   "admin_clients": {

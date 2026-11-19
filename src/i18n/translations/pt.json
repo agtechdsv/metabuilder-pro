@@ -6046,7 +6046,7 @@
     "ev_code_failed": "Código errado demais",
     "ev_same_session": "Mesma sessão em outro dispositivo",
     "err_forbidden": "Só o SuperAdmin pode fazer isso.",
-    "err_invalid_settings": "Valores fora do permitido.",
+    "err_invalid_settings": "Não foi possível salvar: há valores fora do permitido. Use números inteiros: minutos sem atividade de 1 a 1440, trocas por dia de 1 a 50 e segundos entre conferências de 10 a 600.",
     "err_unknown": "Não foi possível concluir. O script scripts/sessoes-dispositivos.sql já foi rodado?"
   },
   "admin_clients": {

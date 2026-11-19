@@ -32,7 +32,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => [...prev, { id, message, type, action }])
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))
-    }, 5000)
+    }, Math.min(15000, Math.max(5000, message.length * 60))) // mensagem longa fica o tempo de ler
   }, [])
 
   return (
