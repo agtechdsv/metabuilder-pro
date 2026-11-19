@@ -285,13 +285,13 @@ Nesta rodada a vaga web do agtechtrade foi disputada entre o note e a VM (os hor
 
 ---
 
-## T. Zoom da IDE (codado em 19/11; exige release nova da IDE)
-**O que é:** controle **−, % e +** no menu do avatar (só aparece na IDE) e atalhos **Ctrl +**, **Ctrl -**, **Ctrl 0** e **Ctrl + roda do mouse**. Faixa de 70% a 150%, passos de 10%, valor guardado no aparelho e devolvido ao abrir a IDE. Usa o zoom nativo do webview (`setZoom`), com a permissão `core:webview:allow-set-webview-zoom` em `src-tauri/capabilities/desktop.json`. Os atalhos passam pelo código (e não pelo `zoomHotkeysEnabled` do WebView2) para o valor mostrado no menu ser sempre o real e ficar guardado. Se o controle no menu não agradar, a alternativa combinada é uma lupa na barra superior.
+## T. Zoom da IDE (1ª versão testada e aprovada em 19/11; falta conferir o controle no cabeçalho com passos de 5%, release nova)
+**O que é:** controle **−, % e +** no cabeçalho, logo depois do avatar (só aparece na IDE) e atalhos **Ctrl +**, **Ctrl -**, **Ctrl 0** e **Ctrl + roda do mouse**. Faixa de 70% a 150%, passos de 5%, valor guardado no aparelho e devolvido ao abrir a IDE. Usa o zoom nativo do webview (`setZoom`), com a permissão `core:webview:allow-set-webview-zoom` em `src-tauri/capabilities/desktop.json`. Os atalhos passam pelo código (e não pelo `zoomHotkeysEnabled` do WebView2) para o valor mostrado no menu ser sempre o real e ficar guardado. Se o controle no menu não agradar, a alternativa combinada é uma lupa na barra superior.
 **Publicar:** a permissão é configuração do Tauri, então vale só depois de gerar e distribuir uma release nova da IDE (primeiro a release, o site já está compatível). Rodar `npm run build` dentro de `cli/` não é necessário: o CLI não muda.
-- [ ] **T1.** Na IDE, abra o menu do avatar: aparece a linha **Zoom − 100% +**. No site (navegador) ela **não** aparece.
-- [ ] **T2.** Clique em **+** e em **−**: a tela aumenta e diminui de 10% em 10% e o número acompanha; em 150% o **+** fica desativado e em 70% o **−**.
-- [ ] **T3.** Clique no número (ex.: 130%): volta a **100%**.
-- [ ] **T4.** Atalhos: **Ctrl +** (e **Ctrl =**), **Ctrl -**, **Ctrl 0** e **Ctrl + roda do mouse** fazem o mesmo, e o número do menu acompanha.
-- [ ] **T5.** Feche a IDE com 120% e abra de novo: volta em 120% (inclusive na tela de entrada).
-- [ ] **T6.** Em 70% e em 150%, abrir um modal, o editor de código e o menu do avatar: sem corte nem o mouse "errando" o lugar do clique.
-- [ ] **T7.** O Ctrl + roda do mouse dentro do editor de código dá zoom da IDE (e não rola o texto).
+- [x] **T1.** Na IDE, o cabeçalho mostra **− 100% +** logo depois do avatar (primeira versão, dentro do menu do avatar, aprovada em 19/11; movida para o cabeçalho a pedido do dono). No site (navegador) ela **não** aparece.
+- [x] **T2.** Clique em **+** e em **−**: a tela aumenta e diminui de 5% em 5% e o número acompanha; em 150% o **+** fica desativado e em 70% o **−**.
+- [x] **T3.** Clique no número (ex.: 130%): volta a **100%**.
+- [x] **T4.** Atalhos: **Ctrl +** (e **Ctrl =**), **Ctrl -**, **Ctrl 0** e **Ctrl + roda do mouse** fazem o mesmo, e o número do menu acompanha.
+- [x] **T5.** Feche a IDE com 120% e abra de novo: volta em 120% (inclusive na tela de entrada).
+- [x] **T6.** Em 70% e em 150%, abrir um modal, o editor de código e o menu do avatar: sem corte nem o mouse "errando" o lugar do clique.
+- [x] **T7.** O Ctrl + roda do mouse dentro do editor de código dá zoom da IDE (e não rola o texto).

@@ -7,24 +7,31 @@ import {
 const read = (p: string) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n')
 
 describe('zoom da IDE: regras', () => {
-  it('a faixa é de 70% a 150%, em passos de 10%', () => {
+  it('a faixa é de 70% a 150%, em passos de 5%', () => {
     expect(IDE_ZOOM_MIN).toBe(0.7)
     expect(IDE_ZOOM_MAX).toBe(1.5)
-    expect(stepZoom(1, 1)).toBe(1.1)
-    expect(stepZoom(1, -1)).toBe(0.9)
+    expect(stepZoom(1, 1)).toBe(1.05)
+    expect(stepZoom(1, -1)).toBe(0.95)
   })
 
   it('não passa dos limites e não acumula erro de ponto flutuante', () => {
     expect(stepZoom(1.5, 1)).toBe(1.5)
     expect(stepZoom(0.7, -1)).toBe(0.7)
     let z = 1
-    for (let i = 0; i < 20; i++) z = stepZoom(z, 1)
+    for (let i = 0; i < 40; i++) z = stepZoom(z, 1)
     expect(z).toBe(1.5)
-    for (let i = 0; i < 20; i++) z = stepZoom(z, -1)
+    for (let i = 0; i < 40; i++) z = stepZoom(z, -1)
     expect(z).toBe(0.7)
     let w = 1
     for (let i = 0; i < 3; i++) w = stepZoom(w, 1)
-    expect(w).toBe(1.3)
+    expect(w).toBe(1.15)
+    // de 100% a 150% são exatamente 10 passos, e de 100% a 70% são 6
+    let up = 1; let n = 0
+    while (up < 1.5) { up = stepZoom(up, 1); n++ }
+    expect(n).toBe(10)
+    let down = 1; let m = 0
+    while (down > 0.7) { down = stepZoom(down, -1); m++ }
+    expect(m).toBe(6)
   })
 
   it('o passo 0 volta a 100%', () => {
@@ -40,6 +47,7 @@ describe('zoom da IDE: regras', () => {
     expect(parseStoredZoom('9')).toBe(1.5)
     expect(parseStoredZoom('0.1')).toBe(0.7)
     expect(parseStoredZoom('1.2')).toBe(1.2)
+    expect(parseStoredZoom('1.23')).toBe(1.25) // valor antigo ou torto encaixa no passo de 5%
     expect(clampZoom(undefined)).toBe(1)
   })
 
@@ -47,6 +55,7 @@ describe('zoom da IDE: regras', () => {
     expect(zoomPercent(1)).toBe('100%')
     expect(zoomPercent(1.3)).toBe('130%')
     expect(zoomPercent(0.7)).toBe('70%')
+    expect(zoomPercent(1.05)).toBe('105%')
   })
 
   it('atalhos: Ctrl/Cmd com +, =, -, 0 e o teclado numérico; sem Ctrl ou com Alt não faz nada', () => {
@@ -74,9 +83,12 @@ describe('zoom da IDE: ligação', () => {
     expect(read('src-tauri/capabilities/desktop.json')).toContain('core:webview:allow-set-webview-zoom')
   })
 
-  it('o host fica nos Providers, o controle no menu do usuário, e ambos só agem dentro do Tauri', () => {
+  it('o host fica nos Providers, o controle no cabeçalho logo depois do avatar (não mais dentro do menu), e ambos só agem dentro do Tauri', () => {
     expect(read('src/components/Providers.tsx')).toContain('<IdeZoomHost />')
-    expect(read('src/components/auth/UserMenu.tsx')).toContain('<IdeZoomControl />')
+    const header = read('src/components/layout/HeaderActions.tsx')
+    expect(header).toContain('<IdeZoomControl />')
+    expect(header.indexOf('<UserMenu')).toBeLessThan(header.indexOf('<IdeZoomControl />'))
+    expect(read('src/components/auth/UserMenu.tsx')).not.toContain('IdeZoomControl')
     expect(read('src/components/tauri/IdeZoomHost.tsx')).toContain('if (!isTauri()) return')
     expect(read('src/components/tauri/IdeZoomControl.tsx')).toContain('if (!desktop) return null')
     expect(read('src/utils/ideZoom.ts')).toContain('if (!isTauri()) return z')

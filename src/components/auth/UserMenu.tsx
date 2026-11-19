@@ -11,7 +11,6 @@ import { canSeeWorkspaceMenu } from '@/lib/auth/menuAccess'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { ProfileDrawer } from '@/components/profile/ProfileDrawer'
-import { IdeZoomControl } from '@/components/tauri/IdeZoomControl'
 
 
 import { useI18n } from '@/i18n/I18nContext'
@@ -286,9 +285,6 @@ export function UserMenu({ user, profile: initialProfile }: UserMenuProps) {
                   </div>
                   <span className="text-sm font-bold">{t('common.profile')}</span>
                 </button>
-
-                {/* zoom da IDE (−, %, +): só aparece dentro da IDE */}
-                <IdeZoomControl />
 
                 {isCustomAvatar && (
                   <button

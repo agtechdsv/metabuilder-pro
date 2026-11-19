@@ -1,26 +1,28 @@
 /**
- * Zoom da IDE (janela Tauri). Regras puras: faixa de 70% a 150%, passos de 10%, valor guardado no aparelho.
+ * Zoom da IDE (janela Tauri). Regras puras: faixa de 70% a 150%, passos de 5%, valor guardado no aparelho.
  * Quem aplica no webview é src/utils/ideZoom.ts; aqui não há nada de navegador, para testar fácil.
  */
 export const IDE_ZOOM_MIN = 0.7
 export const IDE_ZOOM_MAX = 1.5
-export const IDE_ZOOM_STEP = 0.1
+export const IDE_ZOOM_STEP = 0.05
 export const IDE_ZOOM_DEFAULT = 1
 export const IDE_ZOOM_STORAGE_KEY = 'mb_ide_zoom'
 
-const round1 = (n: number) => Math.round(n * 10) / 10
+/** Encaixa no passo de 5% (1.2999999 vira 1.3; 1.23 vira 1.25), sem erro de ponto flutuante. */
+const snap = (n: number) => Math.round(n / IDE_ZOOM_STEP) * IDE_ZOOM_STEP
+const round2 = (n: number) => Math.round(n * 100) / 100
 
-/** Mantém o fator dentro da faixa, em passos de 0,1 (1.2999999 vira 1.3). Valor inválido volta a 100%. */
+/** Mantém o fator dentro da faixa, em passos de 0,05. Valor inválido volta a 100%. */
 export function clampZoom(n: unknown): number {
   const v = typeof n === 'number' ? n : Number(n)
   if (!Number.isFinite(v)) return IDE_ZOOM_DEFAULT
-  return round1(Math.min(IDE_ZOOM_MAX, Math.max(IDE_ZOOM_MIN, v)))
+  return round2(Math.min(IDE_ZOOM_MAX, Math.max(IDE_ZOOM_MIN, snap(v))))
 }
 
 /** Um passo para cima (1), para baixo (-1) ou volta a 100% (0). */
 export function stepZoom(current: number, dir: 1 | -1 | 0): number {
   if (dir === 0) return IDE_ZOOM_DEFAULT
-  return clampZoom(round1(clampZoom(current) + dir * IDE_ZOOM_STEP))
+  return clampZoom(clampZoom(current) + dir * IDE_ZOOM_STEP)
 }
 
 /** Lê o valor guardado; lixo ou fora da faixa não passa. */
