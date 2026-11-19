@@ -3,15 +3,16 @@
 import React from 'react'
 import { Sparkles } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
-import { SUBSCRIBE_INVITE_HREF } from '@/lib/billing/subscribeInvite'
-import { isTauri, openExternalUrl } from '@/utils/tauriUtils'
-import { DEFAULT_SITE_URL } from '@/lib/siteUrl'
+import { useRouter } from 'next/navigation'
+import { SUBSCRIBE_INVITE_HREF, SUBSCRIBE_INVITE_IDE_HREF } from '@/lib/billing/subscribeInvite'
+import { isTauri } from '@/utils/tauriUtils'
 
 const P = 'subscribe_invite.'
 
 /** Convite para assinar, para quem ainda não tem plano (o servidor decide se mostra; ver shouldShowSubscribeInvite). */
 export default function SubscribeInviteBanner() {
   const { t } = useI18n()
+  const router = useRouter()
   return (
     <div role="status" className="flex flex-wrap items-center gap-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-indigo-900 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200">
       <Sparkles className="h-5 w-5 shrink-0" />
@@ -20,8 +21,8 @@ export default function SubscribeInviteBanner() {
         <p className="mt-0.5 text-xs">{t(P + 'desc')}</p>
       </div>
       <a href={SUBSCRIBE_INVITE_HREF}
-        // na IDE a página inicial é a de entrada da IDE (sem os planos): abre a seção de planos do site no navegador do sistema
-        onClick={e => { if (isTauri()) { e.preventDefault(); void openExternalUrl(DEFAULT_SITE_URL + SUBSCRIBE_INVITE_HREF) } }}
+        // na IDE vai ao checkout da própria IDE: já logado, com os dados do perfil e sem risco de assinar com outro usuário
+        onClick={e => { if (isTauri()) { e.preventDefault(); router.push(SUBSCRIBE_INVITE_IDE_HREF) } }}
         className="rounded-xl bg-neutral-900 px-4 py-2 text-xs font-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black">
         {t(P + 'button')}
       </a>
