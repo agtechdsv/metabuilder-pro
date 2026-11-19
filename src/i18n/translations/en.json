@@ -6166,6 +6166,12 @@
     "err_invalid_email": "Invalid e-mail.",
     "err_unknown": "Could not complete. Was the scripts/avisos-cobranca.sql script already run?"
   },
+  "ide_zoom": {
+    "label": "Zoom",
+    "out": "Zoom out (Ctrl -)",
+    "in": "Zoom in (Ctrl +)",
+    "reset": "Reset to 100% (Ctrl 0)"
+  },
   "subscribe_invite": {
     "title": "Subscribe to unlock all features",
     "desc": "You can already explore, but the PRO plan unlocks licenses, workspaces and projects without limits. See the plans and the current campaign.",

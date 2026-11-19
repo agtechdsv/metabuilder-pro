@@ -6166,6 +6166,12 @@
     "err_invalid_email": "E-mail inválido.",
     "err_unknown": "Não foi possível concluir. O script scripts/avisos-cobranca.sql já foi rodado?"
   },
+  "ide_zoom": {
+    "label": "Zoom",
+    "out": "Diminuir o zoom (Ctrl -)",
+    "in": "Aumentar o zoom (Ctrl +)",
+    "reset": "Voltar a 100% (Ctrl 0)"
+  },
   "subscribe_invite": {
     "title": "Assine para liberar todos os recursos",
     "desc": "Você já pode explorar, mas o plano PRO libera licenças, workspaces e projetos sem limite. Veja os planos e a campanha vigente.",

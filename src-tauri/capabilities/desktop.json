@@ -25,6 +25,7 @@
     "opener:allow-open-url",
     "opener:allow-default-urls",
     "opener:allow-open-path",
+    "core:webview:allow-set-webview-zoom",
     "fs:allow-download-read",
     "fs:allow-download-write",
     "fs:allow-home-read",

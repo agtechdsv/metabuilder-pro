@@ -208,14 +208,14 @@ Em /client/dashboard > Segurança (e no perfil, aba Segurança):
 - [x] Checkout e Asaas (não deve ser tocado). · [x] Programa de parceiros: /parceiro e /parceiros.
 - [x] Lixeiras e Central de Downloads. · [x] Idiomas pt, en e es nas telas novas.
 
-## S. Sessões do SuperAdmin (codado em 19/11; falta rodar o SQL, fazer o deploy e testar)
+## S. Sessões do SuperAdmin — testado e aprovado em 19/11 (informado pelo dono)
 **Feito no código:** coluna `exempt` e índice `mb_device_sessions_one_active ... and not exempt`; ramo do SuperAdmin em `mb_claim_device_slot` (registra e renova sem limite, nunca disputa vaga nem gera conflito; a sessão encerrada pelo admin derruba também ele); a mesma máquina entrando de novo tira a sessão anterior dela da lista (`same_device`); painel com a etiqueta **SuperAdmin**, aviso de ociosa próprio e texto novo nos 3 idiomas. Testes: `deviceSessionsSite` (SQL e painel) e o teste de SQL em PostgreSQL local (`node scripts/test-sessoes-dispositivos-sql.mjs`: 67 verificações, incluindo a seção do SuperAdmin e rodar o script duas vezes).
 **Ordem de publicação:** primeiro rodar `scripts/sessoes-dispositivos.sql` no SQL Editor (é aditivo e o código antigo continua funcionando com ele), **depois** o deploy (o painel passa a ler a coluna `exempt`; sem o SQL rodado a tela avisa "O script … já foi rodado?").
 - [x] **S1.** *(19/11, ~13:26: o dono informou "funcionando 100%": o painel listou as sessões do SuperAdmin (2 IDEs e 3 navegadores) junto com as dos demais. Na imagem a etiqueta e o texto novo do subtítulo ainda não apareciam (tela da versão anterior, antes de o deploy chegar). Pedido do dono: sessões do SuperAdmin **no topo, em grupo próprio** ("Suas sessões (SuperAdmin)" e "Demais usuários"), cada grupo por atividade mais recente; feito em seguida, a conferir depois do deploy.)* SuperAdmin em 2 Chrome (um normal e um anônimo) e 2 IDEs: entra **sem escolha** e sem derrubar ninguém; no painel as 4 sessões aparecem com a etiqueta **SuperAdmin**.
-- [ ] **S2.** **Encerrar** uma delas pelo painel (com confirmação): em até ~1 min aquela máquina mostra "Sua sessão foi encerrada" e as outras seguem normais; o histórico registra o encerramento pelo administrador.
-- [ ] **S3.** Sair (logout) em uma máquina do SuperAdmin tira só a sessão dela da lista. Entrar de novo na mesma máquina não deixa linha duplicada.
-- [ ] **S4.** Regressão rápida com usuário comum (F, G e I): uma vaga por tipo, escolha, troca, ociosidade e logout seguem como antes; as sessões do SuperAdmin não aparecem na escolha do usuário comum.
-- [ ] **S5.** Uma sessão do SuperAdmin parada há mais que o limite mostra o aviso "sem atividade há um tempo", e **não** é derrubada sozinha.
+- [x] **S2.** **Encerrar** uma delas pelo painel (com confirmação): em até ~1 min aquela máquina mostra "Sua sessão foi encerrada" e as outras seguem normais; o histórico registra o encerramento pelo administrador.
+- [x] **S3.** Sair (logout) em uma máquina do SuperAdmin tira só a sessão dela da lista. Entrar de novo na mesma máquina não deixa linha duplicada.
+- [x] **S4.** Regressão rápida com usuário comum (F, G e I): uma vaga por tipo, escolha, troca, ociosidade e logout seguem como antes; as sessões do SuperAdmin não aparecem na escolha do usuário comum.
+- [x] **S5.** Uma sessão do SuperAdmin parada há mais que o limite mostra o aviso "sem atividade há um tempo", e **não** é derrubada sozinha.
 **Limite conhecido:** sem a vaga única, nada libera sessões esquecidas do SuperAdmin (navegador fechado sem sair): elas ficam listadas (com o aviso de inativa) até ele encerrar ou sair; só a mesma máquina entrando de novo as limpa.
 
 ### Registro da decisão (antes do código)
@@ -282,3 +282,16 @@ Nesta rodada a vaga web do agtechtrade foi disputada entre o note e a VM (os hor
 - Mais um **logout pelo avatar** funcionou às 19:33 (sessão `26c20bfd`, `revoked_reason = logout`).
 
 **Ainda pendente (17/11, fim do dia):** G4 completo (abrir uma área protegida em C1 depois da vaga liberada) e G5 (C1 aberto e em uso: C2 vê a escolha); E6 (convite e recuperação de senha); F9 depois da próxima troca ou do cron; o logout pelo menu na IDE (I3); e os itens soltos dos blocos D, J, K, L a Q e R. A limpeza de cookies presos já foi provada (item 11, commits 59867c77 e 11da3d97).
+
+---
+
+## T. Zoom da IDE (codado em 19/11; exige release nova da IDE)
+**O que é:** controle **−, % e +** no menu do avatar (só aparece na IDE) e atalhos **Ctrl +**, **Ctrl -**, **Ctrl 0** e **Ctrl + roda do mouse**. Faixa de 70% a 150%, passos de 10%, valor guardado no aparelho e devolvido ao abrir a IDE. Usa o zoom nativo do webview (`setZoom`), com a permissão `core:webview:allow-set-webview-zoom` em `src-tauri/capabilities/desktop.json`. Os atalhos passam pelo código (e não pelo `zoomHotkeysEnabled` do WebView2) para o valor mostrado no menu ser sempre o real e ficar guardado. Se o controle no menu não agradar, a alternativa combinada é uma lupa na barra superior.
+**Publicar:** a permissão é configuração do Tauri, então vale só depois de gerar e distribuir uma release nova da IDE (primeiro a release, o site já está compatível). Rodar `npm run build` dentro de `cli/` não é necessário: o CLI não muda.
+- [ ] **T1.** Na IDE, abra o menu do avatar: aparece a linha **Zoom − 100% +**. No site (navegador) ela **não** aparece.
+- [ ] **T2.** Clique em **+** e em **−**: a tela aumenta e diminui de 10% em 10% e o número acompanha; em 150% o **+** fica desativado e em 70% o **−**.
+- [ ] **T3.** Clique no número (ex.: 130%): volta a **100%**.
+- [ ] **T4.** Atalhos: **Ctrl +** (e **Ctrl =**), **Ctrl -**, **Ctrl 0** e **Ctrl + roda do mouse** fazem o mesmo, e o número do menu acompanha.
+- [ ] **T5.** Feche a IDE com 120% e abra de novo: volta em 120% (inclusive na tela de entrada).
+- [ ] **T6.** Em 70% e em 150%, abrir um modal, o editor de código e o menu do avatar: sem corte nem o mouse "errando" o lugar do clique.
+- [ ] **T7.** O Ctrl + roda do mouse dentro do editor de código dá zoom da IDE (e não rola o texto).

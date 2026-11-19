@@ -3,6 +3,7 @@ import { I18nProvider } from '@/i18n/I18nContext'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ProgressBarProvider } from './ProgressBarProvider'
 import { AutoUpdater } from '@/components/tauri/AutoUpdater'
+import { IdeZoomHost } from '@/components/tauri/IdeZoomHost'
 import { GlobalDesktopListener } from './layout/GlobalDesktopListener'
 import { UpgradeModalProvider } from '@/context/UpgradeModalContext'
 import { PreviewProvider } from '@/contexts/PreviewContext'
@@ -27,6 +28,7 @@ export function Providers({
               <IDESyncProvider>
                 <ProgressBarProvider />
                 <AutoUpdater />
+                <IdeZoomHost />
                 <GlobalDesktopListener />
                 <SessionGuard />
                 <AskDialogHost />

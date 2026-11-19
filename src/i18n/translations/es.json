@@ -6254,6 +6254,12 @@
     "err_invalid_email": "E-mail inválido.",
     "err_unknown": "No fue posible completar. ¿Ya se ejecutó el script scripts/avisos-cobranca.sql?"
   },
+  "ide_zoom": {
+    "label": "Zoom",
+    "out": "Reducir el zoom (Ctrl -)",
+    "in": "Aumentar el zoom (Ctrl +)",
+    "reset": "Volver al 100% (Ctrl 0)"
+  },
   "subscribe_invite": {
     "title": "Suscríbase para liberar todas las funciones",
     "desc": "Ya puede explorar, pero el plan PRO libera licencias, workspaces y proyectos sin límite. Vea los planes y la campaña vigente.",
