@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import {
-  DEFAULT_ZOOM_BAR, ZOOM_BAR_SIZE, ZOOM_BAR_STORAGE_KEY, barCssPosition, clamp01, fractionsFromCssPosition, parseZoomBarState,
+  DEFAULT_ZOOM_BAR, ZOOM_BAR_DEFAULT_ANCHOR, ZOOM_BAR_SIZE, ZOOM_BAR_STORAGE_KEY, barCssPosition, clamp01, fractionsFromCssPosition, parseZoomBarState,
 } from '../ideZoomBar'
 
 const read = (p: string) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n')
@@ -60,12 +60,38 @@ describe('barra flutuante do zoom: tamanho e lugar fixos na tela', () => {
 })
 
 describe('barra flutuante do zoom: estado guardado', () => {
-  it('começa fechada, no canto inferior direito', () => {
-    expect(DEFAULT_ZOOM_BAR.open).toBe(false)
-    expect(DEFAULT_ZOOM_BAR.fx).toBeGreaterThan(0.9)
-    expect(DEFAULT_ZOOM_BAR.fy).toBeGreaterThan(0.9)
+  it('começa fechada e sem posição guardada (vale a padrão, no canto superior direito)', () => {
+    expect(DEFAULT_ZOOM_BAR).toEqual({ open: false, fx: null, fy: null })
     expect(parseZoomBarState(null)).toEqual(DEFAULT_ZOOM_BAR)
     expect(parseZoomBarState('')).toEqual(DEFAULT_ZOOM_BAR)
+  })
+
+  it('posição padrão: canto superior direito, logo abaixo do cabeçalho, no mesmo lugar da TELA em qualquer zoom e tamanho de janela', () => {
+    for (const [sw, sh] of [[1280, 720], [1920, 1080], [900, 600]]) {
+      for (const z of ZOOMS) {
+        const p = barCssPosition({ fx: null, fy: null }, sw / z, sh / z, z)
+        // em pixels da tela
+        expect(Math.round(p.top * z)).toBe(ZOOM_BAR_DEFAULT_ANCHOR.top)
+        expect(Math.round(sw - (p.left * z + ZOOM_BAR_SIZE.w))).toBe(ZOOM_BAR_DEFAULT_ANCHOR.right)
+      }
+    }
+  })
+
+  it('a posição padrão não cobre o cabeçalho (fica abaixo dele) e cabe na janela pequena', () => {
+    expect(ZOOM_BAR_DEFAULT_ANCHOR.top).toBeGreaterThanOrEqual(90) // o cabeçalho da IDE tem ~88 px
+    const p = barCssPosition({ fx: null, fy: null }, 300, 120, 1)
+    expect(p.left).toBeGreaterThanOrEqual(0)
+    expect(p.top).toBeGreaterThanOrEqual(0)
+    expect(p.top + ZOOM_BAR_SIZE.h).toBeLessThanOrEqual(120 + 1e-9)
+  })
+
+  it('depois que o usuário arrasta, a posição guardada vale e a padrão deixa de valer', () => {
+    const z = 1
+    const arrastada = barCssPosition({ fx: 0, fy: 1 }, 1280, 720, z)
+    expect(arrastada).toMatchObject({ left: 0 })
+    expect(arrastada.top).toBeCloseTo(720 - ZOOM_BAR_SIZE.h, 6)
+    const sem = barCssPosition({ fx: null, fy: null }, 1280, 720, z)
+    expect(sem.left).toBeGreaterThan(900)
   })
 
   it('lembra se estava aberta e onde estava', () => {
@@ -78,6 +104,7 @@ describe('barra flutuante do zoom: estado guardado', () => {
     expect(parseZoomBarState('null')).toEqual(DEFAULT_ZOOM_BAR)
     expect(parseZoomBarState('42')).toEqual(DEFAULT_ZOOM_BAR)
     expect(parseZoomBarState(JSON.stringify({ open: 'sim', fx: 'x', fy: null }))).toEqual({ ...DEFAULT_ZOOM_BAR, open: false })
+    expect(parseZoomBarState(JSON.stringify({ open: true }))).toEqual({ open: true, fx: null, fy: null }) // aberta, nunca arrastada
     expect(parseZoomBarState(JSON.stringify({ open: true, fx: 7, fy: -3 }))).toEqual({ open: true, fx: 1, fy: 0 })
     expect(clamp01(NaN)).toBe(0)
   })
