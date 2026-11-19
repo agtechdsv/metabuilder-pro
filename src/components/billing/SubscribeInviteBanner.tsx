@@ -4,6 +4,8 @@ import React from 'react'
 import { Sparkles } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
 import { SUBSCRIBE_INVITE_HREF } from '@/lib/billing/subscribeInvite'
+import { isTauri, openExternalUrl } from '@/utils/tauriUtils'
+import { DEFAULT_SITE_URL } from '@/lib/siteUrl'
 
 const P = 'subscribe_invite.'
 
@@ -18,6 +20,8 @@ export default function SubscribeInviteBanner() {
         <p className="mt-0.5 text-xs">{t(P + 'desc')}</p>
       </div>
       <a href={SUBSCRIBE_INVITE_HREF}
+        // na IDE a página inicial é a de entrada da IDE (sem os planos): abre a seção de planos do site no navegador do sistema
+        onClick={e => { if (isTauri()) { e.preventDefault(); void openExternalUrl(DEFAULT_SITE_URL + SUBSCRIBE_INVITE_HREF) } }}
         className="rounded-xl bg-neutral-900 px-4 py-2 text-xs font-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black">
         {t(P + 'button')}
       </a>

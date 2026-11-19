@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import { shouldShowSubscribeInvite, SUBSCRIBE_INVITE_HREF } from '../subscribeInvite'
 
 describe('convite para assinar', () => {
@@ -21,5 +23,11 @@ describe('convite para assinar', () => {
 
   it('leva à seção de planos da página inicial', () => {
     expect(SUBSCRIBE_INVITE_HREF).toBe('/#pricing')
+  })
+
+  it('na IDE abre os planos do site no navegador do sistema (a home da IDE não tem planos)', () => {
+    const src = readFileSync(join(process.cwd(), 'src/components/billing/SubscribeInviteBanner.tsx'), 'utf8')
+    expect(src).toContain('isTauri()')
+    expect(src).toContain('openExternalUrl(DEFAULT_SITE_URL + SUBSCRIBE_INVITE_HREF)')
   })
 })
