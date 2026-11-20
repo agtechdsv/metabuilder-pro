@@ -444,3 +444,9 @@ O contador (Lunis) tem um emissor próprio (cliente.lunis.ia.br) com **modelos d
 - Regras puras em `src/lib/nfse/queue.ts` (inclui `whoIssues`, que já sabe o híbrido: emissão no mesmo mês do pagamento = automática).
 
 **Pendente de terceiros:** perguntas ao contador (URL preenchida, competência anterior à emissão, ISS retido para pessoa física, API) e ao Asaas (R$ 0,49 no cancelamento, e-mail da nota). Para ligar Híbrido/Automática: implementar o emissor automático e trocar `NFSE_AUTO_AVAILABLE` para true.
+
+## 12. Respostas do Asaas (20/11/2026)
+- **Tarifa de R$ 0,49:** cobrada na autorização da nota. Nota autorizada e depois cancelada (chargeback ou desistência) **não** devolve os R$ 0,49; só nota rejeitada com erro ou agendamento excluído antes da emissão não é tarifada. Nova nota = nova tarifa.
+- **E-mail da NFS-e:** toda nota autorizada é enviada ao e-mail principal do cliente pelo Asaas (o Portal Nacional também pode enviar). `notificationDisabled: true` bloqueia só os avisos financeiros da cobrança; não há opção no painel nem parâmetro em `POST /v3/invoices` para desligar o e-mail da nota (dá para pedir ao suporte).
+- **Impacto:** a regra de emitir só pagamento + 8 dias (nunca cancelar por desistência) evita a perda dos R$ 0,49. Se o modo Automática pelo Asaas for usado, o cliente receberia o e-mail do Asaas além do nosso: decidir entre não enviar o nosso ou pedir ao suporte para desligar o deles.
+- **Atualização (20/11/2026):** o suporte do Asaas **desativou o envio automático do e-mail da NFS-e** na nossa conta (dá para pedir a reativação). Assim, só o nosso e-mail (com o PDF anexo) chega ao cliente, em qualquer modo.
