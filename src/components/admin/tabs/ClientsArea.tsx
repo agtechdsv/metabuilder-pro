@@ -1,0 +1,37 @@
+'use client'
+
+import React, { useState } from 'react'
+import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n/I18nContext'
+import { ClientsTab } from './ClientsTab'
+import { NfseTab } from './NfseTab'
+import { attentionCount, useNfseQueue } from '../hooks/useNfseQueue'
+import type { useClientsAdmin } from '../hooks/useClientsAdmin'
+
+type Sub = 'clients' | 'nfse'
+
+/** Aba Clientes do painel: duas subabas, Clientes (a tela de sempre) e Notas Fiscais (a fila de emissão). */
+export function ClientsArea({ hook, refreshKey = 0 }: { hook: ReturnType<typeof useClientsAdmin>; refreshKey?: number }) {
+  const { t } = useI18n()
+  const [sub, setSub] = useState<Sub>('clients')
+  const nfse = useNfseQueue(refreshKey)
+  const attention = attentionCount(nfse.overview)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex w-fit gap-1 rounded-xl bg-neutral-100 p-1 dark:bg-neutral-950" role="tablist">
+        {(['clients', 'nfse'] as const).map(s => (
+          <button key={s} type="button" role="tab" aria-selected={sub === s} data-testid={`clients-sub-${s}`} onClick={() => setSub(s)}
+            className={cn('flex items-center gap-2 rounded-lg px-5 py-2 text-xs font-bold transition-all',
+              sub === s ? 'bg-white text-indigo-500 shadow-sm dark:bg-neutral-850 dark:text-indigo-400' : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300')}>
+            {t(s === 'clients' ? 'admin_nfse.tab_clients' : 'admin_nfse.tab_nfse')}
+            {s === 'nfse' && attention > 0 && (
+              <span data-testid="nfse-attention" className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-black leading-none text-white">{attention}</span>
+            )}
+          </button>
+        ))}
+      </div>
+      {sub === 'clients' ? <ClientsTab hook={hook} /> : <NfseTab hook={nfse} />}
+    </div>
+  )
+}

@@ -8,7 +8,7 @@ import type { EmailTopic } from '@/lib/email/routing'
  * sem nada escolhido, sai da conta do SMTP como sempre. Se o servidor recusar o remetente escolhido, tenta de novo com a conta do SMTP (o aviso
  * nunca deixa de sair por causa de um alias mal configurado). Devolve false (sem lançar) se faltar configuração ou o envio falhar.
  */
-async function send(to: string, mail: MailContent, topic: EmailTopic = 'default'): Promise<boolean> {
+async function send(to: string, mail: MailContent, topic: EmailTopic = 'default', attachments?: { filename: string; content: Buffer; contentType?: string }[]): Promise<boolean> {
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !to) return false
   try {
@@ -19,7 +19,7 @@ async function send(to: string, mail: MailContent, topic: EmailTopic = 'default'
       auth: { user: SMTP_USER, pass: SMTP_PASS },
     })
     const route = await routeFor(topic)
-    const base = { to, subject: mail.subject, html: mail.html, text: mail.text, ...(route.replyTo ? { replyTo: route.replyTo } : {}) }
+    const base = { to, subject: mail.subject, html: mail.html, text: mail.text, ...(route.replyTo ? { replyTo: route.replyTo } : {}), ...(attachments?.length ? { attachments } : {}) }
     try {
       await transporter.sendMail({ ...base, from: route.fromHeader })
     } catch (e) {
@@ -54,6 +54,10 @@ export function sendTeamNotice(subject: string, text: string, html: string, to?:
 
 /** Envia um e-mail pronto (ex.: aprovação ou recusa de parceiro) ao endereço informado, pelo remetente do assunto. Devolve false se faltar configuração ou falhar. */
 export const sendMailTo = (to: string, mail: MailContent, topic: EmailTopic = 'default') => send(to, mail, topic)
+
+/** Envia a NFS-e (PDF anexo) ao cliente, pelo remetente do assunto "cobranças ao cliente". Devolve false se faltar configuração ou falhar. */
+export const sendNfseEmail = (to: string, mail: MailContent, pdf: { filename: string; content: Buffer }) =>
+  send(to, mail, 'billing_customer', [{ filename: pdf.filename, content: pdf.content, contentType: 'application/pdf' }])
 
 /** Envia o código de confirmação da troca de dispositivo. */
 export const sendSlotCodeEmail = (to: string, lang: MailLang, code: string, ttlMinutes: number) => send(to, slotCodeMail(lang, code, ttlMinutes), 'security')

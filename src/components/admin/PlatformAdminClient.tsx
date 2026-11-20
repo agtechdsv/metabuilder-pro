@@ -40,7 +40,7 @@ import { useIClubAdmin } from './hooks/useIClubAdmin'
 
 import { useI18n } from '@/i18n/I18nContext'
 import { DashboardTab } from './tabs/DashboardTab'
-import { ClientsTab } from './tabs/ClientsTab'
+import { ClientsArea } from './tabs/ClientsArea'
 import { AgendaTab } from './tabs/AgendaTab'
 import { IClubTab } from './tabs/IClubTab'
 
@@ -421,7 +421,7 @@ export default function PlatformAdminClient({
         )}
 
         {activeTab === 'dashboard' && <DashboardTab hook={dashboardHook} initialWorkspaces={initialWorkspaces} clientProfiles={clientProfiles} mappedWorkspaces={mappedWorkspaces} />}
-        {activeTab === 'clients' && <ClientsTab hook={clientsHook} />}
+        {activeTab === 'clients' && <ClientsArea hook={clientsHook} refreshKey={refreshCount} />}
         {activeTab === 'agenda' && <AgendaTab hook={agendaHook} />}
         {activeTab === 'iclub' && <IClubTab hook={iclubHook} />}
       </AnimatePresence>

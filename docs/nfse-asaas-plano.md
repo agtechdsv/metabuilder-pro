@@ -432,3 +432,15 @@ Cenários que **não** dá para provocar em produção (Asaas fora do ar, falha 
 - [ ] Para o contador: **tributos aproximados** (Lei 12.741/2012): hoje a aba Preferências está em "Não incluir"; para venda ao consumidor final, precisa incluir?
 - [ ] Para o contador: item (e) da lista (pagamento nos últimos 7 dias do mês), NBS/indicador/cClassTrib, IBS/CBS (prazo 27/11), plano anual, IRRF/INSS e exterior.
 - [ ] Anotar a validade do certificado A1 (ao vencer, as notas param).
+
+## 11. Decisão de 20/11/2026: fila de notas e emissão manual pelo Lunis (feito)
+
+O contador (Lunis) tem um emissor próprio (cliente.lunis.ia.br) com **modelos de nota**: o modelo 92 (serviço 01.05.01, licenciamento de software, município 001) é o do MetaBuilderPRO. Só se digita valor e CPF/CNPJ do tomador; o resto vem do modelo. A emissão leva menos de 10 segundos. A API de emissão do Lunis foi anunciada pelo contador, sem data. Se vier, pode substituir o Asaas na emissão automática.
+
+**Construído (nada depende do Asaas nem da API do Lunis):**
+- `scripts/nfse-fila.sql` + teste `node scripts/test-nfse-fila-sql.mjs`: tabela `mb_nfse_queue`, trigger em `payments` (pago -> entra na fila com data = pagamento + 8 dias em Brasília; devolvido -> sai da fila, ou marca "a cancelar" se já emitida), ajustes `nfse_mode` e `nfse_wait_days`. A trigger nunca derruba o webhook.
+- Painel SuperAdmin > Clientes > subaba **Notas Fiscais**: modo (Manual ativo; Híbrido e Automática aparecem como "em breve"), prazo, resumo do dia, filtros, botão Emitir (campos com Copiar + abre o Lunis + anexar PDF e enviar ao cliente por e-mail), Dispensar, Reabrir, "Nota cancelada no emissor".
+- Aviso diário por e-mail à equipe (`/api/cron/nfse-due`, 8h de Brasília) quando há nota para hoje ou atrasada.
+- Regras puras em `src/lib/nfse/queue.ts` (inclui `whoIssues`, que já sabe o híbrido: emissão no mesmo mês do pagamento = automática).
+
+**Pendente de terceiros:** perguntas ao contador (URL preenchida, competência anterior à emissão, ISS retido para pessoa física, API) e ao Asaas (R$ 0,49 no cancelamento, e-mail da nota). Para ligar Híbrido/Automática: implementar o emissor automático e trocar `NFSE_AUTO_AVAILABLE` para true.
