@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient, createAdminClient } from '@/utils/supabase/server'
-import { loadBillingSettings } from '@/lib/billing/billingService'
+import { checkoutOnlyUsers, loadBillingSettings } from '@/lib/billing/billingService'
 import { MAX_GRACE_DAYS, daysToDue, suspensionDate } from '../../../supabase/functions/_shared/billingCore'
 import type { BillingAdminOverview, BillingErrorCode, MyBillingNotice } from '@/lib/billing/notice'
 
@@ -65,7 +65,10 @@ export async function getMyBillingNotice(): Promise<MyBillingNotice | null> {
     if (!cfg.enabled) return null
 
     const { data: profile } = await admin.from('profiles').select('subscription_licenses, subscription_status, overdue_since').eq('id', user.id).maybeSingle()
-    if (!profile || !(Number(profile.subscription_licenses) > 0) || profile.subscription_status === 'canceled') return null
+    if (!profile || profile.subscription_status === 'canceled') return null
+    // FREE que só abriu o checkout também vê o aviso (com texto suave); quem não é dono nem tem cobrança aberta não vê nada
+    const checkout = (await checkoutOnlyUsers(admin, [user.id])).has(user.id)
+    if (!checkout && !(Number(profile.subscription_licenses) > 0)) return null
 
     const { data: pay } = await admin.from('payments').select('amount, status, billing_type, invoice_url, asaas_payment_id, due_date')
       .eq('user_id', user.id).in('status', ['pending', 'overdue']).not('due_date', 'is', null).order('due_date', { ascending: true }).limit(1).maybeSingle()
@@ -75,6 +78,8 @@ export async function getMyBillingNotice(): Promise<MyBillingNotice | null> {
     const d = daysToDue(pay.due_date, now)
     if (!Number.isFinite(d)) return null
     const base = { dueDate: pay.due_date as string, amount: Number(pay.amount), billingType: pay.billing_type as string | null, invoiceUrl: pay.invoice_url as string | null, daysToDue: d }
+
+    if (checkout) return { state: 'checkout_pending', ...base, suspendOn: null }
 
     if (pay.status === 'overdue') {
       return { state: 'overdue', ...base, suspendOn: suspensionDate(profile.overdue_since, cfg.graceDays)?.toISOString() ?? null }

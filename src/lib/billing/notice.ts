@@ -1,5 +1,5 @@
 /** O que a tela do dono mostra no aviso fixo de cobrança (banner). */
-export type MyBillingNoticeState = 'due_soon' | 'overdue' | 'card_refused'
+export type MyBillingNoticeState = 'due_soon' | 'overdue' | 'card_refused' | 'checkout_pending'
 
 export interface MyBillingNotice {
   state: MyBillingNoticeState

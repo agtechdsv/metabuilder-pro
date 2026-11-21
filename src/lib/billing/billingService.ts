@@ -7,7 +7,7 @@ import { welcomeMail } from '@/lib/billing/welcomeMailText'
 import { resolveMailLang } from '@/lib/security/securityMailText'
 import {
   ALWAYS_SEND_KINDS, isCustomerKind, isPayoutKind, noticeRef, parseBillingSettings, payoutIsFinal, reminderKindFor, resolveLang, suspensionDate, graceExpired,
-  type BillingSettings, type NoticeKind,
+  type BillingSettings, type NoticeKind, isCheckoutOnly, checkoutReminderStep,
 } from '../../../supabase/functions/_shared/billingCore'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -31,18 +31,46 @@ async function queue(admin: Admin, n: { kind: NoticeKind; userId?: string | null
   return (data?.length ?? 0) > 0
 }
 
+/**
+ * Quais destes usuários são FREE que só abriram o checkout (plano grátis e nenhum pagamento pago). Eles nunca são suspensos nem recebem os avisos de
+ * atraso do PRO: só o lembrete suave (checkout_reminder). O app já ignora o bloqueio de conta FREE; suspender só geraria um e-mail falso.
+ */
+export async function checkoutOnlyUsers(admin: Admin, ids: string[]): Promise<Set<string>> {
+  if (!ids.length) return new Set()
+  const [{ data: profs }, { data: paid }] = await Promise.all([
+    admin.from('profiles').select('id, subscription_tier').in('id', ids),
+    admin.from('payments').select('user_id').eq('status', 'paid').in('user_id', ids),
+  ])
+  const paidBy = new Map<string, number>()
+  for (const r of (paid || []) as any[]) paidBy.set(r.user_id, (paidBy.get(r.user_id) || 0) + 1)
+  return new Set(((profs || []) as any[]).filter(p => isCheckoutOnly(p.subscription_tier, paidBy.get(p.id) || 0)).map(p => p.id as string))
+}
+
 /** Lembretes por data: o que cada cobrança em aberto pede hoje (3 dias antes, no dia, 1 e 3 dias depois). Não repete (fila única). */
 export async function scheduleReminders(admin: Admin, now: Date): Promise<number> {
-  const { data: pays } = await admin.from('payments').select('id, user_id, amount, status, billing_type, invoice_url, asaas_payment_id, due_date')
-    .in('status', ['pending', 'overdue']).not('due_date', 'is', null).not('user_id', 'is', null).limit(1000)
+  const { data: pays } = await admin.from('payments').select('id, user_id, amount, status, billing_type, invoice_url, asaas_payment_id, due_date, created_at')
+    .in('status', ['pending', 'overdue']).not('due_date', 'is', null).not('user_id', 'is', null).order('created_at', { ascending: true }).limit(1000)
   const rows = pays || []
   if (!rows.length) return 0
   const { data: profiles } = await admin.from('profiles').select('id, subscription_status').in('id', Array.from(new Set(rows.map((p: any) => p.user_id))))
   const status = new Map((profiles || []).map((p: any) => [p.id as string, p.subscription_status as string]))
+  const checkout = await checkoutOnlyUsers(admin, Array.from(new Set(rows.map((p: any) => p.user_id as string))))
+  const firstOf = new Map<string, string>() // FREE do checkout: só a primeira cobrança conta (renovações do plano abandonado não geram lembrete de novo)
+  for (const p of rows as any[]) if (checkout.has(p.user_id) && !firstOf.has(p.user_id)) firstOf.set(p.user_id, p.id)
   let n = 0
   for (const p of rows as any[]) {
     const st = status.get(p.user_id)
-    if (st === 'canceled' || st === 'blocked') continue // cancelado não recebe cobrança; suspenso já recebeu o aviso de suspensão
+    if (st === 'canceled') continue // cancelado não recebe cobrança
+    if (checkout.has(p.user_id)) {
+      const step = firstOf.get(p.user_id) === p.id ? checkoutReminderStep(p.created_at, now) : 0
+      if (!step) continue
+      if (await queue(admin, {
+        kind: 'checkout_reminder', userId: p.user_id, ref: noticeRef([p.asaas_payment_id || p.id, step]),
+        payload: { paymentId: p.asaas_payment_id || p.id, amount: Number(p.amount), dueDate: p.due_date, billingType: p.billing_type, invoiceUrl: p.invoice_url },
+      })) n++
+      continue
+    }
+    if (st === 'blocked') continue // suspenso já recebeu o aviso de suspensão
     const kind = reminderKindFor(p.status, p.due_date, now)
     if (!kind) continue
     if (await queue(admin, {
@@ -56,8 +84,10 @@ export async function scheduleReminders(admin: Admin, now: Date): Promise<number
 /** Carência acabou: suspende (e avisa). Só quem está com atraso marcado (overdue_since) e ainda não suspenso. */
 export async function suspendAfterGrace(admin: Admin, cfg: BillingSettings, now: Date): Promise<number> {
   const { data } = await admin.from('profiles').select('id, overdue_since, subscription_status').not('overdue_since', 'is', null).neq('subscription_status', 'blocked').neq('subscription_status', 'canceled').limit(500)
+  const checkout = await checkoutOnlyUsers(admin, ((data || []) as any[]).map(p => p.id as string))
   let n = 0
   for (const p of (data || []) as any[]) {
+    if (checkout.has(p.id)) continue // FREE que só abriu o checkout nunca é suspenso
     if (!graceExpired(p.overdue_since, cfg.graceDays, now)) continue
     const { error } = await admin.from('profiles').update({ subscription_status: 'blocked', is_blocked: true }).eq('id', p.id).not('overdue_since', 'is', null)
     if (error) { console.error('[avisos] falha ao suspender:', error.message); continue }
@@ -207,8 +237,12 @@ export async function processQueue(admin: Admin, cfg: BillingSettings): Promise<
       } else if (isCustomerKind(it.kind)) {
         const { data: prof } = await admin.from('profiles').select('email, full_name, billing_language, overdue_since').eq('id', it.user_id).maybeSingle()
         if (!prof?.email) { await mark('failed', 'cliente sem e-mail'); out.failed++; continue }
+        // FREE que só abriu o checkout não recebe aviso de atraso nem de suspensão do PRO (o webhook antigo ou uma fila antiga podem ter deixado um na fila)
+        if (['reminder_3d', 'reminder_due', 'overdue_1d', 'overdue_3d', 'suspended'].includes(it.kind) && (await checkoutOnlyUsers(admin, [String(it.user_id)])).has(String(it.user_id))) {
+          await mark('sent', 'ignorado: cliente FREE que ainda não pagou'); out.skipped++; continue
+        }
         // cobrança paga ou estornada nesse meio tempo: lembrete e aviso de atraso não fazem mais sentido
-        if (p.paymentId && ['invoice_created', 'reminder_3d', 'reminder_due', 'overdue_1d', 'overdue_3d'].includes(it.kind)) {
+        if (p.paymentId && ['invoice_created', 'reminder_3d', 'reminder_due', 'overdue_1d', 'overdue_3d', 'checkout_reminder'].includes(it.kind)) {
           const { data: pay } = await admin.from('payments').select('status').eq('asaas_payment_id', p.paymentId).maybeSingle()
           if (pay && (pay.status === 'paid' || pay.status === 'refunded')) { await mark('sent', 'ignorado: já pago'); out.skipped++; continue }
         }

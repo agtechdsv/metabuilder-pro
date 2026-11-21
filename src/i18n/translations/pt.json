@@ -3847,7 +3847,8 @@
     },
     "shared": {
       "licenses_gauge_title": "Licenças"
-    }
+    },
+    "subscription_guest_subtitle": "Conclua o pagamento do plano PRO"
   },
   "studio": {
     "sql": {
@@ -4037,7 +4038,9 @@
       "table_status": "Status",
       "table_receipt": "Comprovante",
       "receipt_btn": "Recibo",
-      "no_transactions": "Nenhuma transação registrada."
+      "no_transactions": "Nenhuma transação registrada.",
+      "pending_invoice_title_free": "Falta só o pagamento do plano PRO",
+      "pending_invoice_desc_free": "Você iniciou a assinatura do plano PRO e falta pagar {value}. Sua conta gratuita continua funcionando normalmente."
     },
     "metrics": {
       "refresh_tooltip": "Atualizar painel",
@@ -6280,7 +6283,10 @@
     "refused_title": "Não conseguimos cobrar o seu cartão",
     "refused_desc": "A cobrança de {amount} foi recusada. Atualize o cartão ou pague de outra forma para não perder o acesso.",
     "pay_button": "Pagar agora",
-    "update_button": "Atualizar pagamento"
+    "update_button": "Atualizar pagamento",
+    "checkout_title": "Falta só o pagamento do plano PRO",
+    "checkout_desc": "Você iniciou a assinatura e falta pagar {amount}. Sua conta gratuita continua funcionando normalmente.",
+    "checkout_button": "Concluir pagamento"
   },
   "partner_apply": {
     "title": "Quero ser parceiro",

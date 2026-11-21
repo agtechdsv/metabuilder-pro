@@ -4,7 +4,7 @@ import { grantVolumeLicenses, processReferralConversion, revokeReferralRewards, 
 import { CYCLE_MONTHS, isCycle } from "../_shared/pricing.ts";
 import { applyTransferEvent, cancelPartnerReferral, recordPartnerCommission, revokePartnerCommissionForPayment } from "../_shared/partners.ts";
 import { billingSettings, pingNotify, queueNotice, queuePayoutNotice } from "../_shared/billing.ts";
-import { noticeRef, payoutIsFinal, type NoticeKind } from "../_shared/billingCore.ts";
+import { isCheckoutOnly, noticeRef, payoutIsFinal, type NoticeKind } from "../_shared/billingCore.ts";
 import { isForeignAsaasEvent, keyAlertDecision, loadAsaasApps } from "../_shared/asaasApps.ts";
 import { appOfRef, isOwnRef, parsePaymentRef } from "../_shared/familyRefs.ts";
 
@@ -410,7 +410,14 @@ serve(async (req) => {
 
     else if (event === "PAYMENT_OVERDUE") {
       const ctx = await resolveContext();
+      // FREE que só abriu o checkout e nunca pagou: não é suspenso, não entra na carência e não recebe aviso de atraso (a rotina diária manda só um lembrete suave)
+      let checkoutOnly = false;
       if (ctx?.userId) {
+        const { data: tierRow } = await supabase.from("profiles").select("subscription_tier").eq("id", ctx.userId).maybeSingle();
+        const { count: paidCount } = await supabase.from("payments").select("id", { count: "exact", head: true }).eq("user_id", ctx.userId).eq("status", "paid");
+        checkoutOnly = isCheckoutOnly(tierRow?.subscription_tier, paidCount ?? 0);
+      }
+      if (ctx?.userId && !checkoutOnly) {
         const { data: cur } = await supabase.from("profiles").select("overdue_since").eq("id", ctx.userId).maybeSingle();
         const overdueSince = cur?.overdue_since || new Date().toISOString();
         if (!cfg.enabled || cfg.graceDays <= 0) {
@@ -440,7 +447,7 @@ serve(async (req) => {
           })
           .eq("asaas_payment_id", payment.id);
       }
-      console.log(`[PAYMENT_OVERDUE] Profile blocked for ${ctx?.userId}`);
+      console.log(checkoutOnly ? `[PAYMENT_OVERDUE] ${ctx?.userId} é FREE sem pagamento: nada bloqueado` : `[PAYMENT_OVERDUE] Profile blocked for ${ctx?.userId}`);
     }
 
     // há aviso novo na fila: pede ao site para enviar já (não trava o webhook; sem resposta, a rotina diária envia)

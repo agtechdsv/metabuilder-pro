@@ -51,6 +51,7 @@ const TEXTS: Record<MailLang, Record<string, Text>> = {
     refunded: { subject: 'Seu pagamento foi estornado', title: 'Pagamento estornado', intro: (d, l) => `Olá, ${d.name}. O pagamento de ${money(d.amount, l)} foi estornado. Se você não pediu isso, fale com a gente.` },
     canceled: { subject: 'A renovação da sua assinatura foi cancelada', title: 'Renovação cancelada', intro: (d, l) => `Olá, ${d.name}. Cancelamos a renovação automática da sua assinatura. Seu acesso continua até ${day(d.validUntil, l)}. Você pode reativar quando quiser.`, button: 'Reativar assinatura' },
     ending_soon: { subject: 'Seu acesso ao MetaBuilder PRO termina em breve', title: 'Seu acesso termina em breve', intro: (d, l) => `Olá, ${d.name}. Seu acesso termina em ${day(d.validUntil, l)}. Para continuar, reative a assinatura.`, button: 'Reativar assinatura' },
+    checkout_reminder: { subject: 'Falta só o pagamento para ativar o seu plano PRO', title: 'Seu plano PRO está esperando', intro: (d, l) => `Olá, ${d.name}! Você começou a assinatura do plano PRO e falta só o pagamento de ${money(d.amount, l)}. Sua conta gratuita continua funcionando normalmente. Quando quiser concluir, é só pagar por aqui.`, button: 'Concluir pagamento' },
   },
   en: {
     invoice_created: { subject: 'Your MetaBuilder PRO invoice is ready', title: 'Your invoice is ready', intro: (d, l) => `Hello, ${d.name}! The invoice for your subscription is available. Pay by ${day(d.dueDate, l)} to keep everything running.`, button: 'View invoice' },
@@ -64,6 +65,7 @@ const TEXTS: Record<MailLang, Record<string, Text>> = {
     refunded: { subject: 'Your payment was refunded', title: 'Payment refunded', intro: (d, l) => `Hello, ${d.name}. The payment of ${money(d.amount, l)} was refunded. If you did not ask for this, contact us.` },
     canceled: { subject: 'Your subscription renewal was canceled', title: 'Renewal canceled', intro: (d, l) => `Hello, ${d.name}. We canceled the automatic renewal of your subscription. Your access continues until ${day(d.validUntil, l)}. You can reactivate whenever you want.`, button: 'Reactivate subscription' },
     ending_soon: { subject: 'Your MetaBuilder PRO access ends soon', title: 'Your access ends soon', intro: (d, l) => `Hello, ${d.name}. Your access ends on ${day(d.validUntil, l)}. To continue, reactivate your subscription.`, button: 'Reactivate subscription' },
+    checkout_reminder: { subject: 'Only the payment is missing to activate your PRO plan', title: 'Your PRO plan is waiting', intro: (d, l) => `Hello, ${d.name}! You started the PRO plan subscription and only the payment of ${money(d.amount, l)} is missing. Your free account keeps working normally. Whenever you want to finish, just pay here.`, button: 'Complete payment' },
   },
   es: {
     invoice_created: { subject: 'Su factura de MetaBuilder PRO está lista', title: 'Su factura está lista', intro: (d, l) => `¡Hola, ${d.name}! La factura de su suscripción ya está disponible. Pague hasta el ${day(d.dueDate, l)} para mantener todo funcionando.`, button: 'Ver factura' },
@@ -77,6 +79,7 @@ const TEXTS: Record<MailLang, Record<string, Text>> = {
     refunded: { subject: 'Su pago fue reembolsado', title: 'Pago reembolsado', intro: (d, l) => `Hola, ${d.name}. El pago de ${money(d.amount, l)} fue reembolsado. Si usted no lo pidió, contáctenos.` },
     canceled: { subject: 'La renovación de su suscripción fue cancelada', title: 'Renovación cancelada', intro: (d, l) => `Hola, ${d.name}. Cancelamos la renovación automática de su suscripción. Su acceso continúa hasta el ${day(d.validUntil, l)}. Puede reactivarla cuando quiera.`, button: 'Reactivar suscripción' },
     ending_soon: { subject: 'Su acceso a MetaBuilder PRO termina pronto', title: 'Su acceso termina pronto', intro: (d, l) => `Hola, ${d.name}. Su acceso termina el ${day(d.validUntil, l)}. Para continuar, reactive la suscripción.`, button: 'Reactivar suscripción' },
+    checkout_reminder: { subject: 'Solo falta el pago para activar su plan PRO', title: 'Su plan PRO le está esperando', intro: (d, l) => `¡Hola, ${d.name}! Usted inició la suscripción al plan PRO y solo falta el pago de ${money(d.amount, l)}. Su cuenta gratuita sigue funcionando con normalidad. Cuando quiera terminar, solo pague por aquí.`, button: 'Completar el pago' },
   },
 }
 
@@ -104,7 +107,9 @@ export function customerBillingMail(kind: string, lang: MailLang, d: BillingMail
   if (m) rows.push([L.method, m])
   if (kind === 'payment_received' && d.validUntil) rows.push([L.until, day(d.validUntil, lang)])
   const dashboard = `${d.appUrl}/client/dashboard`
-  const url = kind === 'payment_received' || kind === 'canceled' || kind === 'ending_soon' || kind === 'suspended' || kind === 'card_refused' ? dashboard : (d.invoiceUrl || dashboard)
+  // suspensão, cartão recusado e checkout abandonado levam à aba Assinatura (QR Code e cartão na própria tela); os demais, à fatura
+  const pay = `${dashboard}?tab=subscription`
+  const url = kind === 'suspended' || kind === 'card_refused' || kind === 'checkout_reminder' ? pay : kind === 'payment_received' || kind === 'canceled' || kind === 'ending_soon' ? dashboard : (d.invoiceUrl || dashboard)
   const note = t.note ? t.note(d, lang) : ''
   const html = mailShell(t.title,
     `<p style="margin:0 0 20px 0;">${esc(t.intro(d, lang))}</p>` + (rows.length ? infoBox(L.box, rows) : '') +

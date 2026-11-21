@@ -171,6 +171,9 @@ export default function ClientDashboardClient({
   const { t } = useI18n()
   const [localProfile, setLocalProfile] = useState(profile)
   const isGuest = !localProfile?.is_super_admin && !localProfile?.subscription_licenses
+  // FREE com cobrança em aberto (checkout sem pagar): vê a aba Assinatura para pagar, mesmo sem licenças
+  const hasOpenCharge = (payments || []).some((p: any) => p.status === 'pending' || p.status === 'overdue')
+  const canPayAsGuest = isGuest && hasOpenCharge
   const [activeTab, setActiveTab] = useState<TabId>(isGuest ? 'downloads' : 'dashboard')
   const unreadChat = useUnreadChatCount()
 
@@ -199,18 +202,18 @@ export default function ClientDashboardClient({
       const params = new URLSearchParams(window.location.search)
       const tab = params.get('tab') as TabId
       if (tab && TABS.some(t => t.id === tab)) {
-        if (!isGuest || tab === 'metavoice' || tab === 'community' || tab === 'downloads') {
+        if (!isGuest || tab === 'metavoice' || tab === 'community' || tab === 'downloads' || (tab === 'subscription' && canPayAsGuest)) {
           setActiveTab(tab)
         }
       }
     }
-  }, [isGuest])
+  }, [isGuest, canPayAsGuest])
 
   useEffect(() => {
-    if (isGuest && activeTab !== 'metavoice' && activeTab !== 'community' && activeTab !== 'downloads') {
+    if (isGuest && activeTab !== 'metavoice' && activeTab !== 'community' && activeTab !== 'downloads' && !(activeTab === 'subscription' && canPayAsGuest)) {
       setActiveTab('downloads')
     }
-  }, [isGuest, activeTab])
+  }, [isGuest, activeTab, canPayAsGuest])
 
 
   const {
@@ -300,7 +303,7 @@ export default function ClientDashboardClient({
     <div className="max-w-7xl mx-auto space-y-8">
 
       {/* Aviso de cobrança (fatura vencendo, vencida ou cartão recusado): só aparece quando há algo a pagar */}
-      {!isGuest && <BillingBanner />}
+      {(!isGuest || (canPayAsGuest && activeTab !== 'subscription')) && <BillingBanner />}
 
       {/* Convite para assinar: quem ainda não tem plano (e não foi convidado por outro dono) */}
       {isGuest && showSubscribeInvite && <SubscribeInviteBanner />}
@@ -317,10 +320,12 @@ export default function ClientDashboardClient({
             </div>
             <div>
               <h1 className="text-2xl font-black text-neutral-900 dark:text-white">
-                {activeTab === 'community' ? t('client_dashboard.community_title', 'MetaBuilders') : activeTab === 'downloads' ? t('client_dashboard.downloads_title', 'Central de Downloads') : t('client_dashboard.metavoice_title', 'Sugestões & Ideias (MetaVoice)')}
+                {activeTab === 'subscription' ? t('client_dashboard.tabs.subscription', 'Assinatura') : activeTab === 'community' ? t('client_dashboard.community_title', 'MetaBuilders') : activeTab === 'downloads' ? t('client_dashboard.downloads_title', 'Central de Downloads') : t('client_dashboard.metavoice_title', 'Sugestões & Ideias (MetaVoice)')}
               </h1>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-                {activeTab === 'community' 
+                {activeTab === 'subscription'
+                  ? t('client_dashboard.subscription_guest_subtitle', 'Conclua o pagamento do plano PRO')
+                  : activeTab === 'community' 
                   ? t('client_dashboard.community_subtitle', 'Conecte-se com outros Owners e Desenvolvedores') 
                   : activeTab === 'downloads'
                   ? t('client_dashboard.downloads_subtitle', 'Baixe a IDE Desktop e mantenha seu ambiente de trabalho sempre atualizado')
@@ -394,8 +399,8 @@ export default function ClientDashboardClient({
       <div className={cn("flex flex-col sm:flex-row gap-4 w-full", isGuest ? "sm:justify-end" : "sm:items-center sm:justify-between")}>
           {/* Guests (devs): show 3-tab bar with Downloads, MetaBuilders, MetaVoice */}
           {isGuest && (
-            <div className="flex sm:grid sm:grid-cols-3 gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-full xl:w-fit overflow-x-auto no-scrollbar">
-              {(['downloads', 'community', 'metavoice'] as const).map(tabId => {
+            <div className={cn('flex sm:grid gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-full xl:w-fit overflow-x-auto no-scrollbar', canPayAsGuest ? 'sm:grid-cols-4' : 'sm:grid-cols-3')}>
+              {(canPayAsGuest ? (['subscription', 'downloads', 'community', 'metavoice'] as const) : (['downloads', 'community', 'metavoice'] as const)).map(tabId => {
                 const tab = TABS.find(t => t.id === tabId)!
                 return (
                   <button
@@ -411,6 +416,7 @@ export default function ClientDashboardClient({
                   >
                     <tab.icon className={cn(
                       "w-4 h-4",
+                      tab.id === 'subscription' && "text-emerald-500 dark:text-emerald-400",
                       tab.id === 'downloads' && "text-cyan-500 dark:text-cyan-400",
                       tab.id === 'community' && "text-blue-500 dark:text-blue-400",
                       tab.id === 'metavoice' && "text-amber-500 dark:text-amber-400",

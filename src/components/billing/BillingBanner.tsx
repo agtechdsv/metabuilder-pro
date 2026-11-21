@@ -30,10 +30,11 @@ export default function BillingBanner() {
 
   const overdue = notice.state === 'overdue'
   const refused = notice.state === 'card_refused'
-  const tone = overdue || refused ? 'border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300' : 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300'
-  const Icon = refused ? CreditCard : overdue ? AlertTriangle : CalendarClock
-  const title = refused ? t(P + 'refused_title') : overdue ? t(P + 'overdue_title') : t(P + (notice.daysToDue === 0 ? 'today_title' : 'soon_title'))
-  const desc = refused ? fill(t(P + 'refused_desc')) : overdue ? fill(t(P + (notice.suspendOn ? 'overdue_desc_grace' : 'overdue_desc'))) : fill(t(P + 'soon_desc'))
+  const checkout = notice.state === 'checkout_pending'
+  const tone = !checkout && (overdue || refused) ? 'border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300' : 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300'
+  const Icon = checkout ? CreditCard : refused ? CreditCard : overdue ? AlertTriangle : CalendarClock
+  const title = checkout ? t(P + 'checkout_title') : refused ? t(P + 'refused_title') : overdue ? t(P + 'overdue_title') : t(P + (notice.daysToDue === 0 ? 'today_title' : 'soon_title'))
+  const desc = checkout ? fill(t(P + 'checkout_desc')) : refused ? fill(t(P + 'refused_desc')) : overdue ? fill(t(P + (notice.suspendOn ? 'overdue_desc_grace' : 'overdue_desc'))) : fill(t(P + 'soon_desc'))
 
   return (
     <div role="status" className={`flex flex-wrap items-center gap-4 rounded-2xl border p-4 ${tone}`}>
@@ -42,9 +43,9 @@ export default function BillingBanner() {
         <p className="text-sm font-black">{title}</p>
         <p className="mt-0.5 text-xs">{desc}</p>
       </div>
-      <a href={notice.invoiceUrl && !refused ? notice.invoiceUrl : '/client/dashboard'} target={notice.invoiceUrl && !refused ? '_blank' : undefined} rel="noreferrer"
+      <a href={checkout ? '/client/dashboard?tab=subscription' : notice.invoiceUrl && !refused ? notice.invoiceUrl : '/client/dashboard'} target={!checkout && notice.invoiceUrl && !refused ? '_blank' : undefined} rel="noreferrer"
         className="rounded-xl bg-neutral-900 px-4 py-2 text-xs font-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black">
-        {refused ? t(P + 'update_button') : t(P + 'pay_button')}
+        {refused ? t(P + 'update_button') : checkout ? t(P + 'checkout_button') : t(P + 'pay_button')}
       </a>
     </div>
   )

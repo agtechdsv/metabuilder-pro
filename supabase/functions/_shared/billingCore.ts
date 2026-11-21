@@ -6,7 +6,7 @@ export type MailLang = "pt" | "en" | "es";
 /** Avisos ao CLIENTE. */
 export const CUSTOMER_KINDS = [
   "invoice_created", "reminder_3d", "reminder_due", "overdue_1d", "overdue_3d", "suspended", "payment_received",
-  "card_refused", "refunded", "canceled", "ending_soon",
+  "card_refused", "refunded", "canceled", "ending_soon", "checkout_reminder",
 ] as const;
 /** Avisos ao ADMIN. */
 export const ADMIN_KINDS = ["admin_overdue", "admin_refund", "admin_unresolved", "admin_digest", "admin_key_alert"] as const;
@@ -82,6 +82,26 @@ export function reminderKindFor(status: string, dueDate: string | null | undefin
     if (late >= 1) return "overdue_1d";
   }
   return null;
+}
+
+/**
+ * Cliente FREE que so gerou o checkout e nunca pagou (plano gratis e nenhum pagamento 'paid'). Esse cliente NUNCA e suspenso nem recebe os avisos de
+ * atraso do PRO: so um lembrete suave (ver checkoutReminderStep). O app ja ignora o bloqueio de conta FREE, entao suspender so geraria um e-mail falso.
+ */
+export function isCheckoutOnly(tier: string | null | undefined, paidCount: number): boolean {
+  const t = String(tier ?? '').trim().toLowerCase();
+  return (t === '' || t === 'free') && !(paidCount > 0);
+}
+
+/** Lembretes do checkout abandonado: 1 dia e 3 dias depois de gerada a cobranca. Depois de MAX dias nao avisa mais. 0 = nada hoje. */
+export const CHECKOUT_REMINDER_MAX_DAYS = 10;
+export function checkoutReminderStep(createdAt: string | Date | null | undefined, now: Date): 0 | 1 | 3 {
+  if (!createdAt) return 0;
+  const t = new Date(createdAt).getTime();
+  if (!Number.isFinite(t)) return 0;
+  const age = Math.floor((now.getTime() - t) / DAY);
+  if (age > CHECKOUT_REMINDER_MAX_DAYS) return 0;
+  return age >= 3 ? 3 : age >= 1 ? 1 : 0;
 }
 
 /** A carencia acabou? (overdue_since + graceDays dias <= agora). Sem data de atraso nunca suspende. */

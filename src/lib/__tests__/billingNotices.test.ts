@@ -91,7 +91,9 @@ describe('avisos de cobrança: e-mails', () => {
   it('o botão leva à fatura (Pix, boleto) nos lembretes e ao painel nos demais', () => {
     expect(customerBillingMail('reminder_due', 'pt', d)!.html).toContain('href="https://asaas.exemplo/i/123"')
     expect(customerBillingMail('overdue_1d', 'pt', d)!.html).toContain('href="https://asaas.exemplo/i/123"')
-    for (const k of ['suspended', 'payment_received', 'card_refused', 'canceled']) expect(customerBillingMail(k, 'pt', d)!.html, k).toContain('href="https://s.exemplo/client/dashboard"')
+    for (const k of ['payment_received', 'canceled']) expect(customerBillingMail(k, 'pt', d)!.html, k).toContain('href="https://s.exemplo/client/dashboard"')
+    // suspensão e cartão recusado abrem direto a aba Assinatura (QR Code e cartão na própria tela)
+    for (const k of ['suspended', 'card_refused']) expect(customerBillingMail(k, 'pt', d)!.html, k).toContain('href="https://s.exemplo/client/dashboard?tab=subscription"')
     expect(customerBillingMail('reminder_due', 'pt', { ...d, invoiceUrl: null })!.html).toContain('href="https://s.exemplo/client/dashboard"')
   })
 

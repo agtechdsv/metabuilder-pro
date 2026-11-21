@@ -3847,7 +3847,8 @@
     },
     "shared": {
       "licenses_gauge_title": "Licenses"
-    }
+    },
+    "subscription_guest_subtitle": "Complete the PRO plan payment"
   },
   "studio": {
     "sql": {
@@ -4037,7 +4038,9 @@
       "table_status": "Status",
       "table_receipt": "Receipt",
       "receipt_btn": "Receipt",
-      "no_transactions": "No transactions recorded."
+      "no_transactions": "No transactions recorded.",
+      "pending_invoice_title_free": "Only the PRO plan payment is missing",
+      "pending_invoice_desc_free": "You started the PRO plan subscription and {value} is still to be paid. Your free account keeps working normally."
     },
     "metrics": {
       "refresh_tooltip": "Refresh panel",
@@ -6280,7 +6283,10 @@
     "refused_title": "We could not charge your card",
     "refused_desc": "The charge of {amount} was declined. Update your card or pay another way so you do not lose access.",
     "pay_button": "Pay now",
-    "update_button": "Update payment"
+    "update_button": "Update payment",
+    "checkout_title": "Only the PRO plan payment is missing",
+    "checkout_desc": "You started the subscription and {amount} is still to be paid. Your free account keeps working normally.",
+    "checkout_button": "Complete payment"
   },
   "partner_apply": {
     "title": "I want to be a partner",

@@ -72,3 +72,12 @@ Cobrança vencida, estorno/chargeback, **pagamento que o webhook não conseguiu 
 - A validade (`subscription_expires_at`) continua sendo recalculada a cada confirmação ("agora + ciclo"); no cartão, o Asaas pode mandar o `RECEIVED` só na liquidação, o que empurra a data. Agora que a rotina fecha quem cancelou depois da data, vale conferir essa data no primeiro ciclo de cartão. **Não foi mexido nisso.**
 - Estorno e chargeback **não bloqueiam** o acesso (só revogam recompensas e comissões e avisam o admin). Decisão de negócio pendente.
 - O envio depende do SMTP (limites diários da hospedagem do e-mail). A deliverabilidade depende de SPF, DKIM e DMARC do domínio.
+
+## Cliente FREE que só abriu o checkout (21/11/2026)
+- **Quem é:** plano grátis (`subscription_tier` free ou vazio) e nenhum pagamento `paid`. Regra pura em `billingCore.ts` (`isCheckoutOnly`).
+- **Nunca é suspenso** e não recebe os avisos de atraso/suspensão do PRO: a rotina (`suspendAfterGrace`) o pula, o webhook (`PAYMENT_OVERDUE`) não grava `blocked` nem `overdue_since`, e `processQueue` descarta avisos desses tipos que tenham ficado na fila. O app já ignora o bloqueio de conta FREE, então suspender só gerava e-mail falso.
+- **Recebe só o lembrete suave** `checkout_reminder`: 1 e 3 dias depois de gerada a cobrança, só da primeira cobrança, e nada depois de 10 dias. O botão abre `/client/dashboard?tab=subscription`.
+- **Na tela:** o banner de cobrança aparece também para ele (texto suave) e a aba Assinatura (QR Code Pix e "Pagar com cartão") fica visível enquanto houver cobrança aberta, mesmo sem licenças.
+- **Suspensão e cartão recusado** (PRO) também abrem a aba Assinatura.
+- **Dados:** `scripts/corrigir-free-suspenso.sql` desfaz a marca de "suspenso" de contas FREE sem pagamento.
+- **Pendente:** cancelar no Asaas a cobrança/assinatura abandonada depois do último lembrete. Hoje só o webhook/Edge Function fala com o Asaas; exige uma função nova e deploy.

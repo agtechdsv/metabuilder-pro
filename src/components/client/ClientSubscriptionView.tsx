@@ -27,6 +27,8 @@ export function ClientSubscriptionView({
   payments,
 }: ClientSubscriptionViewProps) {
   const { t } = useI18n()
+  // FREE que só abriu o checkout: texto suave, sem "evite interrupções"
+  const isFree = !localProfile?.subscription_licenses && !localProfile?.is_super_admin
 
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-200">
@@ -47,11 +49,11 @@ export function ClientSubscriptionView({
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
               <h4 className="text-xs font-black text-amber-800 dark:text-amber-400 uppercase tracking-widest">
-                {t('client_views.subscription.pending_invoice_title', 'Cobrança Pendente Encontrada')}
+                {isFree ? t('client_views.subscription.pending_invoice_title_free', 'Falta só o pagamento do plano PRO') : t('client_views.subscription.pending_invoice_title', 'Cobrança Pendente Encontrada')}
               </h4>
             </div>
             <p className="text-xs text-neutral-600 dark:text-neutral-400 max-w-xl">
-              {t('client_views.subscription.pending_invoice_desc', 'Há um pagamento em aberto de {value} vencendo em {date}. Efetue o pagamento abaixo para evitar interrupções.')
+              {(isFree ? t('client_views.subscription.pending_invoice_desc_free', 'Você iniciou a assinatura do plano PRO e falta pagar {value}. Sua conta gratuita continua funcionando normalmente.') : t('client_views.subscription.pending_invoice_desc', 'Há um pagamento em aberto de {value} vencendo em {date}. Efetue o pagamento abaixo para evitar interrupções.'))
                 .replace('{value}', formatPrice(asaasSubData.pendingInvoice.value))
                 .replace('{date}', formatDate(asaasSubData.pendingInvoice.dueDate))}
             </p>
