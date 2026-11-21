@@ -79,3 +79,44 @@ describe('FREE que só abriu o checkout: nunca suspenso, só lembrete suave', ()
     }
   })
 })
+
+describe('correções do teste de renovação (21/11/2026)', () => {
+  it('a tela mostra a cobrança mais antiga (vencida primeiro), não só a PENDING', () => {
+    const fn = read('supabase/functions/asaas-update-subscription/index.ts')
+    expect(fn).toContain('["OVERDUE", "PENDING"]')
+    expect(fn).toContain('openCharges.sort')
+    expect(fn).not.toContain('&status=PENDING`')
+  })
+
+  it('o webhook grava a renovação com referência única e registra o erro do insert', () => {
+    const hook = read('supabase/functions/asaas-webhook/index.ts')
+    expect(hook).toContain('const renewalRef =')
+    expect(hook).toContain('`${base}~${paymentId}`')
+    expect(hook.match(/renewalRef\(ctx\.externalReference, payment\.id\)/g)?.length).toBe(2)
+    expect(hook).toContain('erro ao gravar o pagamento')
+  })
+
+  it('a tela confere o pagamento no nosso banco, e o QR tem lupa e janela ampliada', () => {
+    const hk = read('src/components/client/hooks/useClientSubscription.ts')
+    expect(hk).toContain("eq('status', 'paid')")
+    expect(hk).toContain('Pagamento recebido! Obrigado.')
+    expect(hk).toContain('setInterval')
+    const view = read('src/components/client/ClientSubscriptionView.tsx')
+    expect(view).toContain('data-testid="qr-zoom-open"')
+    expect(view).toContain('data-testid="qr-zoom-modal"')
+  })
+
+  it('o script de reconciliação grava a linha paga uma única vez', () => {
+    const sql = read('scripts/reconciliar-pagamento-lgpd-dezembro.sql')
+    expect(sql).toContain("'paid'")
+    expect(sql).toContain('not exists')
+    expect(sql).toContain("'~pay_x66on5rkt3wxmu57'")
+  })
+
+  it('os textos do QR existem nos três idiomas', () => {
+    for (const l of ['pt', 'en', 'es']) {
+      const j = JSON.parse(read(`src/i18n/translations/${l}.json`))
+      for (const k of ['qr_zoom', 'qr_close', 'qr_zoom_title']) expect(j.client_views.subscription[k], `${l}: ${k}`).toBeTruthy()
+    }
+  })
+})

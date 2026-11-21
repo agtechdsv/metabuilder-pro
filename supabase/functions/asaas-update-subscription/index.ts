@@ -91,13 +91,20 @@ serve(async (req) => {
 
       const subscription = await res.json();
       
-      // Get the payments list to see if there is any pending invoice
-      const paymentsRes = await fetch(`${ASAAS_URL}/payments?subscription=${profile.asaas_subscription_id}&status=PENDING`, {
-        headers: { "access_token": ASAAS_API_KEY }
-      });
+      // Cobranças em aberto: VENCIDAS e a vencer. Só pedir PENDING escondia a vencida e mostrava (e fazia pagar) a próxima, que ainda nem venceu.
+      // A mais antiga vem primeiro: é a que justifica o aviso de atraso.
+      const openCharges: any[] = [];
+      let paymentsRes: Response | null = null;
+      for (const st of ["OVERDUE", "PENDING"]) {
+        const r = await fetch(`${ASAAS_URL}/payments?subscription=${profile.asaas_subscription_id}&status=${st}`, {
+          headers: { "access_token": ASAAS_API_KEY }
+        });
+        if (r.ok) { paymentsRes = r; const d = await r.json(); if (Array.isArray(d.data)) openCharges.push(...d.data); }
+      }
+      openCharges.sort((a, b) => String(a.dueDate || "").localeCompare(String(b.dueDate || "")));
       let pendingInvoice = null;
-      if (paymentsRes.ok) {
-        const paymentsData = await paymentsRes.json();
+      if (paymentsRes) {
+        const paymentsData = { data: openCharges };
         if (paymentsData.data && paymentsData.data.length > 0) {
           const firstPending = paymentsData.data[0];
           

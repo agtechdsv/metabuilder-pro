@@ -81,3 +81,9 @@ Cobrança vencida, estorno/chargeback, **pagamento que o webhook não conseguiu 
 - **Suspensão e cartão recusado** (PRO) também abrem a aba Assinatura.
 - **Dados:** `scripts/corrigir-free-suspenso.sql` desfaz a marca de "suspenso" de contas FREE sem pagamento.
 - **Pendente:** cancelar no Asaas a cobrança/assinatura abandonada depois do último lembrete. Hoje só o webhook/Edge Function fala com o Asaas; exige uma função nova e deploy.
+
+## Correções do teste de 21/11/2026 (renovação paga pela tela)
+- **QR da cobrança errada:** `asaas-update-subscription` (GET) só pedia `status=PENDING` ao Asaas, então a cobrança VENCIDA sumia e a tela mostrava (e o cliente pagava) a próxima, que ainda nem tinha vencido. Agora pede OVERDUE e PENDING e mostra a mais antiga primeiro.
+- **Pagamento de renovação não gravado:** `payments.external_reference` é ÚNICO e o Asaas repete a referência da assinatura em todas as cobranças. O insert do webhook (PAYMENT_CREATED e PAYMENT_RECEIVED) falhava em silêncio quando a cobrança não existia no banco: sem histórico, sem fila de NFS-e, sem comissão. Agora a referência da renovação é `<referência>~<id do pagamento>` e o erro do insert vai para o log. Reconciliação do caso de teste: `scripts/reconciliar-pagamento-lgpd-dezembro.sql`.
+- **Tela depois do Pix:** enquanto a cobrança está na tela, ela consulta o nosso banco a cada 5 s (o webhook grava lá) e, quando o pagamento entra, avisa, atualiza o perfil e a tela. Para sozinha em 15 min.
+- **QR ampliado:** lupa no QR Code abre uma janela com o código grande para o banco ler.

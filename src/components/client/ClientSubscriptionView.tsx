@@ -1,5 +1,5 @@
-import React from 'react'
-import { CreditCard, ExternalLink, Loader2, ShieldAlert, Sliders } from 'lucide-react'
+import React, { useState } from 'react'
+import { CreditCard, ExternalLink, Loader2, Search, ShieldAlert, Sliders, X } from 'lucide-react'
 import { formatPrice, formatDate, getCycleLabel, getBillingTypeLabel, StatusBadge } from './ClientSharedComponents'
 import { useI18n } from '@/i18n'
 
@@ -27,11 +27,26 @@ export function ClientSubscriptionView({
   payments,
 }: ClientSubscriptionViewProps) {
   const { t } = useI18n()
+  const [qrOpen, setQrOpen] = useState(false)
   // FREE que só abriu o checkout: texto suave, sem "evite interrupções"
   const isFree = !localProfile?.subscription_licenses && !localProfile?.is_super_admin
 
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-200">
+      {/* QR Code ampliado: alguns bancos não leem um código pequeno */}
+      {qrOpen && asaasSubData?.pendingInvoice?.pixQrCode && (
+        <div role="dialog" aria-modal="true" data-testid="qr-zoom-modal" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4" onClick={() => setQrOpen(false)} onKeyDown={e => { if (e.key === 'Escape') setQrOpen(false) }}>
+          <div className="relative w-full max-w-md rounded-3xl bg-white p-6 text-center shadow-2xl" onClick={e => e.stopPropagation()}>
+            <button type="button" autoFocus onClick={() => setQrOpen(false)} aria-label={t('client_views.subscription.qr_close', 'Fechar')} className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200">
+              <X className="h-4 w-4" />
+            </button>
+            <p className="mb-3 text-sm font-bold text-neutral-800">{t('client_views.subscription.qr_zoom_title', 'Aponte a câmera do app do seu banco')}</p>
+            <img src={`data:image/png;base64,${asaasSubData.pendingInvoice.pixQrCode}`} alt="PIX QR Code" className="mx-auto aspect-square w-full max-w-[22rem]" />
+            <p className="mt-3 text-xs text-neutral-500">{formatPrice(asaasSubData.pendingInvoice.value)}</p>
+          </div>
+        </div>
+      )}
+
       {/* Real-time Asaas data loading */}
       {loadingAsaasData && (
         <div className="flex items-center gap-3 p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-500/20 rounded-2xl animate-pulse">
@@ -63,8 +78,18 @@ export function ClientSubscriptionView({
               <div className="flex flex-col gap-3 pt-2">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   {asaasSubData.pendingInvoice.pixQrCode && (
-                    <div className="bg-white p-2 rounded-2xl border border-neutral-200 w-fit shrink-0">
+                    <div className="relative bg-white p-2 rounded-2xl border border-neutral-200 w-fit shrink-0">
                       <img src={`data:image/png;base64,${asaasSubData.pendingInvoice.pixQrCode}`} alt="PIX QR Code" className="w-24 h-24" />
+                      <button
+                        type="button"
+                        data-testid="qr-zoom-open"
+                        onClick={() => setQrOpen(true)}
+                        title={t('client_views.subscription.qr_zoom', 'Ampliar QR Code')}
+                        aria-label={t('client_views.subscription.qr_zoom', 'Ampliar QR Code')}
+                        className="absolute -right-2 -bottom-2 flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-white shadow-md hover:bg-indigo-700"
+                      >
+                        <Search className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   )}
                   <div className="flex-1 min-w-[200px] space-y-1.5">

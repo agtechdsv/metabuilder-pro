@@ -4040,7 +4040,10 @@
       "receipt_btn": "Receipt",
       "no_transactions": "No transactions recorded.",
       "pending_invoice_title_free": "Only the PRO plan payment is missing",
-      "pending_invoice_desc_free": "You started the PRO plan subscription and {value} is still to be paid. Your free account keeps working normally."
+      "pending_invoice_desc_free": "You started the PRO plan subscription and {value} is still to be paid. Your free account keeps working normally.",
+      "qr_zoom": "Enlarge QR Code",
+      "qr_close": "Close",
+      "qr_zoom_title": "Point your bank app's camera here"
     },
     "metrics": {
       "refresh_tooltip": "Refresh panel",

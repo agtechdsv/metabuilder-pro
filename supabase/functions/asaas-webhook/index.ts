@@ -70,6 +70,9 @@ serve(async (req) => {
     // Avisos de cobranca (e-mail e tela) feitos pelo MetaBuilder: desligados por padrao (aí tudo se comporta como antes).
     // Enfileira o aviso; no fim do webhook o site é chamado para enviar na hora (se não responder, a rotina diária envia).
     const cfg = await billingSettings(supabase);
+    // payments.external_reference é ÚNICO, mas o Asaas repete a referência da assinatura em TODAS as cobranças dela (renovações). Sem isto o insert da renovação
+    // falhava em silêncio e o pagamento não era gravado (sem histórico, sem fila de NFS-e, sem comissão). A primeira cobrança já tem a referência original.
+    const renewalRef = (base: string | null | undefined, paymentId: string) => (base ? `${base}~${paymentId}` : `sub_${paymentId}`);
     let queuedAny = false;
     const notify = async (kind: NoticeKind, userId: string | null, ref: string, payload: Record<string, unknown> = {}) => {
       if (await queueNotice(supabase, cfg, { kind, userId, ref, payload })) queuedAny = true;
@@ -232,19 +235,20 @@ serve(async (req) => {
             .eq("asaas_payment_id", payment.id);
         } else {
           // Payment not in DB yet — insert it
-          await supabase.from("payments").insert({
+          const { error: payInsErr } = await supabase.from("payments").insert({
             user_id: ctx.userId,
             cycle: ctx.cycle || null,
             amount: payment.value || 0,
             status: "paid",
-            external_reference: ctx.externalReference || null,
+            external_reference: renewalRef(ctx.externalReference, payment.id),
             billing_type: payment.billingType || null,
             asaas_payment_id: payment.id,
             webhook_payload: body,
             webhook_received_at: new Date().toISOString(),
             webhook_processed: true
           });
-          console.log(`[PAYMENT_RECEIVED] Inserted new payment record for ${payment.id}`);
+          if (payInsErr) console.error("[PAYMENT_RECEIVED] erro ao gravar o pagamento:", payInsErr);
+          else console.log(`[PAYMENT_RECEIVED] Inserted new payment record for ${payment.id}`);
         }
       }
 
@@ -332,7 +336,7 @@ serve(async (req) => {
             cycle: ctx.cycle || "monthly",
             amount: payment.value || 0,
             status: "pending",
-            external_reference: ctx.externalReference || `sub_${payment.subscription || payment.id}`,
+            external_reference: renewalRef(ctx.externalReference, payment.id),
             billing_type: payment.billingType || null,
             invoice_url: link,
             asaas_payment_id: payment.id,

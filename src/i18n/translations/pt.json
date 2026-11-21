@@ -4040,7 +4040,10 @@
       "receipt_btn": "Recibo",
       "no_transactions": "Nenhuma transação registrada.",
       "pending_invoice_title_free": "Falta só o pagamento do plano PRO",
-      "pending_invoice_desc_free": "Você iniciou a assinatura do plano PRO e falta pagar {value}. Sua conta gratuita continua funcionando normalmente."
+      "pending_invoice_desc_free": "Você iniciou a assinatura do plano PRO e falta pagar {value}. Sua conta gratuita continua funcionando normalmente.",
+      "qr_zoom": "Ampliar QR Code",
+      "qr_close": "Fechar",
+      "qr_zoom_title": "Aponte a câmera do app do seu banco"
     },
     "metrics": {
       "refresh_tooltip": "Atualizar painel",

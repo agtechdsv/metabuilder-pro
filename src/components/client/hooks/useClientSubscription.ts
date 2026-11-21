@@ -66,6 +66,41 @@ export function useClientSubscription({
     }
   }, [activeTab, localProfile?.asaas_subscription_id])
 
+  // Cobrança na tela (Pix): enquanto ela estiver aberta, olha o NOSSO banco a cada 5 s (o webhook do Asaas grava o pagamento lá). Quando o pagamento
+  // entra, avisa, atualiza o perfil e a tela. Não consulta o Asaas (barato) e para sozinho depois de 15 minutos.
+  useEffect(() => {
+    const inv = asaasSubData?.pendingInvoice
+    const uid = localProfile?.id
+    if (!inv || !uid) return
+    const supabase = createClient()
+    let stopped = false
+    let base: { paid: number; status: string; lic: number } | null = null
+    let ticks = 0
+    const check = async () => {
+      if (stopped) return
+      try {
+        const [paidRes, profRes] = await Promise.all([
+          supabase.from('payments').select('id', { count: 'exact', head: true }).eq('user_id', uid).eq('status', 'paid'),
+          supabase.from('profiles').select('subscription_status, subscription_licenses, subscription_cycle, subscription_expires_at, subscription_amount').eq('id', uid).maybeSingle(),
+        ])
+        const now = { paid: paidRes.count ?? 0, status: String(profRes.data?.subscription_status ?? ''), lic: Number(profRes.data?.subscription_licenses ?? 0) }
+        if (!base) { base = now; return }
+        if (now.paid > base.paid || (now.status === 'active' && base.status !== 'active') || now.lic > base.lic) {
+          stopped = true
+          clearInterval(timer)
+          toast('Pagamento recebido! Obrigado.', 'success')
+          if (profRes.data) setLocalProfile((prev: any) => prev ? { ...prev, ...profRes.data } : prev)
+          setAsaasSubData(prev => (prev ? { ...prev, pendingInvoice: null } : prev))
+          router.refresh()
+        }
+      } catch { /* tenta de novo no próximo ciclo */ }
+    }
+    const timer = setInterval(() => { if (++ticks > 180) { stopped = true; clearInterval(timer); return } void check() }, 5000)
+    void check()
+    return () => { stopped = true; clearInterval(timer) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asaasSubData?.pendingInvoice?.id, localProfile?.id])
+
   const handleUpdateCard = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsUpdatingCard(true)
