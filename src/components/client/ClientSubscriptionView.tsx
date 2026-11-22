@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { CreditCard, ExternalLink, Loader2, Search, ShieldAlert, Sliders, X } from 'lucide-react'
+import { invoiceLinkKind } from '@/lib/billing/invoiceLink'
 import { formatPrice, formatDate, getCycleLabel, getBillingTypeLabel, StatusBadge } from './ClientSharedComponents'
 import { useI18n } from '@/i18n'
 
@@ -367,7 +368,7 @@ export function ClientSubscriptionView({
                     {t('client_views.subscription.table_status', 'Status')}
                   </th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-500 text-right">
-                    {t('client_views.subscription.table_receipt', 'Comprovante')}
+                    {t('client_views.subscription.table_invoice', 'Fatura')}
                   </th>
                 </tr>
               </thead>
@@ -380,14 +381,14 @@ export function ClientSubscriptionView({
                     <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">{getBillingTypeLabel(p.billing_type)}</td>
                     <td className="px-6 py-4"><StatusBadge status={p.status} /></td>
                     <td className="px-6 py-4 text-right">
-                      {p.invoice_url ? (
+                      {p.invoice_url && invoiceLinkKind(p.status) ? (
                         <a
                           href={p.invoice_url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
                         >
-                          {t('client_views.subscription.receipt_btn', 'Recibo')} <ExternalLink className="w-3.5 h-3.5" />
+                          {invoiceLinkKind(p.status) === 'receipt' ? t('client_views.subscription.receipt_btn', 'Recibo') : t('client_views.subscription.pay_btn', 'Pagar')} <ExternalLink className="w-3.5 h-3.5" />
                         </a>
                       ) : (
                         <span className="text-xs text-neutral-400 italic">—</span>
