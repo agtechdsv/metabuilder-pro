@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import { BILLING_REFRESH_EVENT } from '@/lib/billing/notice'
 
 export const CANCELLATION_REASONS = [
   { id: 'preco_alto', label: 'PREÇO MUITO ALTO' },
@@ -102,6 +103,7 @@ export function useClientSubscription({
           toast('Pagamento recebido! Obrigado.', 'success')
           if (profRes.data) setLocalProfile((prev: any) => prev ? { ...prev, ...profRes.data } : prev)
           setAsaasSubData(prev => (prev ? { ...prev, pendingInvoice: null } : prev))
+          window.dispatchEvent(new Event(BILLING_REFRESH_EVENT)) // o banner de cobrança confere de novo e some
           router.refresh()
         }
       } catch { /* tenta de novo no próximo ciclo */ }

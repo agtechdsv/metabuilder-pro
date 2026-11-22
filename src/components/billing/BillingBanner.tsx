@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { AlertTriangle, CalendarClock, CreditCard } from 'lucide-react'
 import { getMyBillingNotice } from '@/app/actions/billingNotices'
 import { useI18n } from '@/i18n/I18nContext'
-import type { MyBillingNotice } from '@/lib/billing/notice'
+import { BILLING_REFRESH_EVENT, type MyBillingNotice } from '@/lib/billing/notice'
 
 const P = 'billing_banner.'
 
@@ -14,12 +15,27 @@ const P = 'billing_banner.'
  */
 export default function BillingBanner() {
   const { t, language } = useI18n()
+  const router = useRouter()
   const [notice, setNotice] = useState<MyBillingNotice | null>(null)
+  const lastRef = useRef<MyBillingNotice | null>(null)
 
+  // Carrega o aviso e, enquanto houver cobrança em aberto, confere de novo a cada 20 s (até 15 min): quem paga pela página do Asaas ou pelo QR
+  // não precisa recarregar. Quando o aviso some (pagamento entrou), atualiza o resto da tela. A aba Assinatura também pede a conferência na hora.
   useEffect(() => {
     let alive = true
-    getMyBillingNotice().then(n => { if (alive) setNotice(n) }).catch(() => {})
-    return () => { alive = false }
+    let ticks = 0
+    const load = () => getMyBillingNotice().then(n => {
+      if (!alive) return
+      const had = !!lastRef.current
+      lastRef.current = n
+      setNotice(n)
+      if (had && !n) router.refresh()
+    }).catch(() => {})
+    void load()
+    const timer = setInterval(() => { if (lastRef.current && ++ticks <= 45) void load() }, 20_000)
+    window.addEventListener(BILLING_REFRESH_EVENT, load)
+    return () => { alive = false; clearInterval(timer); window.removeEventListener(BILLING_REFRESH_EVENT, load) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (!notice) return null

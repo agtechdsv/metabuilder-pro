@@ -1,3 +1,6 @@
+/** Evento da janela: "o pagamento entrou, confira o aviso de cobrança de novo" (a aba Assinatura dispara; o banner escuta). */
+export const BILLING_REFRESH_EVENT = 'mb-billing-refresh'
+
 /** O que a tela do dono mostra no aviso fixo de cobrança (banner). */
 export type MyBillingNoticeState = 'due_soon' | 'overdue' | 'card_refused' | 'checkout_pending'
 

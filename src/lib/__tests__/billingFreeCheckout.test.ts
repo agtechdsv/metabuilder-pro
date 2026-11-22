@@ -179,6 +179,14 @@ describe('correções do teste de renovação (21/11/2026)', () => {
     expect(run.indexOf('if (!cfg.enabled)')).toBeLessThan(run.indexOf('cancelAbandonedCheckouts'))
   })
 
+  it('o banner de cobrança some sozinho depois do pagamento (confere de novo e atualiza a tela)', () => {
+    const b = read('src/components/billing/BillingBanner.tsx')
+    expect(b).toContain('setInterval')
+    expect(b).toContain('BILLING_REFRESH_EVENT')
+    expect(b).toContain('if (had && !n) router.refresh()')
+    expect(read('src/components/client/hooks/useClientSubscription.ts')).toContain('window.dispatchEvent(new Event(BILLING_REFRESH_EVENT))')
+  })
+
   it('os textos do QR existem nos três idiomas', () => {
     for (const l of ['pt', 'en', 'es']) {
       const j = JSON.parse(read(`src/i18n/translations/${l}.json`))
