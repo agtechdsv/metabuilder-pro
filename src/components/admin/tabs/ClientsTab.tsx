@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Unlock, Lock, Trash2, AlertTriangle, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
+import { Search, Unlock, Lock, Trash2, AlertTriangle, Loader2, ChevronDown, ChevronRight, Receipt } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Modal } from '@/components/ui/Modal'
 import { useI18n } from '@/i18n/I18nContext'
@@ -9,6 +9,8 @@ import { useClientsAdmin, type BillingPreview } from '../hooks/useClientsAdmin'
 
 interface ClientsTabProps {
   hook: ReturnType<typeof useClientsAdmin>
+  /** atalho "Cobranças" da linha do cliente (abre a subaba Cobranças filtrada por ele) */
+  onViewCharges?: (userId: string, name: string) => void
 }
 
 const brl = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
@@ -47,7 +49,8 @@ function BillingBox({ preview, mode, checked, onCheck, disabled }: { preview: Bi
   )
 }
 
-export function ClientsTab({ hook }: ClientsTabProps) {
+export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
+  const { t } = useI18n()
   const {
     searchQuery,
     setSearchQuery,
@@ -240,6 +243,17 @@ export function ClientsTab({ hook }: ClientsTabProps) {
                         </td>
                         <td className="px-6 py-4.5 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            {onViewCharges && (
+                              <button
+                                type="button"
+                                data-testid="client-view-charges"
+                                onClick={() => onViewCharges(client.ownerId, client.ownerName || client.ownerEmail)}
+                                className="px-3 py-1.5 bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 shrink-0"
+                              >
+                                <Receipt className="w-3.5 h-3.5" />
+                                <span>{t('admin_charges.view_charges')}</span>
+                              </button>
+                            )}
                             {client.is_blocked ? (
                               <button
                                 type="button"

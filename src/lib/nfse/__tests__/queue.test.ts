@@ -182,7 +182,7 @@ describe('fila de notas: ligação no site', () => {
   it('a subaba Notas Fiscais está dentro de Clientes e o painel usa a nova área', () => {
     expect(read('src/components/admin/PlatformAdminClient.tsx')).toContain('<ClientsArea hook={clientsHook}')
     const area = read('src/components/admin/tabs/ClientsArea.tsx')
-    expect(area).toContain('<ClientsTab hook={hook} />')
+    expect(area).toContain('<ClientsTab hook={hook}')
     expect(area).toContain('<NfseTab hook={nfse} />')
   })
 
