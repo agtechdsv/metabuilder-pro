@@ -183,7 +183,9 @@ describe('correções do teste de renovação (21/11/2026)', () => {
     const b = read('src/components/billing/BillingBanner.tsx')
     expect(b).toContain('setInterval')
     expect(b).toContain('BILLING_REFRESH_EVENT')
-    expect(b).toContain('if (had && !n) router.refresh()')
+    // só atualiza se ainda houver sessão: ao SAIR da conta o aviso também some, e atualizar mandaria ao login (modal abrindo sozinho)
+    expect(b).toContain('if (alive && signedIn) router.refresh()')
+    expect(b.indexOf('auth.getSession()')).toBeLessThan(b.indexOf('router.refresh()'))
     expect(read('src/components/client/hooks/useClientSubscription.ts')).toContain('window.dispatchEvent(new Event(BILLING_REFRESH_EVENT))')
   })
 

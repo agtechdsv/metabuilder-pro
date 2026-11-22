@@ -8,6 +8,7 @@ import { releaseSlot, releaseSlotByDevice } from '@/lib/sessions/slotService'
 import { DEVICE_COOKIE, KIND_COOKIE, SLOT_COOKIE, parseKind } from '@/lib/sessions/slotCore'
 import { currentMailLang } from '@/lib/auth/mailLangServer'
 import { sendWelcomeIfNew } from '@/lib/billing/billingService'
+import { ownerLandingPath } from '@/lib/billing/ownerLanding'
 
 export async function login(formData: FormData) {
   const supabase = await createClient()
@@ -433,7 +434,9 @@ export async function getPostLoginRedirectPath(userId: string): Promise<string> 
 
     // 3. User is an Owner (not super admin, not guest)
     if (profile?.subscription_licenses && profile.subscription_licenses > 0 && profile?.subscription_status === 'active') {
-      return '/client/dashboard'
+      // fatura vencida em aberto: cai direto na Assinatura (QR Code e cartão), não no painel
+      const { data: overdue } = await supabase.from('payments').select('id').eq('user_id', userId).eq('status', 'overdue').limit(1).maybeSingle()
+      return ownerLandingPath(!!overdue)
     }
 
     // 4. Free tier user — goes to workspace dashboard (no checkout required)

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/utils/supabase/client'
 import { AlertTriangle, CalendarClock, CreditCard } from 'lucide-react'
 import { getMyBillingNotice } from '@/app/actions/billingNotices'
 import { useI18n } from '@/i18n/I18nContext'
@@ -24,12 +25,18 @@ export default function BillingBanner() {
   useEffect(() => {
     let alive = true
     let ticks = 0
-    const load = () => getMyBillingNotice().then(n => {
+    // O aviso some por duas razões: o pagamento entrou (atualiza a tela) ou a pessoa SAIU da conta (não pode atualizar: a página protegida
+    // mandaria para o login e o modal abriria sozinho). Por isso confere se ainda há sessão neste navegador antes de atualizar.
+    const load = () => getMyBillingNotice().then(async n => {
       if (!alive) return
       const had = !!lastRef.current
       lastRef.current = n
       setNotice(n)
-      if (had && !n) router.refresh()
+      if (had && !n) {
+        let signedIn = false
+        try { signedIn = !!(await createClient().auth.getSession()).data.session } catch { /* sem sessão legível: não atualiza */ }
+        if (alive && signedIn) router.refresh()
+      }
     }).catch(() => {})
     void load()
     const timer = setInterval(() => { if (lastRef.current && ++ticks <= 45) void load() }, 20_000)
