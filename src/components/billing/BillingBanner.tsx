@@ -43,7 +43,7 @@ export default function BillingBanner() {
         <p className="text-sm font-black">{title}</p>
         <p className="mt-0.5 text-xs">{desc}</p>
       </div>
-      <a href={checkout ? '/client/dashboard?tab=subscription' : notice.invoiceUrl && !refused ? notice.invoiceUrl : '/client/dashboard'} target={!checkout && notice.invoiceUrl && !refused ? '_blank' : undefined} rel="noreferrer"
+      <a href={checkout ? `/client/dashboard?tab=subscription${/^pay_[A-Za-z0-9]+$/.test(notice.paymentId || '') ? `&pay=${notice.paymentId}` : ''}` : notice.invoiceUrl && !refused ? notice.invoiceUrl : '/client/dashboard'} target={!checkout && notice.invoiceUrl && !refused ? '_blank' : undefined} rel="noreferrer"
         className="rounded-xl bg-neutral-900 px-4 py-2 text-xs font-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black">
         {refused ? t(P + 'update_button') : checkout ? t(P + 'checkout_button') : t(P + 'pay_button')}
       </a>

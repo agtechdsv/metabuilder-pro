@@ -113,6 +113,37 @@ describe('correções do teste de renovação (21/11/2026)', () => {
     expect(sql).toContain("'~pay_x66on5rkt3wxmu57'")
   })
 
+  it('a cobrança pedida pelo id só vale se for do usuário da sessão', () => {
+    const fn = read('supabase/functions/asaas-update-subscription/index.ts')
+    expect(fn).toContain('/^pay_[A-Za-z0-9]+$/.test(askedId)')
+    // a conferência de dono vem ANTES de qualquer consulta ao Asaas por esse id
+    const own = fn.indexOf('.eq("asaas_payment_id", askedId).eq("user_id", user.id)')
+    const asaas = fn.indexOf('payments/${askedId}')
+    expect(own).toBeGreaterThan(0)
+    expect(asaas).toBeGreaterThan(own)
+    // só troca a cobrança se estiver em aberto; senão cai na regra da mais antiga
+    expect(fn).toContain('one.status === "PENDING" || one.status === "OVERDUE"')
+  })
+
+  it('o link do e-mail leva o id da cobrança (e ignora um id fora do formato)', () => {
+    const base = { name: 'A', amount: 5, appUrl: 'https://x.test' }
+    const ok = customerBillingMail('checkout_reminder', 'pt', { ...base, paymentId: 'pay_abc123' })!
+    expect(ok.text).toContain('https://x.test/client/dashboard?tab=subscription&pay=pay_abc123')
+    for (const bad of ['8c72a89a-1792-4833', 'pay_x"><script>', '', null]) {
+      const m = customerBillingMail('suspended', 'pt', { ...base, paymentId: bad as any })!
+      expect(m.text).toContain('https://x.test/client/dashboard?tab=subscription')
+      expect(m.text).not.toContain('&pay=')
+    }
+  })
+
+  it('banner e tela passam o id da cobrança', () => {
+    expect(read('src/components/billing/BillingBanner.tsx')).toContain('&pay=${notice.paymentId}')
+    expect(read('src/app/actions/billingNotices.ts')).toContain('paymentId:')
+    const hk = read('src/components/client/hooks/useClientSubscription.ts')
+    expect(hk).toContain('subscriptionFnName()')
+    expect(hk).toContain('asaas-update-subscription?pay=')
+  })
+
   it('os textos do QR existem nos três idiomas', () => {
     for (const l of ['pt', 'en', 'es']) {
       const j = JSON.parse(read(`src/i18n/translations/${l}.json`))

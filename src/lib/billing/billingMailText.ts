@@ -10,6 +10,8 @@ export interface BillingMailData {
   /** vencimento, YYYY-MM-DD */
   dueDate?: string | null
   invoiceUrl?: string | null
+  /** id da cobrança no Asaas (pay_...): o link da aba Assinatura leva esse id, para a tela mostrar exatamente esta cobrança */
+  paymentId?: string | null
   billingType?: string | null
   /** acesso/renovação até (ISO) */
   validUntil?: string | null
@@ -108,7 +110,7 @@ export function customerBillingMail(kind: string, lang: MailLang, d: BillingMail
   if (kind === 'payment_received' && d.validUntil) rows.push([L.until, day(d.validUntil, lang)])
   const dashboard = `${d.appUrl}/client/dashboard`
   // suspensão, cartão recusado e checkout abandonado levam à aba Assinatura (QR Code e cartão na própria tela); os demais, à fatura
-  const pay = `${dashboard}?tab=subscription`
+  const pay = `${dashboard}?tab=subscription${/^pay_[A-Za-z0-9]+$/.test(d.paymentId || '') ? `&pay=${d.paymentId}` : ''}`
   const url = kind === 'suspended' || kind === 'card_refused' || kind === 'checkout_reminder' ? pay : kind === 'payment_received' || kind === 'canceled' || kind === 'ending_soon' ? dashboard : (d.invoiceUrl || dashboard)
   const note = t.note ? t.note(d, lang) : ''
   const html = mailShell(t.title,

@@ -102,8 +102,27 @@ serve(async (req) => {
         if (r.ok) { paymentsRes = r; const d = await r.json(); if (Array.isArray(d.data)) openCharges.push(...d.data); }
       }
       openCharges.sort((a, b) => String(a.dueDate || "").localeCompare(String(b.dueDate || "")));
+
+      // Cobrança pedida pelo id (link do e-mail/banner: ?pay=pay_...). É a cobrança EXATA que o cliente quer pagar, e só vale se for dele:
+      // a linha precisa existir em payments com o user_id da sessão (o id do Asaas vem do navegador e nunca é confiado). Se não for dele, não
+      // existir, ou já estiver paga/cancelada no Asaas, cai na regra geral (a mais antiga em aberto).
+      let requestedPayment: { id: string; status: string } | null = null;
+      const askedId = (new URL(req.url).searchParams.get("pay") || "").trim();
+      if (/^pay_[A-Za-z0-9]+$/.test(askedId)) {
+        const { data: own } = await supabaseClient.from("payments").select("id").eq("asaas_payment_id", askedId).eq("user_id", user.id).maybeSingle();
+        if (own) {
+          const pr = await fetch(`${ASAAS_URL}/payments/${askedId}`, { headers: { "access_token": ASAAS_API_KEY } });
+          if (pr.ok) {
+            const one = await pr.json();
+            requestedPayment = { id: askedId, status: String(one.status || "") };
+            if (one.status === "PENDING" || one.status === "OVERDUE") {
+              openCharges.splice(0, openCharges.length, one);
+            }
+          }
+        }
+      }
       let pendingInvoice = null;
-      if (paymentsRes) {
+      if (paymentsRes || openCharges.length > 0) {
         const paymentsData = { data: openCharges };
         if (paymentsData.data && paymentsData.data.length > 0) {
           const firstPending = paymentsData.data[0];
@@ -134,7 +153,8 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           creditCard: subscription.creditCard || null,
-          pendingInvoice: pendingInvoice
+          pendingInvoice: pendingInvoice,
+          requestedPayment: requestedPayment
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

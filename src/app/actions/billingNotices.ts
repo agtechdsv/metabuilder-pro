@@ -77,7 +77,7 @@ export async function getMyBillingNotice(): Promise<MyBillingNotice | null> {
     const now = new Date()
     const d = daysToDue(pay.due_date, now)
     if (!Number.isFinite(d)) return null
-    const base = { dueDate: pay.due_date as string, amount: Number(pay.amount), billingType: pay.billing_type as string | null, invoiceUrl: pay.invoice_url as string | null, daysToDue: d }
+    const base = { dueDate: pay.due_date as string, amount: Number(pay.amount), billingType: pay.billing_type as string | null, invoiceUrl: pay.invoice_url as string | null, paymentId: (pay.asaas_payment_id as string | null) || null, daysToDue: d }
 
     if (checkout) return { state: 'checkout_pending', ...base, suspendOn: null }
 

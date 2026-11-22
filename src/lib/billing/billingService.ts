@@ -92,7 +92,7 @@ export async function suspendAfterGrace(admin: Admin, cfg: BillingSettings, now:
     const { error } = await admin.from('profiles').update({ subscription_status: 'blocked', is_blocked: true }).eq('id', p.id).not('overdue_since', 'is', null)
     if (error) { console.error('[avisos] falha ao suspender:', error.message); continue }
     const { data: pay } = await admin.from('payments').select('amount, due_date, asaas_payment_id, invoice_url').eq('user_id', p.id).eq('status', 'overdue').order('due_date', { ascending: true }).limit(1).maybeSingle()
-    await queue(admin, { kind: 'suspended', userId: p.id, ref: noticeRef([p.id, String(p.overdue_since).slice(0, 10)]), payload: { amount: pay ? Number(pay.amount) : null, dueDate: pay?.due_date || null, invoiceUrl: pay?.invoice_url || null } })
+    await queue(admin, { kind: 'suspended', userId: p.id, ref: noticeRef([p.id, String(p.overdue_since).slice(0, 10)]), payload: { paymentId: pay?.asaas_payment_id || null, amount: pay ? Number(pay.amount) : null, dueDate: pay?.due_date || null, invoiceUrl: pay?.invoice_url || null } })
     n++
   }
   return n
@@ -247,7 +247,7 @@ export async function processQueue(admin: Admin, cfg: BillingSettings): Promise<
           if (pay && (pay.status === 'paid' || pay.status === 'refunded')) { await mark('sent', 'ignorado: já pago'); out.skipped++; continue }
         }
         const mail = customerBillingMail(it.kind, resolveLang(prof.billing_language), {
-          name: String(prof.full_name || '').trim() || prof.email, amount: p.amount ?? null, dueDate: p.dueDate ?? null, invoiceUrl: p.invoiceUrl ?? null, billingType: p.billingType ?? null,
+          name: String(prof.full_name || '').trim() || prof.email, amount: p.amount ?? null, dueDate: p.dueDate ?? null, invoiceUrl: p.invoiceUrl ?? null, paymentId: p.paymentId ?? null, billingType: p.billingType ?? null,
           validUntil: p.validUntil ?? p.expiresAt ?? null, graceDays: cfg.graceDays, suspendOn: suspensionDate(p.overdueSince || prof.overdue_since, cfg.graceDays)?.toISOString() ?? null,
           wasSuspended: !!p.wasSuspended, appUrl: appUrl(),
         })

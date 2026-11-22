@@ -9,6 +9,8 @@ export interface MyBillingNotice {
   billingType: string | null
   /** link da fatura (Pix, boleto) */
   invoiceUrl: string | null
+  /** id da cobrança no Asaas (pay_...), para a aba Assinatura abrir exatamente esta cobrança */
+  paymentId: string | null
   /** dias até vencer (negativo = vencida) */
   daysToDue: number | null
   /** quando a conta será suspensa se nada for pago (ISO), no estado "vencida" com carência */

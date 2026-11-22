@@ -19,6 +19,17 @@ interface UseClientSubscriptionProps {
   router: ReturnType<typeof useRouter>
 }
 
+/**
+ * Nome da Edge Function de assinatura (GET). Se a URL traz ?pay=pay_... (link do e-mail ou do banner), vai junto: o servidor devolve exatamente
+ * essa cobrança, depois de conferir que é do usuário da sessão.
+ */
+export function subscriptionFnName(): string {
+  try {
+    const p = new URLSearchParams(window.location.search).get('pay')
+    return p && /^pay_[A-Za-z0-9]+$/.test(p) ? `asaas-update-subscription?pay=${encodeURIComponent(p)}` : 'asaas-update-subscription'
+  } catch { return 'asaas-update-subscription' }
+}
+
 export function useClientSubscription({
   localProfile,
   setLocalProfile,
@@ -55,7 +66,7 @@ export function useClientSubscription({
     if (activeTab === 'subscription' && localProfile?.asaas_subscription_id) {
       setLoadingAsaasData(true)
       const supabase = createClient()
-      supabase.functions.invoke('asaas-update-subscription', { method: 'GET' })
+      supabase.functions.invoke(subscriptionFnName(), { method: 'GET' })
         .then(({ data, error }) => {
           if (data && !error) {
             setAsaasSubData(data)
@@ -132,7 +143,7 @@ export function useClientSubscription({
         } : prev)
 
         if (localProfile?.asaas_subscription_id) {
-          const { data: realTimeData } = await supabase.functions.invoke('asaas-update-subscription', { method: 'GET' })
+          const { data: realTimeData } = await supabase.functions.invoke(subscriptionFnName(), { method: 'GET' })
           if (realTimeData) setAsaasSubData(realTimeData)
         }
 
