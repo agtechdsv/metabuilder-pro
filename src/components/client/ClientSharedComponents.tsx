@@ -4,6 +4,7 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recha
 import { Clock, CheckCircle, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n'
+import { formatDateOnly } from '@/lib/billing/dateOnly'
 
 // ─── Helper Functions ─────────────────────────────────────────────────────────
 
@@ -13,6 +14,8 @@ export function formatPrice(amount: number) {
 
 export function formatDate(dateStr?: string | null) {
   if (!dateStr) return '—'
+  const dateOnly = formatDateOnly(dateStr) // vencimento (só dia): sem fuso, senão 16/11 aparece como 15/11
+  if (dateOnly) return dateOnly
   try {
     return new Date(dateStr).toLocaleDateString('pt-BR', {
       day: '2-digit',
