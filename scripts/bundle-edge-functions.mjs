@@ -12,7 +12,7 @@ const fnDir = path.join(root, 'supabase', 'functions')
 const outDir = path.join(root, 'supabase', 'functions-dashboard')
 const FUNCTIONS = ['admin-cancel-billing', 'asaas-cancel', 'asaas-checkout', 'asaas-update-subscription', 'asaas-webhook', 'iclub-release', 'partner-payout', 'partner-transfer-validation']
 
-const SHARED_ORDER = ['pricing', 'iclub', 'partnerCommission', 'partners', 'billingCore', 'billing', 'adminCancel', 'familyRefs', 'asaasApps']
+const SHARED_ORDER = ['pricing', 'iclub', 'partnerCommission', 'partners', 'billingCore', 'billing', 'adminCancel', 'adminBilling', 'familyRefs', 'asaasApps']
 const read = f => fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n')
 const sharedImport = /^import [^;]*?from ["']\.\.\/_shared\/([\w-]+)\.ts["'];?\s*$/gm
 const anyImport = /^import [^;]*?from ["']\.\/(\w+)\.ts["'];?\s*$/gm
@@ -24,6 +24,13 @@ for (const name of FUNCTIONS) {
   if (used.has('iclub')) used.add('pricing') // iclub.ts usa o pricing.ts
   if (used.has('partners')) used.add('partnerCommission') // partners.ts usa o partnerCommission.ts
   if (used.has('billing')) used.add('billingCore') // billing.ts usa o billingCore.ts
+  // módulo importado e fora da lista: antes era descartado em silêncio e a função quebrava só na hora de usar ("x is not defined")
+  const unknown = [...used].filter(u => !SHARED_ORDER.includes(u))
+  if (unknown.length) {
+    console.error(`ERRO em ${name}: módulo(s) _shared fora de SHARED_ORDER: ${unknown.join(', ')}. Inclua em SHARED_ORDER.`)
+    process.exitCode = 1
+    continue
+  }
   const body = src.replace(sharedImport, '').replace(/^\n+/, '')
 
   const parts = []

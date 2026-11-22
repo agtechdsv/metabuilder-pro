@@ -20,7 +20,7 @@ export const isOpenChargeStatus = (s: unknown): boolean => ["pending", "overdue"
 /** Motivo digitado pelo admin: sem espaços sobrando, no máximo 300 letras. */
 export const cleanReason = (r: unknown): string => String(r ?? "").replace(/\s+/g, " ").trim().slice(0, 300);
 
-const round2 = (n: number) => Math.round(n * 100) / 100;
+const money2 = (n: number) => Math.round(n * 100) / 100;
 
 export type RefundCheck =
   | { ok: true; value: number; full: boolean }
@@ -33,10 +33,10 @@ export type RefundCheck =
 export function checkRefund(input: { status: unknown; method: unknown; paidAmount: unknown; value?: unknown }): RefundCheck {
   if (String(input.status ?? "").trim().toLowerCase() !== "paid") return { ok: false, code: "not_paid" };
   if (!REFUNDABLE_METHODS.includes(String(input.method ?? "").trim().toUpperCase())) return { ok: false, code: "method_not_supported" };
-  const paid = round2(Number(input.paidAmount));
+  const paid = money2(Number(input.paidAmount));
   if (!(paid > 0)) return { ok: false, code: "invalid_value" };
   if (input.value === undefined || input.value === null || input.value === "") return { ok: true, value: paid, full: true };
-  const v = round2(Number(input.value));
+  const v = money2(Number(input.value));
   if (!Number.isFinite(v) || v < 0.01) return { ok: false, code: "invalid_value" };
   if (v > paid) return { ok: false, code: "value_too_big" };
   return { ok: true, value: v, full: v === paid };
@@ -185,7 +185,8 @@ export async function runChargeAction(db: any, ops: ChargeOps, actorId: string, 
         invalid_value: "Valor do estorno inválido.",
         value_too_big: "O valor do estorno não pode passar do que foi pago.",
       };
-      return fail(400, check.code, msg[check.code]);
+      const code = (check as { code: string }).code; // o editor do painel compila sem "strict" e não estreita a união
+      return fail(400, code, msg[code]);
     }
     if (!row.asaas_payment_id) return fail(409, "no_asaas_id", "Esta cobrança não tem id no Asaas.");
 
