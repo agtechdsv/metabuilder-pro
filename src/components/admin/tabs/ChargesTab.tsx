@@ -6,6 +6,9 @@ import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
 import { formatDateBr, moneyBr } from '@/lib/nfse/queue'
 import { invoiceLinkKind } from '@/lib/billing/invoiceLink'
+import { availableActions, type ChargeActionKind } from '@/lib/billing/chargeActions'
+import { useToast } from '@/components/ui/Toast'
+import { ChargeActionModal } from './ChargeActionModal'
 import { CHARGE_GROUPS, type ChargeDto, type ChargeGroup, type ChargeMethodFilter, type ChargeStatusFilter } from '@/lib/billing/adminCharges'
 import type { AdminChargesHook } from '../hooks/useAdminCharges'
 
@@ -45,6 +48,8 @@ export function ChargesTab({ hook, userLabel, onClearUser }: { hook: AdminCharge
     return s
   }
   const { filters, data, loading, error, update, reset, reload } = hook
+  const { toast } = useToast()
+  const [act, setAct] = useState<{ action: ChargeActionKind; charge: ChargeDto } | null>(null)
   const summary = data?.summary
   const allCount = summary ? CHARGE_GROUPS.reduce((n, g) => n + summary[g].count, 0) : 0
 
@@ -168,6 +173,7 @@ export function ChargesTab({ hook, userLabel, onClearUser }: { hook: AdminCharge
                   <th className="px-6 py-4">{k('col_status')}</th>
                   <th className="px-6 py-4">{k('col_method')}</th>
                   <th className="px-6 py-4 text-right">{k('col_invoice')}</th>
+                  <th className="px-6 py-4 text-right">{k('col_actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-850/60">
@@ -181,9 +187,24 @@ export function ChargesTab({ hook, userLabel, onClearUser }: { hook: AdminCharge
                     <td className="px-6 py-4 font-black">{moneyBr(c.amount)}</td>
                     <td className="px-6 py-4 text-neutral-500">{formatDateBr(c.dueDate) || '—'}</td>
                     <td className="px-6 py-4 text-neutral-500">{formatDateBr(c.paidOn) || '—'}</td>
-                    <td className="px-6 py-4"><span className={cn('inline-block rounded-full px-2.5 py-0.5 text-[10px] font-black', BADGE[c.group])}>{k(`status_${c.group}`)}</span></td>
+                    <td className="px-6 py-4">
+                      <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-[10px] font-black', BADGE[c.group])}>{k(`status_${c.group}`)}</span>
+                      {c.refundRequested && <span data-testid="charges-refund-pending" className="ml-1.5 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">{k('refund_pending')}</span>}
+                    </td>
                     <td className="px-6 py-4 text-neutral-500">{methodText(c.method)}</td>
                     <td className="px-6 py-4 text-right">{linkFor(c)}</td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex flex-wrap justify-end gap-1.5">
+                        {availableActions(c).map(a => (
+                          <button key={a} type="button" data-testid={`charge-action-${a}`} onClick={() => setAct({ action: a, charge: c })}
+                            className={cn('rounded-lg px-2.5 py-1 text-[10px] font-black transition-all',
+                              a === 'refund' ? 'bg-amber-500/10 text-amber-700 hover:bg-amber-500 hover:text-white dark:text-amber-300'
+                                : 'bg-red-500/10 text-red-600 hover:bg-red-500 hover:text-white dark:text-red-300')}>
+                            {k(`act_${a}`)}
+                          </button>
+                        ))}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -203,6 +224,11 @@ export function ChargesTab({ hook, userLabel, onClearUser }: { hook: AdminCharge
         )}
       </div>
       {summary?.truncated && <p className="text-[11px] text-neutral-400">{k('truncated_note')}</p>}
+
+      {act && (
+        <ChargeActionModal action={act.action} charge={act.charge} k={k} onClose={() => setAct(null)}
+          onDone={async (message, warning) => { setAct(null); toast(message, 'success'); if (warning) toast(warning, 'error'); await reload() }} />
+      )}
     </div>
   )
 }

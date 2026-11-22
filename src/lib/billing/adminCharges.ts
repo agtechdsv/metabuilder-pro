@@ -114,6 +114,10 @@ export interface ChargeDto {
   cycle: string | null
   invoiceUrl: string | null
   asaasPaymentId: string | null
+  /** o cliente tem assinatura ativa no Asaas (dá para cancelá-la) */
+  subscriptionActive: boolean
+  /** há um estorno pedido pelo SuperAdmin aguardando o Asaas confirmar */
+  refundRequested: boolean
 }
 
 export interface ChargesPage {
@@ -129,7 +133,7 @@ export type ChargesErrorCode = 'forbidden' | 'unknown'
 export type ChargesResult = ({ success: true } & ChargesPage) | { success: false; code: ChargesErrorCode }
 
 /** Linha do banco -> o que a tela mostra. */
-export function toChargeDto(r: any, profile: { name: string; email: string } | undefined, today: string): ChargeDto {
+export function toChargeDto(r: any, profile: { name: string; email: string; subscriptionActive?: boolean } | undefined, today: string, refundRequested = false): ChargeDto {
   const group = chargeGroup(r.status, r.due_date, today)
   return {
     id: String(r.id),
@@ -145,5 +149,7 @@ export function toChargeDto(r: any, profile: { name: string; email: string } | u
     cycle: r.cycle ?? null,
     invoiceUrl: r.invoice_url ?? null,
     asaasPaymentId: r.asaas_payment_id ?? null,
+    subscriptionActive: !!profile?.subscriptionActive,
+    refundRequested,
   }
 }

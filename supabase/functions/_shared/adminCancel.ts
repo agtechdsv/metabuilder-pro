@@ -19,8 +19,10 @@ export const OPEN_CHARGE_STATUSES = ["PENDING", "OVERDUE"];
 /** 404 = já não existe no Asaas: para o nosso fim é o mesmo que cancelado. */
 export const isAlreadyGone = (httpStatus: number) => httpStatus === 404;
 
-async function asaasCall(a: AsaasAccess, method: string, path: string): Promise<{ ok: boolean; status: number; body: any }> {
-  const res = await (a.fetcher ?? fetch)(`${a.url}${path}`, { method, headers: { access_token: a.key, "Content-Type": "application/json" } });
+async function asaasCall(a: AsaasAccess, method: string, path: string, payload?: unknown): Promise<{ ok: boolean; status: number; body: any }> {
+  const res = await (a.fetcher ?? fetch)(`${a.url}${path}`, {
+    method, headers: { access_token: a.key, "Content-Type": "application/json" }, ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+  });
   const body = await res.json().catch(() => ({}));
   return { ok: res.ok, status: res.status, body };
 }
@@ -50,6 +52,29 @@ export async function inspectAsaasBilling(a: AsaasAccess, ids: BillingIds): Prom
   const charges = await listOpenCharges(a, ids);
   const total = charges.reduce((s, c) => s + c.value, 0);
   return { hasBilling: true, hasSubscription: !!ids.subscriptionId, chargeCount: charges.length, chargeTotal: Math.round(total * 100) / 100 };
+}
+
+export interface CallOutcome { ok: boolean; /** o Asaas disse que já não existe (404): para o nosso fim é o mesmo que feito */ gone: boolean; error: string | null; body: any }
+
+const outcome = (r: { ok: boolean; status: number; body: any }, fallback: string): CallOutcome =>
+  ({ ok: r.ok || isAlreadyGone(r.status), gone: isAlreadyGone(r.status), error: r.ok || isAlreadyGone(r.status) ? null : asaasError(r.body, `${fallback} (${r.status})`), body: r.body });
+
+/** Apaga UMA cobrança aberta (pendente ou vencida). A assinatura, se houver, continua e gera a próxima cobrança no ciclo seguinte. */
+export async function deleteCharge(a: AsaasAccess, paymentId: string): Promise<CallOutcome> {
+  return outcome(await asaasCall(a, "DELETE", `/payments/${encodeURIComponent(paymentId)}`), "Asaas recusou apagar a cobrança");
+}
+
+/** Cancela só a assinatura (o Asaas para de gerar cobranças novas); as já geradas ficam como estão. */
+export async function deleteSubscription(a: AsaasAccess, subscriptionId: string): Promise<CallOutcome> {
+  return outcome(await asaasCall(a, "DELETE", `/subscriptions/${encodeURIComponent(subscriptionId)}`), "Asaas recusou cancelar a assinatura");
+}
+
+/** Pede o estorno de uma cobrança paga (Pix ou cartão). Sem `value` é o estorno total. Quem confirma é o webhook (PAYMENT_REFUNDED). */
+export async function refundCharge(a: AsaasAccess, paymentId: string, value?: number, description?: string): Promise<CallOutcome> {
+  const payload: Record<string, unknown> = {};
+  if (value !== undefined) payload.value = value;
+  if (description) payload.description = description;
+  return outcome(await asaasCall(a, "POST", `/payments/${encodeURIComponent(paymentId)}/refund`, payload), "Asaas recusou o estorno");
 }
 
 /** Cancela a assinatura e apaga as cobranças abertas. Nunca lança: o que não deu certo vai em `failures`. */

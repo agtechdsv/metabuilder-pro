@@ -6,6 +6,7 @@ import { applyTransferEvent, cancelPartnerReferral, recordPartnerCommission, rev
 import { billingSettings, pingNotify, queueNotice, queuePayoutNotice } from "../_shared/billing.ts";
 import { isCheckoutOnly, noticeRef, payoutIsFinal, type NoticeKind } from "../_shared/billingCore.ts";
 import { isForeignAsaasEvent, keyAlertDecision, loadAsaasApps } from "../_shared/asaasApps.ts";
+import { closeRefundLog } from "../_shared/adminBilling.ts";
 import { appOfRef, isOwnRef, parsePaymentRef } from "../_shared/familyRefs.ts";
 
 serve(async (req) => {
@@ -369,6 +370,8 @@ serve(async (req) => {
           .from("payments")
           .update({ status: "refunded", webhook_payload: body, webhook_received_at: new Date().toISOString(), webhook_processed: true })
           .eq("asaas_payment_id", payment.id);
+        // se o estorno foi pedido pela tela do SuperAdmin, fecha o registro dele como "feito"
+        await closeRefundLog(supabase, payment.id, event, { value: payment.value ?? null });
       }
       if (ctx?.userId) {
         try {
@@ -378,6 +381,57 @@ serve(async (req) => {
       // a comissão desse pagamento deixa de valer (ou é descontada do próximo lote, se já saiu)
       try { if (payment?.id) await revokePartnerCommissionForPayment(supabase, payment.id, event); } catch (e) { console.error("[parceiros] erro ao revogar a comissão:", e); }
       console.log(`[${event}] payment ${payment?.id} user ${ctx?.userId}`);
+    }
+
+    // estorno parcial: a cobrança CONTINUA paga (o valor devolvido fica só no registro e no aviso ao admin; comissão e recompensas não mudam)
+    // estorno negado: o Asaas recusou; o registro do SuperAdmin vira "falhou". Em andamento: só anota.
+    else if (event === "PAYMENT_PARTIALLY_REFUNDED" || event === "PAYMENT_REFUND_DENIED" || event === "PAYMENT_REFUND_IN_PROGRESS") {
+      const ctx = await resolveContext();
+      if (payment?.id) {
+        await closeRefundLog(supabase, payment.id, event, { value: payment.value ?? null });
+        if (event !== "PAYMENT_REFUND_IN_PROGRESS") {
+          await notify("admin_refund", null, noticeRef([payment.id, event]), { event, paymentId: payment.id, userId: ctx?.userId || null, amount: payment.value });
+        }
+      }
+      console.log(`[${event}] payment ${payment?.id} user ${ctx?.userId}`);
+    }
+
+    // cobrança apagada (pelo admin ou direto no painel do Asaas): sai da lista de abertas e, se era a única vencida, o atraso acaba
+    else if (event === "PAYMENT_DELETED") {
+      const ctx = await resolveContext();
+      if (payment?.id) {
+        await supabase.from("payments").update({ status: "canceled", webhook_processed: true }).eq("asaas_payment_id", payment.id).in("status", ["pending", "overdue"]);
+        if (ctx?.userId) {
+          const { data: stillOverdue } = await supabase.from("payments").select("id").eq("user_id", ctx.userId).eq("status", "overdue").limit(1).maybeSingle();
+          if (!stillOverdue) await supabase.from("profiles").update({ overdue_since: null }).eq("id", ctx.userId);
+        }
+      }
+    }
+
+    // cobrança restaurada no painel do Asaas: volta a ficar em aberto
+    else if (event === "PAYMENT_RESTORED") {
+      if (payment?.id) {
+        await supabase.from("payments").update({ status: "pending", due_date: payment.dueDate || null, webhook_processed: true }).eq("asaas_payment_id", payment.id).eq("status", "canceled");
+      }
+    }
+
+    // vencimento ou valor mudou no painel do Asaas: só cobrança ABERTA acompanha (paga não muda). Voltar a "aguardando" tira o atraso.
+    else if (event === "PAYMENT_UPDATED") {
+      const ctx = await resolveContext();
+      if (payment?.id) {
+        const patch: Record<string, unknown> = { webhook_processed: true };
+        if (payment.dueDate) patch.due_date = payment.dueDate;
+        if (payment.value != null) patch.amount = payment.value;
+        const link = payment.invoiceUrl || payment.bankSlipUrl || null;
+        if (link) patch.invoice_url = link;
+        const backToPending = String(payment.status || "").toUpperCase() === "PENDING";
+        if (backToPending) patch.status = "pending";
+        await supabase.from("payments").update(patch).eq("asaas_payment_id", payment.id).in("status", ["pending", "overdue"]);
+        if (backToPending && ctx?.userId) {
+          const { data: stillOverdue } = await supabase.from("payments").select("id").eq("user_id", ctx.userId).eq("status", "overdue").limit(1).maybeSingle();
+          if (!stillOverdue) await supabase.from("profiles").update({ overdue_since: null }).eq("id", ctx.userId);
+        }
+      }
     }
 
     // transferências Pix dos lotes de parceiros (o webhook do Asaas precisa assinar os eventos TRANSFER_*)

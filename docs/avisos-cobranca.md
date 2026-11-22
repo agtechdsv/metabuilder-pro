@@ -98,3 +98,19 @@ Quem abriu o checkout, gerou a cobrança (Pix) e nunca pagou fica com cliente, a
 - **O que acontece:** o vínculo `asaas_subscription_id` sai do perfil ANTES (o evento de exclusão do Asaas não marca o cliente como "cancelado" nem mexe em indicação); a assinatura e as cobranças abertas são apagadas no Asaas; as linhas abertas de `payments` viram `canceled` (saem do banner e dos lembretes). Se o Asaas falhar, o vínculo volta e a rotina tenta de novo no dia seguinte.
 - **Quando o cliente volta:** o checkout cria assinatura e cobrança novas, como num cliente novo.
 - **Deploy:** publicar a Edge Function `admin-cancel-billing` e o site.
+
+## Cobranças do SuperAdmin: cancelar e estornar (22/11/2026, fase 2)
+
+Tela **Clientes > Cobranças**, coluna Ações. Tudo passa pela Edge Function `admin-cancel-billing` (sessão do SuperAdmin; a chave do Asaas fica lá) e grava uma linha em `mb_admin_billing_log` **antes** de falar com o Asaas (sem a tabela, a ação é recusada).
+
+| Ação | No Asaas | No nosso banco |
+|---|---|---|
+| **Cancelar cobrança** (pendente ou vencida) | apaga só essa cobrança; a assinatura continua | linha vira `canceled`; se era a única vencida, `overdue_since` é limpo |
+| **Cancelar assinatura** | apaga a assinatura (e, por padrão, as cobranças abertas) | cliente `canceled`, acesso até o fim do período (como no cancelamento do próprio cliente); o vínculo permanece para o webhook revogar recompensas e comissão; aviso "renovação cancelada" |
+| **Estornar** (só **Pix e cartão**; boleto no painel do Asaas) | `POST /payments/{id}/refund`, total ou parcial | NADA muda na hora: a linha vira `refunded` quando o webhook (`PAYMENT_REFUNDED`) confirmar; o registro fica `requested` até lá |
+
+Guardas: motivo obrigatório no estorno e palavra de confirmação na tela; valor entre R$ 0,01 e o pago; pedido repetido da mesma cobrança em 10 min é recusado; o estorno pode cancelar a assinatura junto (opcional). Os eventos de estorno do webhook revogam comissão e recompensas, **exceto o parcial**, que só avisa o admin.
+
+**Webhook (eventos novos, marcar no Asaas > Integrações > Webhooks):** `PAYMENT_PARTIALLY_REFUNDED`, `PAYMENT_REFUND_IN_PROGRESS`, `PAYMENT_REFUND_DENIED`, `PAYMENT_DELETED` (cobrança apagada, inclusive no painel do Asaas), `PAYMENT_UPDATED` (vencimento ou valor mudou), `PAYMENT_RESTORED`. Opcionais, só para alerta: `PAYMENT_CHARGEBACK_DISPUTE`, `PAYMENT_AWAITING_CHARGEBACK_REVERSAL`.
+
+**Deploy:** 1) rodar `scripts/admin-cobrancas.sql` no SQL Editor; 2) publicar as Edge Functions `admin-cancel-billing` e `asaas-webhook`; 3) deploy do site; 4) marcar os eventos novos no Asaas. O estorno de Pix pode falhar por falta de saldo na conta do Asaas; a tela mostra a mensagem dele. Não verificado: se a chave de API do Asaas tem permissão de estorno.

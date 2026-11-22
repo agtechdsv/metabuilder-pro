@@ -3,6 +3,10 @@
 //   inspect: diz o que seria cancelado (assinatura e cobranças abertas), sem mexer em nada.
 //   cancel : cancela a assinatura no Asaas e apaga as cobranças abertas. Com purpose "delete" também faz o que o webhook faria depois
 //            (revoga prêmios do iClub e cancela a indicação do parceiro), porque o usuário vai deixar de existir e o webhook não o acharia.
+//   Tela Clientes > Cobranças (fase 2), com registro em mb_admin_billing_log (scripts/admin-cobrancas.sql):
+//   POST { mode: "cancel_charge", paymentId, reason? }                              cancela UMA cobrança aberta; a assinatura continua
+//   POST { mode: "cancel_subscription", userId, reason?, cancelCharges? }           cancela a assinatura (acesso até o fim do período)
+//   POST { mode: "refund", paymentId, reason, value?, cancelSubscription? }         pede o estorno (Pix/cartão); o webhook confirma
 // Só o SuperAdmin chama (confere a sessão); a chave do Asaas fica aqui, nos Secrets, e nunca vai ao navegador.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
@@ -10,6 +14,10 @@ import { revokeReferralRewards, syncNextCharge } from "../_shared/iclub.ts";
 import { cancelPartnerReferral } from "../_shared/partners.ts";
 import { cancelAsaasBilling, inspectAsaasBilling } from "../_shared/adminCancel.ts";
 import { isCheckoutOnly } from "../_shared/billingCore.ts";
+import { runChargeAction } from "../_shared/adminBilling.ts";
+import { deleteCharge, deleteSubscription, refundCharge } from "../_shared/adminCancel.ts";
+import { billingSettings, pingNotify, queueNotice } from "../_shared/billing.ts";
+import { noticeRef } from "../_shared/billingCore.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,6 +42,7 @@ serve(async (req) => {
     const bearer = authHeader.replace(/^Bearer\s+/i, "").trim();
     const serviceKeys = [Deno.env.get("MY_SERVICE_ROLE_KEY")?.trim(), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim()].filter(Boolean) as string[];
     const fromServer = !!bearer && serviceKeys.includes(bearer);
+    let actorId = ""; // o SuperAdmin da sessão (só existe quando a chamada NÃO vem da chave de serviço)
     if (fromServer) {
       if (body?.purpose !== "abandoned") return json({ error: "A chave de serviço só pode cancelar cobrança abandonada." }, 403);
     } else {
@@ -42,6 +51,26 @@ serve(async (req) => {
       if (userError || !user) return json({ error: "Invalid user token" }, 401);
       const { data: caller } = await db.from("profiles").select("is_super_admin").eq("id", user.id).maybeSingle();
       if (!caller?.is_super_admin) return json({ error: "Apenas o SuperAdmin pode fazer isto." }, 403);
+      actorId = user.id;
+    }
+
+    // Ações da tela Clientes > Cobranças (cancelar cobrança, cancelar assinatura, estornar): só com a sessão do SuperAdmin e sempre com registro.
+    if (["cancel_charge", "cancel_subscription", "refund"].includes(String(body?.mode))) {
+      if (!actorId) return json({ error: "Esta ação exige a sessão do SuperAdmin." }, 403);
+      const key = Deno.env.get("ASAAS_API_KEY")?.trim();
+      if (!key) return json({ error: "Chave de API do Asaas não configurada" }, 500);
+      const r = await runChargeAction(db, {
+        asaas: { url: Deno.env.get("ASAAS_URL")?.trim() || "https://api.asaas.com/v3", key },
+        cancelAsaasBilling, deleteCharge, deleteSubscription, refundCharge,
+        // aviso ao cliente: renovação cancelada, acesso até a data (o mesmo do cancelamento feito pelo próprio cliente; desligado = não faz nada)
+        notifyCanceled: async (userId: string, expiresAt: string | null) => {
+          const cfg = await billingSettings(db);
+          const day = String(expiresAt || "").slice(0, 10);
+          if (await queueNotice(db, cfg, { kind: "canceled", userId, ref: noticeRef([userId, day || "sem-data"]), payload: { expiresAt } })) await pingNotify();
+        },
+      }, actorId, body);
+      console.log(`[admin-cancel-billing] ${actorId}: ${body.mode} -> ${r.status}${r.json.code ? ` (${r.json.code})` : ""}`);
+      return json(r.json, r.status);
     }
 
     const userId = String(body?.userId || "");

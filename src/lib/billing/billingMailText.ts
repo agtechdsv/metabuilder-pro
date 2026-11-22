@@ -162,7 +162,14 @@ export function adminBillingMail(kind: string, d: AdminBillingData): MailContent
     title = 'Cobrança vencida'; intro = `A cobrança de ${who} venceu e não foi paga.`
     rows = [row('Cliente', who), row('Valor', d.amount != null ? `R$ ${Number(d.amount).toFixed(2)}` : '-'), row('Vencimento', d.dueDate), row('Cobrança', d.paymentId)]
   } else if (kind === 'admin_refund') {
-    title = 'Estorno ou chargeback'; intro = `Houve ${d.event === 'PAYMENT_CHARGEBACK_REQUESTED' ? 'um pedido de chargeback' : 'um estorno'} de pagamento. As comissões e recompensas ligadas a ele foram revogadas.`
+    // estorno parcial e estorno negado não revogam nada: o texto não pode dizer o contrário
+    if (d.event === 'PAYMENT_PARTIALLY_REFUNDED') {
+      title = 'Estorno parcial'; intro = 'Houve um estorno parcial de um pagamento. A cobrança continua paga; comissões e recompensas não foram alteradas.'
+    } else if (d.event === 'PAYMENT_REFUND_DENIED') {
+      title = 'Estorno negado'; intro = 'O Asaas negou o estorno pedido. Nada foi devolvido ao cliente; confira o motivo no painel do Asaas.'
+    } else {
+      title = 'Estorno ou chargeback'; intro = `Houve ${d.event === 'PAYMENT_CHARGEBACK_REQUESTED' ? 'um pedido de chargeback' : 'um estorno'} de pagamento. As comissões e recompensas ligadas a ele foram revogadas.`
+    }
     rows = [row('Cliente', who), row('Valor', d.amount != null ? `R$ ${Number(d.amount).toFixed(2)}` : '-'), row('Evento', d.event), row('Cobrança', d.paymentId)]
   } else if (kind === 'admin_unresolved') {
     title = 'Pagamento sem cliente identificado'; intro = 'O Asaas avisou de um pagamento que o sistema não conseguiu ligar a nenhum cliente. É preciso conferir à mão no painel do Asaas.'

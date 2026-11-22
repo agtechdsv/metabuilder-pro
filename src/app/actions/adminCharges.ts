@@ -78,10 +78,21 @@ export async function adminChargesAction(input: unknown): Promise<ChargesResult>
 
   const rows = (pageRes.data || []) as any[]
   const ids = [...new Set(rows.map(r => r.user_id).filter(Boolean))] as string[]
-  const names = new Map<string, { name: string; email: string }>()
+  const names = new Map<string, { name: string; email: string; subscriptionActive: boolean }>()
   if (ids.length) {
-    const { data: profs } = await db.from('profiles').select('id, company_name, full_name, email').in('id', ids)
-    for (const p of (profs || []) as any[]) names.set(p.id, { name: p.company_name || p.full_name || '', email: p.email || '' })
+    const { data: profs } = await db.from('profiles').select('id, company_name, full_name, email, asaas_subscription_id, subscription_status').in('id', ids)
+    for (const p of (profs || []) as any[]) {
+      names.set(p.id, {
+        name: p.company_name || p.full_name || '', email: p.email || '',
+        subscriptionActive: !!p.asaas_subscription_id && String(p.subscription_status ?? '').toLowerCase() !== 'canceled',
+      })
+    }
+  }
+  // estornos pedidos pelo SuperAdmin que o Asaas ainda não confirmou (tabela ainda não criada = nenhum)
+  const refundPending = new Set<string>()
+  if (rows.length) {
+    const { data: logs, error: logErr } = await db.from('mb_admin_billing_log').select('payment_id').eq('action', 'refund').eq('status', 'requested').in('payment_id', rows.map(r => r.id))
+    if (!logErr) for (const l of (logs || []) as any[]) if (l.payment_id) refundPending.add(l.payment_id)
   }
 
   const sumRows = (sumRes.data || []) as any[]
@@ -89,7 +100,7 @@ export async function adminChargesAction(input: unknown): Promise<ChargesResult>
   return {
     success: true,
     today,
-    items: rows.map(r => toChargeDto(r, r.user_id ? names.get(r.user_id) : undefined, today)),
+    items: rows.map(r => toChargeDto(r, r.user_id ? names.get(r.user_id) : undefined, today, refundPending.has(r.id))),
     total: pageRes.count ?? rows.length,
     page: f.page,
     pageSize: PAGE_SIZE,

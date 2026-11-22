@@ -156,6 +156,12 @@ describe('ação de servidor e telas', () => {
     for (const m of ['all', 'PIX', 'CREDIT_CARD', 'BOLETO']) used.add(`method_${m}`)
     for (const e of ['forbidden', 'unknown']) used.add(`err_${e}`)
     used.add('tab'); used.add('view_charges')
+    // fase 2: o modal de ações (chaves fixas e as montadas pelo nome da ação)
+    const modal = read('src/components/admin/tabs/ChargeActionModal.tsx')
+    for (const m of modal.matchAll(/\bk\('([a-z_A-Z]+)'/g)) used.add(m[1])
+    for (const a of ['cancel_charge', 'cancel_subscription', 'refund']) for (const p of ['act_', `${a}_title`, `${a}_help`, `btn_${a}`, `ok_${a}`]) used.add(p === 'act_' ? `act_${a}` : p)
+    for (const c of ['invalid_input', 'not_found', 'not_open', 'no_asaas_id', 'no_subscription', 'already_canceled', 'not_paid', 'method_not_supported', 'invalid_value', 'value_too_big', 'reason_required', 'duplicate', 'log_unavailable', 'asaas_failed', 'unknown', 'forbidden']) used.add(`err_${c}`)
+    for (const key of ['col_actions', 'refund_pending', 'refund_word', 'refund_confirm_label', 'ok_refund_sub_failed']) used.add(key)
     for (const l of ['pt', 'en', 'es']) {
       const j = JSON.parse(read(`src/i18n/translations/${l}.json`))
       for (const key of used) expect(j.admin_charges?.[key], `${l}: admin_charges.${key}`).toBeTruthy()
