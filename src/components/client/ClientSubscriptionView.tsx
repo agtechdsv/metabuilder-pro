@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { CreditCard, ExternalLink, Loader2, Search, ShieldAlert, Sliders, X } from 'lucide-react'
 import { invoiceLinkKind } from '@/lib/billing/invoiceLink'
+import { paymentDisplayDate } from '@/lib/billing/paymentDate'
 import { formatPrice, formatDate, getCycleLabel, getBillingTypeLabel, StatusBadge } from './ClientSharedComponents'
 import { useI18n } from '@/i18n'
 
@@ -319,7 +320,7 @@ export function ClientSubscriptionView({
               <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 block mb-1">
                 {t('client_views.subscription.date', 'Data')}
               </span>
-              <span className="font-bold text-neutral-900 dark:text-white">{formatDate(lastSuccessfulPayment.created_at)}</span>
+              <span className="font-bold text-neutral-900 dark:text-white">{formatDate(paymentDisplayDate(lastSuccessfulPayment))}</span>
             </div>
             <div>
               <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 block mb-1">
@@ -375,7 +376,7 @@ export function ClientSubscriptionView({
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
                 {payments.map(p => (
                   <tr key={p.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-850/20 transition-colors">
-                    <td className="px-6 py-4 text-sm text-neutral-800 dark:text-neutral-200 font-medium">{formatDate(p.created_at)}</td>
+                    <td className="px-6 py-4 text-sm text-neutral-800 dark:text-neutral-200 font-medium">{formatDate(paymentDisplayDate(p))}</td>
                     <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">{getCycleLabel(p.cycle)}</td>
                     <td className="px-6 py-4 text-sm font-bold text-neutral-900 dark:text-white">{formatPrice(p.amount)}</td>
                     <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">{getBillingTypeLabel(p.billing_type)}</td>

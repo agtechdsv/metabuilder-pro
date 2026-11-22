@@ -122,6 +122,8 @@ interface Payment {
   billing_type: string | null
   invoice_url: string | null
   created_at: string
+  /** quando o Asaas avisou o pagamento (a data de pagamento mostrada ao cliente) */
+  webhook_received_at?: string | null
 }
 
 interface ClientDashboardClientProps {

@@ -123,7 +123,7 @@ export default async function ClientDashboardPage() {
   // Fetch payments for this user
   const { data: payments } = await supabase
     .from('payments')
-    .select('id, amount, status, cycle, billing_type, invoice_url, created_at')
+    .select('id, amount, status, cycle, billing_type, invoice_url, created_at, webhook_received_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
