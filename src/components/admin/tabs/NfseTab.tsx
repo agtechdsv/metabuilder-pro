@@ -279,7 +279,7 @@ export function NfseTab({ hook }: { hook: NfseQueueHook }) {
                           <button type="button" disabled={busyId === i.id} onClick={() => markCanceled(i)}
                             className="rounded-xl bg-red-600 px-3 py-1.5 text-[11px] font-black text-white hover:bg-red-500 disabled:opacity-40">{k('mark_canceled')}</button>
                         )}
-                        {i.status !== 'pending' && !(i.status === 'issued' && i.refunded) && (
+                        {i.status !== 'pending' && !i.refunded && (
                           <button type="button" disabled={busyId === i.id} onClick={() => reopen(i)}
                             className="rounded-xl border border-neutral-200 px-3 py-1.5 text-[11px] font-bold text-neutral-600 hover:bg-neutral-50 disabled:opacity-40 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800">{k('reopen')}</button>
                         )}

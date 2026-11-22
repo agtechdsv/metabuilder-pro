@@ -179,6 +179,13 @@ describe('fila de notas: ligação no site', () => {
     expect(src).toContain(".eq('status', 'pending')")
   })
 
+  it('nota de pagamento estornado não pode ser reaberta (botão some e o servidor recusa)', () => {
+    const tab = read('src/components/admin/tabs/NfseTab.tsx')
+    expect(tab).toContain("{i.status !== 'pending' && !i.refunded && (")
+    const src = read('src/app/actions/nfse.ts')
+    expect(src).toContain("if (to === 'pending') q = q.eq('refunded', false)")
+  })
+
   it('a subaba Notas Fiscais está dentro de Clientes e o painel usa a nova área', () => {
     expect(read('src/components/admin/PlatformAdminClient.tsx')).toContain('<ClientsArea hook={clientsHook}')
     const area = read('src/components/admin/tabs/ClientsArea.tsx')

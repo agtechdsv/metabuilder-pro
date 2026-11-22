@@ -159,7 +159,10 @@ export async function nfseSetStatusAction(id: string, to: Extract<NfseStatus, 'p
   const patch = to === 'canceled'
     ? { status: 'canceled', note: String(note ?? '').trim().slice(0, 300) || null, updated_at: now }
     : { status: 'pending', issued_at: null, nfse_number: null, customer_emailed_at: null, refunded: false, note: null, updated_at: now }
-  const { data, error } = await ctx.db.from('mb_nfse_queue').update(patch).eq('id', id).neq('status', to).select('id')
+  let q = ctx.db.from('mb_nfse_queue').update(patch).eq('id', id).neq('status', to)
+  // pagamento devolvido nunca volta para a fila de emissão (não há dinheiro recebido para justificar uma nota nova)
+  if (to === 'pending') q = q.eq('refunded', false)
+  const { data, error } = await q.select('id')
   if (error) return fail('unknown')
   return data?.length ? { success: true } : fail('not_found')
 }
