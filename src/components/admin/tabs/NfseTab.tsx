@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
 import { askDialog } from '@/utils/askDialog'
-import { openExternalUrl } from '@/utils/tauriUtils'
+import { isTauri, openExternalUrl } from '@/utils/tauriUtils'
 import { nfseIssueAction, nfseSaveSettingsAction, nfseSetStatusAction } from '@/app/actions/nfse'
 import {
   MAX_PDF_BYTES, MAX_WAIT_DAYS, MIN_WAIT_DAYS, NFSE_LUNIS_URL, NFSE_MODES, formatDateBr, formatDoc, moneyBr, moneyForCopy, onlyDigits,
@@ -352,10 +352,12 @@ function IssueModal({ item, today, k, errText, onClose, onDone }: IssueModalProp
           <CopyField testId="nfse-f-competence" label={k('f_competence')} value={formatDateBr(today)} />
         </div>
 
-        <button type="button" data-testid="nfse-open-issuer" onClick={() => openExternalUrl(NFSE_LUNIS_URL)}
+        {/* Link comum (nao window.open): o Chrome so entrega ao app instalado (PWA) o clique em <a>. No Tauri, abre pelo sistema. */}
+        <a data-testid="nfse-open-issuer" href={NFSE_LUNIS_URL} target="_blank"
+          onClick={(e) => { if (isTauri()) { e.preventDefault(); void openExternalUrl(NFSE_LUNIS_URL) } }}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-black text-white hover:bg-indigo-500">
           <ExternalLink className="h-4 w-4" />{k('open_issuer')}
-        </button>
+        </a>
 
         <div className="rounded-xl border border-neutral-200 p-4 text-xs text-neutral-600 dark:border-neutral-700 dark:text-neutral-300">
           <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-neutral-400">{k('steps_title')}</p>
