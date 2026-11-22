@@ -9,6 +9,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
 import { revokeReferralRewards, syncNextCharge } from "../_shared/iclub.ts";
 import { cancelPartnerReferral } from "../_shared/partners.ts";
 import { cancelAsaasBilling, inspectAsaasBilling } from "../_shared/adminCancel.ts";
+import { isCheckoutOnly } from "../_shared/billingCore.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,21 +26,36 @@ serve(async (req) => {
 
     const serviceRoleKey = Deno.env.get("MY_SERVICE_ROLE_KEY")?.trim() || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim() || "";
     const url = Deno.env.get("SUPABASE_URL") ?? "";
-    const asUser = createClient(url, serviceRoleKey, { global: { headers: { Authorization: authHeader } } });
-    const { data: { user }, error: userError } = await asUser.auth.getUser();
-    if (userError || !user) return json({ error: "Invalid user token" }, 401);
-
     const db = createClient(url, serviceRoleKey);
-    const { data: caller } = await db.from("profiles").select("is_super_admin").eq("id", user.id).maybeSingle();
-    if (!caller?.is_super_admin) return json({ error: "Apenas o SuperAdmin pode fazer isto." }, 403);
-
     const body = await req.json().catch(() => ({}));
+
+    // Chamada do SERVIDOR do site (rotina diária de avisos): vem com a chave de serviço no lugar da sessão de um usuário. Só vale para o purpose
+    // "abandoned" (cobrança de quem abriu o checkout e nunca pagou); o resto exige o SuperAdmin, como sempre.
+    const bearer = authHeader.replace(/^Bearer\s+/i, "").trim();
+    const serviceKeys = [Deno.env.get("MY_SERVICE_ROLE_KEY")?.trim(), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim()].filter(Boolean) as string[];
+    const fromServer = !!bearer && serviceKeys.includes(bearer);
+    if (fromServer) {
+      if (body?.purpose !== "abandoned") return json({ error: "A chave de serviço só pode cancelar cobrança abandonada." }, 403);
+    } else {
+      const asUser = createClient(url, serviceRoleKey, { global: { headers: { Authorization: authHeader } } });
+      const { data: { user }, error: userError } = await asUser.auth.getUser();
+      if (userError || !user) return json({ error: "Invalid user token" }, 401);
+      const { data: caller } = await db.from("profiles").select("is_super_admin").eq("id", user.id).maybeSingle();
+      if (!caller?.is_super_admin) return json({ error: "Apenas o SuperAdmin pode fazer isto." }, 403);
+    }
+
     const userId = String(body?.userId || "");
     const mode = body?.mode === "cancel" ? "cancel" : body?.mode === "inspect" ? "inspect" : "";
     if (!userId || !mode) return json({ error: "Informe userId e mode (inspect ou cancel)." }, 400);
 
-    const { data: target } = await db.from("profiles").select("asaas_customer_id, asaas_subscription_id").eq("id", userId).maybeSingle();
+    const { data: target } = await db.from("profiles").select("asaas_customer_id, asaas_subscription_id, subscription_tier").eq("id", userId).maybeSingle();
     if (!target) return json({ error: "Cliente não encontrado." }, 404);
+
+    // "abandoned": o servidor pede, mas a função confere sozinha. FREE e SEM nenhum pagamento recebido; quem já pagou alguma vez nunca é tocado.
+    if (body?.purpose === "abandoned") {
+      const { count: paidCount } = await db.from("payments").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "paid");
+      if (!isCheckoutOnly(target.subscription_tier, paidCount ?? 0)) return json({ error: "Este cliente já pagou ou tem plano: a cobrança não é abandonada." }, 409);
+    }
 
     const ids = { customerId: target.asaas_customer_id ?? null, subscriptionId: target.asaas_subscription_id ?? null };
     const apiKey = Deno.env.get("ASAAS_API_KEY")?.trim();
@@ -52,6 +68,22 @@ serve(async (req) => {
     }
 
     if (!ids.customerId && !ids.subscriptionId) return json({ success: true, subscriptionCanceled: false, chargesDeleted: 0, failures: [] });
+
+    if (body?.purpose === "abandoned") {
+      // O vínculo com a assinatura sai do perfil ANTES: o evento de exclusão que o Asaas manda não é atribuído ao cliente (não marca "cancelado" nem
+      // mexe em indicação/recompensas). Se o cancelamento falhar, o vínculo volta e a rotina tenta de novo no dia seguinte.
+      if (ids.subscriptionId) await db.from("profiles").update({ asaas_subscription_id: null }).eq("id", userId);
+      const res = await cancelAsaasBilling(asaas, ids);
+      if (res.failures.length) {
+        if (ids.subscriptionId) await db.from("profiles").update({ asaas_subscription_id: ids.subscriptionId }).eq("id", userId);
+        return json({ success: false, error: res.failures.join(" | "), ...res }, 502);
+      }
+      // o Asaas apagou; aqui as cobranças abertas viram "canceled" (não há tratamento do evento de cobrança excluída no webhook), e saem do aviso e dos lembretes
+      await db.from("payments").update({ status: "canceled" }).eq("user_id", userId).in("status", ["pending", "overdue"]);
+      console.log(`[admin-cancel-billing] ${userId}: cobranca abandonada cancelada (assinatura=${res.subscriptionCanceled} cobrancas=${res.chargesDeleted})`);
+      return json({ success: true, ...res });
+    }
+
     const out = await cancelAsaasBilling(asaas, ids);
     if (out.failures.length) return json({ success: false, error: out.failures.join(" | "), ...out }, 502);
 

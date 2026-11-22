@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { CHECKOUT_REMINDER_MAX_DAYS, checkoutReminderStep, isCheckoutOnly, isCustomerKind } from '../../../supabase/functions/_shared/billingCore'
+import { CHECKOUT_REMINDER_MAX_DAYS, checkoutReminderStep, isCheckoutAbandoned, isCheckoutOnly, isCustomerKind } from '../../../supabase/functions/_shared/billingCore'
 import { customerBillingMail } from '../billing/billingMailText'
 
 const read = (p: string) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n')
@@ -142,6 +142,41 @@ describe('correções do teste de renovação (21/11/2026)', () => {
     const hk = read('src/components/client/hooks/useClientSubscription.ts')
     expect(hk).toContain('subscriptionFnName()')
     expect(hk).toContain('asaas-update-subscription?pay=')
+  })
+
+  it('checkout abandonado: só depois da janela dos lembretes', () => {
+    expect(isCheckoutAbandoned(ago(CHECKOUT_REMINDER_MAX_DAYS), now)).toBe(false) // 10 dias: ainda na janela
+    expect(isCheckoutAbandoned(ago(CHECKOUT_REMINDER_MAX_DAYS + 1), now)).toBe(true) // 11 dias
+    expect(isCheckoutAbandoned(ago(2), now)).toBe(false)
+    expect(isCheckoutAbandoned(null, now)).toBe(false)
+    expect(isCheckoutAbandoned('lixo', now)).toBe(false)
+  })
+
+  it('o cancelamento do abandonado é protegido nos dois lados (site e Edge Function)', () => {
+    const fn = read('supabase/functions/admin-cancel-billing/index.ts')
+    // a chave de serviço só serve para "abandoned"; o resto continua exigindo o SuperAdmin
+    expect(fn).toContain('body?.purpose !== "abandoned"')
+    expect(fn).toContain('is_super_admin')
+    // a função reconfere sozinha: FREE e sem pagamento recebido (409 caso contrário), antes de falar com o Asaas
+    const guard = fn.indexOf('isCheckoutOnly(target.subscription_tier')
+    expect(guard).toBeGreaterThan(0)
+    expect(fn.indexOf('cancelAsaasBilling(asaas, ids)')).toBeGreaterThan(guard)
+    expect(fn).toContain('409')
+    // o vínculo sai antes (o evento do Asaas não marca "cancelado") e volta se o cancelamento falhar
+    const clear = fn.indexOf('asaas_subscription_id: null')
+    const restore = fn.indexOf('asaas_subscription_id: ids.subscriptionId')
+    expect(clear).toBeGreaterThan(0)
+    expect(restore).toBeGreaterThan(clear)
+    expect(fn).toContain('status: "canceled"')
+    const svc = read('src/lib/billing/billingService.ts')
+    expect(svc).toContain("purpose: 'abandoned'")
+    expect(svc).toContain('Authorization: `Bearer ${key}`')
+    // só cancela quando a cobrança MAIS NOVA já passou da janela, e só de quem é FREE do checkout
+    expect(svc).toContain('newestOf')
+    expect(svc).toContain('checkout.has(id)')
+    // roda na rotina diária só com os avisos ligados
+    const run = svc.slice(svc.indexOf('export async function runBillingNotices'))
+    expect(run.indexOf('if (!cfg.enabled)')).toBeLessThan(run.indexOf('cancelAbandonedCheckouts'))
   })
 
   it('os textos do QR existem nos três idiomas', () => {

@@ -87,3 +87,14 @@ Cobrança vencida, estorno/chargeback, **pagamento que o webhook não conseguiu 
 - **Pagamento de renovação não gravado:** `payments.external_reference` é ÚNICO e o Asaas repete a referência da assinatura em todas as cobranças. O insert do webhook (PAYMENT_CREATED e PAYMENT_RECEIVED) falhava em silêncio quando a cobrança não existia no banco: sem histórico, sem fila de NFS-e, sem comissão. Agora a referência da renovação é `<referência>~<id do pagamento>` e o erro do insert vai para o log. Reconciliação do caso de teste: `scripts/reconciliar-pagamento-lgpd-dezembro.sql`.
 - **Tela depois do Pix:** enquanto a cobrança está na tela, ela consulta o nosso banco a cada 5 s (o webhook grava lá) e, quando o pagamento entra, avisa, atualiza o perfil e a tela. Para sozinha em 15 min.
 - **QR ampliado:** lupa no QR Code abre uma janela com o código grande para o banco ler.
+
+## Cobrança abandonada do checkout é cancelada no Asaas (22/11/2026)
+
+Quem abriu o checkout, gerou a cobrança (Pix) e nunca pagou fica com cliente, assinatura e cobrança abertos no Asaas. Passada a janela dos lembretes (`CHECKOUT_REMINDER_MAX_DAYS` = 10 dias), a rotina diária (`runBillingNotices`, só com os avisos ligados) cancela tudo:
+
+- **Quem pede:** `cancelAbandonedCheckouts` (`billingService.ts`) chama a Edge Function `admin-cancel-billing` com a chave de serviço e `purpose: "abandoned"`. O site não tem a chave do Asaas.
+- **Quem conta:** só entra quem é FREE e nunca pagou, e só quando a cobrança aberta MAIS NOVA do cliente já passou da janela (quem gerou outra cobrança há pouco não tem o checkout novo cancelado). Até 20 clientes por rodada.
+- **Dupla conferência:** a função reconfere sozinha (FREE e sem pagamento recebido, senão responde 409). A chave de serviço só vale para `abandoned`; o resto continua exigindo o SuperAdmin.
+- **O que acontece:** o vínculo `asaas_subscription_id` sai do perfil ANTES (o evento de exclusão do Asaas não marca o cliente como "cancelado" nem mexe em indicação); a assinatura e as cobranças abertas são apagadas no Asaas; as linhas abertas de `payments` viram `canceled` (saem do banner e dos lembretes). Se o Asaas falhar, o vínculo volta e a rotina tenta de novo no dia seguinte.
+- **Quando o cliente volta:** o checkout cria assinatura e cobrança novas, como num cliente novo.
+- **Deploy:** publicar a Edge Function `admin-cancel-billing` e o site.

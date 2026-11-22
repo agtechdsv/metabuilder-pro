@@ -7,7 +7,7 @@ import { welcomeMail } from '@/lib/billing/welcomeMailText'
 import { resolveMailLang } from '@/lib/security/securityMailText'
 import {
   ALWAYS_SEND_KINDS, isCustomerKind, isPayoutKind, noticeRef, parseBillingSettings, payoutIsFinal, reminderKindFor, resolveLang, suspensionDate, graceExpired,
-  type BillingSettings, type NoticeKind, isCheckoutOnly, checkoutReminderStep,
+  type BillingSettings, type NoticeKind, isCheckoutOnly, checkoutReminderStep, isCheckoutAbandoned,
 } from '../../../supabase/functions/_shared/billingCore'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -77,6 +77,41 @@ export async function scheduleReminders(admin: Admin, now: Date): Promise<number
       kind, userId: p.user_id, ref: noticeRef([p.asaas_payment_id || p.id]),
       payload: { paymentId: p.asaas_payment_id || p.id, amount: Number(p.amount), dueDate: p.due_date, billingType: p.billing_type, invoiceUrl: p.invoice_url },
     })) n++
+  }
+  return n
+}
+
+const ABANDON_BATCH = 20
+
+/**
+ * Checkout abandonado: quem abriu o checkout, gerou a cobrança e nunca pagou. Passada a janela dos lembretes, a assinatura e a cobrança abertas
+ * são canceladas no Asaas (o site não tem a chave: pede à Edge Function admin-cancel-billing com a chave de serviço, purpose "abandoned").
+ * A função confere sozinha que o cliente é FREE e sem pagamento. Só conta quando a cobrança MAIS NOVA do cliente já passou da janela: quem gerou
+ * outra cobrança há pouco não tem o checkout novo cancelado. Falhou? Tenta de novo no dia seguinte. Devolve quantos foram cancelados.
+ */
+export async function cancelAbandonedCheckouts(admin: Admin, now: Date): Promise<number> {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, '')
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!base || !key) return 0
+  const { data: pays } = await admin.from('payments').select('user_id, created_at')
+    .in('status', ['pending', 'overdue']).not('user_id', 'is', null).order('created_at', { ascending: false }).limit(1000)
+  const newestOf = new Map<string, string>() // cobrança aberta mais nova de cada cliente
+  for (const p of (pays || []) as any[]) if (!newestOf.has(p.user_id)) newestOf.set(p.user_id, p.created_at)
+  const stale = Array.from(newestOf).filter(([, created]) => isCheckoutAbandoned(created, now)).map(([id]) => id)
+  if (!stale.length) return 0
+  const checkout = await checkoutOnlyUsers(admin, stale)
+  let n = 0
+  for (const userId of stale.filter(id => checkout.has(id)).slice(0, ABANDON_BATCH)) {
+    try {
+      const res = await fetch(`${base}/functions/v1/admin-cancel-billing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}`, apikey: key },
+        body: JSON.stringify({ userId, mode: 'cancel', purpose: 'abandoned' }),
+        cache: 'no-store',
+      })
+      if (res.ok) n++
+      else console.error(`[billing] não foi possível cancelar a cobrança abandonada de ${userId}: ${res.status} ${(await res.text().catch(() => '')).slice(0, 200)}`)
+    } catch (e) { console.error('[billing] erro ao cancelar a cobrança abandonada:', (e as Error)?.message) }
   }
   return n
 }
@@ -279,9 +314,10 @@ export async function runBillingNotices(now = new Date()) {
   const expired = await expireCanceled(admin, now)
   if (!cfg.enabled) return { enabled: false, expired, ...(await processQueue(admin, cfg)) } // avisos de repasse a parceiros saem mesmo assim
   const reminders = await scheduleReminders(admin, now)
+  const abandoned = await cancelAbandonedCheckouts(admin, now)
   const suspended = await suspendAfterGrace(admin, cfg, now)
   const ending = await scheduleEndingSoon(admin, now)
   const digest = await scheduleDigest(admin, now)
   const sent = await processQueue(admin, cfg)
-  return { enabled: true, expired, reminders, suspended, ending, digest, ...sent }
+  return { enabled: true, expired, reminders, abandoned, suspended, ending, digest, ...sent }
 }

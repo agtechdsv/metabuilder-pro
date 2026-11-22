@@ -104,6 +104,14 @@ export function checkoutReminderStep(createdAt: string | Date | null | undefined
   return age >= 3 ? 3 : age >= 1 ? 1 : 0;
 }
 
+/** A cobranca do checkout esta abandonada? Passou da janela dos lembretes (CHECKOUT_REMINDER_MAX_DAYS) sem pagar: a rotina cancela no Asaas. */
+export function isCheckoutAbandoned(createdAt: string | Date | null | undefined, now: Date): boolean {
+  if (!createdAt) return false;
+  const t = new Date(createdAt).getTime();
+  if (!Number.isFinite(t)) return false;
+  return Math.floor((now.getTime() - t) / DAY) > CHECKOUT_REMINDER_MAX_DAYS;
+}
+
 /** A carencia acabou? (overdue_since + graceDays dias <= agora). Sem data de atraso nunca suspende. */
 export function graceExpired(overdueSince: string | null | undefined, graceDays: number, now: Date): boolean {
   if (!overdueSince) return false;
