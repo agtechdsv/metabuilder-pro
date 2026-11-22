@@ -6241,7 +6241,7 @@
     "cancel_subscription_help": "Asaas stops creating charges. The customer keeps access until the end of the period already paid, as if they had canceled it themselves, and receives the cancellation notice. To block access now, use Block in the Customers tab.",
     "cancel_subscription_charges": "Also cancel this customer's open charges",
     "refund_title": "Refund this payment?",
-    "refund_help": "Asaas returns the amount to the customer (Pix or card). Asaas fees are not returned, and if the account balance is lower than the amount Asaas refuses. The charge only becomes Refunded when Asaas confirms.",
+    "refund_help": "Asaas returns the amount to the customer (Pix or card). Asaas fees are not returned, and if the account balance is lower than the amount Asaas refuses. The charge only becomes Refunded when Asaas confirms. For Pix, Asaas asks for an SMS code authorization in its own panel (orange banner at the top): until you authorize, it stays as Refund requested.",
     "refund_value_label": "Amount to refund (empty = full {total})",
     "err_value_range": "Enter an amount from R$ 0.01 up to {total}.",
     "refund_cancel_sub": "Also cancel the customer's subscription",

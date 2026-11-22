@@ -6241,7 +6241,7 @@
     "cancel_subscription_help": "O Asaas para de gerar cobranças. O cliente mantém o acesso até o fim do período já pago, como se ele mesmo tivesse cancelado, e recebe o aviso de cancelamento. Para bloquear o acesso agora, use Bloquear na aba Clientes.",
     "cancel_subscription_charges": "Cancelar também as cobranças em aberto deste cliente",
     "refund_title": "Estornar este pagamento?",
-    "refund_help": "O Asaas devolve o valor ao cliente (Pix ou cartão). As taxas do Asaas não voltam, e se o saldo da conta for menor que o valor o Asaas recusa. A cobrança só vira Estornada quando o Asaas confirmar.",
+    "refund_help": "O Asaas devolve o valor ao cliente (Pix ou cartão). As taxas do Asaas não voltam, e se o saldo da conta for menor que o valor o Asaas recusa. A cobrança só vira Estornada quando o Asaas confirmar. No Pix, o Asaas pede uma autorização por código SMS no painel dele (aviso laranja no topo): até você autorizar, fica como Estorno solicitado.",
     "refund_value_label": "Valor a estornar (vazio = total de {total})",
     "err_value_range": "Informe um valor de R$ 0,01 até {total}.",
     "refund_cancel_sub": "Cancelar também a assinatura do cliente",

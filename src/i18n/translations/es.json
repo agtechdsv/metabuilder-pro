@@ -6329,7 +6329,7 @@
     "cancel_subscription_help": "Asaas deja de generar cobros. El cliente mantiene el acceso hasta el fin del período ya pagado, como si él mismo la hubiera cancelado, y recibe el aviso de cancelación. Para bloquear el acceso ahora, use Bloquear en la pestaña Clientes.",
     "cancel_subscription_charges": "Cancelar también los cobros abiertos de este cliente",
     "refund_title": "¿Reembolsar este pago?",
-    "refund_help": "Asaas devuelve el valor al cliente (Pix o tarjeta). Las tarifas de Asaas no se devuelven, y si el saldo de la cuenta es menor que el valor Asaas lo rechaza. El cobro solo pasa a Reembolsado cuando Asaas lo confirme.",
+    "refund_help": "Asaas devuelve el valor al cliente (Pix o tarjeta). Las tarifas de Asaas no se devuelven, y si el saldo de la cuenta es menor que el valor Asaas lo rechaza. El cobro solo pasa a Reembolsado cuando Asaas lo confirme. En Pix, Asaas pide una autorización por código SMS en su panel (aviso naranja arriba): hasta que lo autorices, queda como Reembolso solicitado.",
     "refund_value_label": "Valor a reembolsar (vacío = total de {total})",
     "err_value_range": "Informe un valor de R$ 0,01 hasta {total}.",
     "refund_cancel_sub": "Cancelar también la suscripción del cliente",
