@@ -15,6 +15,9 @@ import { CheckoutPaymentWaitView } from './components/CheckoutPaymentWaitView'
 import { useI18n } from '@/i18n'
 import { getEnabledCycles } from '@/lib/pricing-cycles'
 import { campaignOffPercent, localizedText } from '@/lib/campaigns'
+import { LegalModal } from '@/components/legal/LegalModal'
+import { TermsContent } from '@/components/legal/TermsContent'
+import { PrivacyContent } from '@/components/legal/PrivacyContent'
 
 
 interface CheckoutClientProps {
@@ -31,7 +34,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
   const { t, language } = useI18n()
   const state = useCheckoutState({ rules, initialLicenses, initialCycle, workspaceSlug, user, profile, mode })
   const {
-    isUpgrade, isReactivation, licenses, setLicenses, cycle, setCycle, workspace,
+    isUpgrade, isReactivation, licenses, setLicenses, cycle, setCycle, workspace, acceptedLegal, setAcceptedLegal,
     billingName, setBillingName, billingCpfCnpj, setBillingCpfCnpj,
     billingEmail, setBillingEmail, billingPhone, setBillingPhone,
     paymentMethod, setPaymentMethod, cardNumber, setCardNumber,
@@ -39,6 +42,8 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
     billingPostalCode, setBillingPostalCode, billingAddressNumber, setBillingAddressNumber,
     isProcessing, checkoutStep, showPaymentDetails, getCyclePrices, quote, prorataDetails, isDowngradeOrSame, handleSubmitCheckout, featuresList, router
   } = state
+  // qual documento legal está aberto no modal (os hooks ficam ANTES dos retornos antecipados abaixo)
+  const [legalDoc, setLegalDoc] = useState<'terms' | 'privacy' | null>(null)
 
   if (checkoutStep === 'success') return <CheckoutSuccessView state={state} />
   if (showPaymentDetails) return <CheckoutPaymentWaitView state={state} />
@@ -367,10 +372,33 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
             </div>
             )}
 
+            {/* Aceite dos Termos de Serviço e da Política de Privacidade: sem ele a assinatura não segue; o servidor grava o aceite antes de criar a cobrança */}
+            <label className="flex items-start gap-3 text-xs leading-relaxed text-neutral-600 dark:text-neutral-400 cursor-pointer">
+              <input
+                type="checkbox"
+                data-testid="checkout-accept-legal"
+                checked={acceptedLegal}
+                onChange={e => setAcceptedLegal(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-neutral-300 accent-indigo-600"
+              />
+              <span>
+                {t('legal.accept_checkout', 'Li e aceito os {terms} e a {privacy}.').split(/(\{terms\}|\{privacy\})/).map((part, i) =>
+                  part === '{terms}' ? (
+                    <button key={i} type="button" onClick={e => { e.preventDefault(); setLegalDoc('terms') }} className="font-bold text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400">{t('terms.title', 'Termos de Serviço')}</button>
+                  ) : part === '{privacy}' ? (
+                    <button key={i} type="button" onClick={e => { e.preventDefault(); setLegalDoc('privacy') }} className="font-bold text-indigo-600 underline hover:text-indigo-500 dark:text-indigo-400">{t('privacy.title', 'Política de Privacidade')}</button>
+                  ) : <span key={i}>{part}</span>
+                )}
+              </span>
+            </label>
+            <LegalModal isOpen={legalDoc !== null} onClose={() => setLegalDoc(null)} title={legalDoc === 'privacy' ? t('privacy.title') : t('terms.title')}>
+              {legalDoc === 'privacy' ? <PrivacyContent /> : <TermsContent />}
+            </LegalModal>
+
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isProcessing || !workspace || (isUpgrade && licenses === profile?.subscription_licenses && cycle === profile?.subscription_cycle)}
+              disabled={isProcessing || !workspace || !acceptedLegal || (isUpgrade && licenses === profile?.subscription_licenses && cycle === profile?.subscription_cycle)}
               className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-3xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all active:scale-[0.99] shadow-xl shadow-indigo-500/25"
             >
               {isProcessing ? (

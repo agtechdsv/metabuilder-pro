@@ -64,6 +64,7 @@ import { TeamDrawer } from '@/components/workspace/TeamDrawer'
 import SecuritySettings from '@/components/workspace/SecuritySettings'
 import { DeviceSessionsPanel } from '@/components/workspace/DeviceSessionsPanel'
 import BillingBanner from '@/components/billing/BillingBanner'
+import { LegalNoticeBanner } from '@/components/legal/LegalNoticeBanner'
 import SubscribeInviteBanner from '@/components/billing/SubscribeInviteBanner'
 import { useI18n } from '@/i18n/I18nContext'
 
@@ -306,6 +307,9 @@ export default function ClientDashboardClient({
 
       {/* Aviso de cobrança (fatura vencendo, vencida ou cartão recusado): só aparece quando há algo a pagar */}
       {(!isGuest || (canPayAsGuest && activeTab !== 'subscription')) && <BillingBanner />}
+
+      {/* Termos de Serviço e Política de Privacidade atualizados: pede o aceite da versão vigente (some depois de aceitar) */}
+      {!isGuest && <LegalNoticeBanner />}
 
       {/* Convite para assinar: quem ainda não tem plano (e não foi convidado por outro dono) */}
       {isGuest && showSubscribeInvite && <SubscribeInviteBanner />}

@@ -26,7 +26,10 @@ export function PrivacyContent() {
     {
       title: t('privacy.item5_title'),
       content: t('privacy.item5_desc')
-    }
+    },
+    // cobrança e parceiros (versão 3.0)
+    { title: t('privacy.item6_title'), content: t('privacy.item6_desc') },
+    { title: t('privacy.item7_title'), content: t('privacy.item7_desc') }
   ]
 
   return (

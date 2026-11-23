@@ -30,7 +30,7 @@ function TermsPageContent() {
         
         <div className="space-y-4">
           <h1 className="text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-neutral-500">{t('terms.title')}</h1>
-          <p className="text-neutral-500 font-medium">{t('terms.version')} • Maio 2026</p>
+          <p className="text-neutral-500 font-medium">{t('terms.version')} • {t('terms.updated')}</p>
         </div>
 
         <div className="bg-neutral-900/50 border border-neutral-800 p-8 rounded-[2.5rem] backdrop-blur-sm shadow-2xl">

@@ -27,7 +27,13 @@ export function TermsContent() {
     {
       title: t('terms.item5_title'),
       content: t('terms.item5_desc')
-    }
+    },
+    // cobrança (versão 3.0): planos e renovação, reajuste, cancelamento e reembolso, campanhas, atraso e suspensão
+    { title: t('terms.item6_title'), content: t('terms.item6_desc') },
+    { title: t('terms.item7_title'), content: t('terms.item7_desc') },
+    { title: t('terms.item8_title'), content: t('terms.item8_desc') },
+    { title: t('terms.item9_title'), content: t('terms.item9_desc') },
+    { title: t('terms.item10_title'), content: t('terms.item10_desc') }
   ]
 
   return (

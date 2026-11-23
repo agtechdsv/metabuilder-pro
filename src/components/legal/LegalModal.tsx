@@ -5,6 +5,7 @@ import { X, ShieldCheck, FileText, Cpu, Shield, CheckCircle2 } from 'lucide-reac
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useI18n } from '@/i18n/I18nContext'
+import { LEGAL_VERSION } from '@/lib/legal/legalVersions'
 
 interface LegalModalProps {
   isOpen: boolean
@@ -59,7 +60,7 @@ export function LegalModal({ isOpen, onClose, title, children }: LegalModalProps
         )}
         <span className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase mt-1 flex items-center gap-2">
           <span className="bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-700">{t('legal.official_document')}</span>
-          <span className="text-indigo-600 dark:text-indigo-500">V2.0</span>
+          <span className="text-indigo-600 dark:text-indigo-500">V{LEGAL_VERSION}</span>
         </span>
       </span>
     )

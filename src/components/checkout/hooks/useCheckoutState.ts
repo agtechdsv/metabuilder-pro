@@ -6,6 +6,7 @@ import { createClient } from '@/utils/supabase/client'
 import { getEnabledCycles } from '@/lib/pricing-cycles'
 import { useI18n } from '@/i18n/I18nContext'
 import { maskCpfCnpj, maskPhone, onlyDigits } from '@/lib/checkout/masks'
+import { acceptLegalAction } from '@/app/actions/legalAcceptance'
 
 export interface CheckoutClientProps {
   rules: any
@@ -31,6 +32,8 @@ export function useCheckoutState({ rules, initialLicenses = 1, initialCycle, wor
       : 'monthly'
   )
   const [workspace, setWorkspace] = useState<any>(null)
+  // aceite dos Termos de Serviço e da Política de Privacidade: sem ele a assinatura não segue (e o servidor grava o aceite antes de criar a cobrança)
+  const [acceptedLegal, setAcceptedLegal] = useState(false)
 
   // Cotação do SERVIDOR: o valor que será cobrado de verdade (campanha incluída, só para quem for elegível). Sem ela, vale o cálculo local (preço regular).
   const [quote, setQuote] = useState<{ quotes: Record<string, { total: number }>; campaign: any | null; licenses: number } | null>(null)
@@ -222,10 +225,19 @@ export function useCheckoutState({ rules, initialLicenses = 1, initialCycle, wor
       }
     }
 
+    if (!acceptedLegal) {
+      toast('Aceite os Termos de Serviço e a Política de Privacidade para continuar.', 'error')
+      return
+    }
+
     setIsProcessing(true)
 
     try {
       const supabase = createClient()
+
+      // O aceite é gravado ANTES de qualquer cobrança ser criada (sem registro do aceite, o pagamento não segue)
+      const accepted = await acceptLegalAction('checkout')
+      if (!accepted.success) throw new Error('Não foi possível registrar o seu aceite dos Termos. Tente novamente.')
 
       // Chamar Edge Function 'asaas-checkout'
       const { data, error } = await supabase.functions.invoke('asaas-checkout', {
@@ -407,7 +419,7 @@ export function useCheckoutState({ rules, initialLicenses = 1, initialCycle, wor
   ]
 
   return {
-    isUpgrade, isReactivation, licenses, setLicenses, cycle, setCycle, workspace,
+    isUpgrade, isReactivation, licenses, setLicenses, cycle, setCycle, workspace, acceptedLegal, setAcceptedLegal,
     billingName, setBillingName, billingCpfCnpj, setBillingCpfCnpj,
     billingEmail, setBillingEmail, billingPhone, setBillingPhone,
     paymentMethod, setPaymentMethod, cardNumber, setCardNumber,

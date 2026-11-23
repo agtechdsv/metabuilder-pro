@@ -198,7 +198,15 @@
   },
   "legal": {
     "official_document": "Documento Oficial",
-    "understand_accept": "Entendido e Aceito"
+    "understand_accept": "Entendido e Aceito",
+    "accept_checkout": "Li e aceito os {terms} e a {privacy}.",
+    "accept_required": "Aceite os Termos de Serviço e a Política de Privacidade para continuar.",
+    "accept_error": "Não foi possível registrar o seu aceite. Tente novamente.",
+    "notice_title": "Atualizamos os Termos de Serviço e a Política de Privacidade",
+    "notice_desc": "Incluímos regras de cobrança, renovação, reajuste, cancelamento e reembolso, e informações sobre os dados de cobrança. Leia e confirme o seu aceite.",
+    "notice_accept": "Li e aceito",
+    "notice_accepting": "Registrando...",
+    "notice_dismiss": "Depois"
   },
   "footer": {
     "developed_by": "Desenvolvido por",
@@ -215,7 +223,8 @@
   },
   "privacy": {
     "title": "Política de Privacidade",
-    "version": "DOCUMENTO OFICIAL V2.0",
+    "version": "DOCUMENTO OFICIAL V3.0",
+    "updated": "Novembro 2026",
     "item1_title": "Informações que Coletamos",
     "item1_desc": "Ao utilizar o login ou preencher suas credenciais BYODB, coletamos apenas os dados essenciais (nome, e-mail e chaves de infraestrutura) para fins de autenticação e funcionamento técnico do sistema.",
     "item2_title": "Uso dos Dados",
@@ -226,11 +235,16 @@
     "item4_desc": "Utilizamos apenas cookies estritamente necessários para manter sua sessão ativa, identificar o dispositivo da sessão e salvar suas preferências de tema (Dark Mode). Toda comunicação é criptografada via TLS 1.3.",
     "item5_title": "Sessões e Dispositivos",
     "item5_desc": "Para aplicar o limite de sessões simultâneas e proteger sua conta, registramos: o tipo de cliente (IDE ou navegador), o navegador e o sistema operacional, a cidade, a região e o país aproximados (obtidos do endereço IP), um hash do endereço IP (nunca o IP em texto), um identificador do dispositivo (cookie) e os horários de entrada e de atividade. Esses dados ficam guardados por até 90 dias após o encerramento da sessão e servem apenas para segurança, prevenção a fraudes e cumprimento dos termos de uso (execução do contrato e legítimo interesse, LGPD, art. 7º, incisos V e IX). Você vê e encerra suas sessões em Segurança > Meus dispositivos.",
+    "item6_title": "Dados de Cobrança e Fiscais",
+    "item6_desc": "Para cobrar a assinatura e emitir a nota fiscal de serviço (NFS-e), tratamos nome ou razão social, CPF ou CNPJ, e-mail, telefone, endereço e os dados da cobrança (valor, ciclo, forma e data de pagamento). Os dados do cartão de crédito são enviados ao provedor de pagamento, que atua como operador, e não ficam armazenados em nossos servidores: guardamos apenas a bandeira e os quatro últimos dígitos. Mantemos os registros de cobrança e fiscais pelo prazo exigido pela legislação tributária e contábil (execução do contrato e obrigação legal, LGPD, art. 7º, incisos V e II).",
+    "item7_title": "Parceiros e Indicações",
+    "item7_desc": "Os parceiros cadastrados informam nome, e-mail, documento e chave Pix para receber comissões, e os repasses são feitos por Pix por meio do provedor de pagamento. O parceiro vê quem comprou por indicação apenas com o e-mail parcialmente ocultado (por exemplo, j***@empresa.com). O programa de indicações (iClub) guarda a relação entre quem indicou e quem foi indicado para calcular descontos. Esses dados são usados apenas para apurar e pagar comissões e descontos e são mantidos pelo prazo necessário às obrigações fiscais.",
     "button": "ENTENDIDO"
   },
   "terms": {
     "title": "Termos de Serviço",
-    "version": "DOCUMENTO OFICIAL V2.0",
+    "version": "DOCUMENTO OFICIAL V3.0",
+    "updated": "Novembro 2026",
     "item1_title": "Aceitação dos Termos",
     "item1_desc": "Ao acessar este aplicativo, você concorda em cumprir estes termos de serviço e todas as leis aplicáveis ao exercício de desenvolvimento e proteção de dados (LGPD).",
     "item2_title": "Isenção de Responsabilidade",
@@ -241,6 +255,16 @@
     "item4_desc": "Todo o design e marca MetaBuilderPRO são de propriedade da AGTech. O código gerado pela engine em sua infraestrutura permanece de sua posse e responsabilidade.",
     "item5_title": "Licença Individual e Sessões Simultâneas",
     "item5_desc": "A licença é individual: vale para um único usuário identificado, que não pode compartilhar login, senha, biometria ou qualquer credencial com terceiros, nem ceder, sublicenciar ou revender o acesso. Cada usuário pode manter, ao mesmo tempo, no máximo uma sessão na IDE desktop e uma sessão em navegador; ao entrar em outro dispositivo do mesmo tipo, deverá escolher qual sessão manter. Para aplicar essa regra e proteger a conta, o MetaBuilderPRO registra dados técnicos das sessões (tipo de cliente, navegador, sistema, cidade aproximada e horários). O uso da mesma credencial por mais de uma pessoa, a troca excessiva de dispositivos ou qualquer meio de burlar o limite violam estes termos: a AGTech poderá, após aviso por e-mail ao titular (ou de imediato, em caso de risco à segurança), restringir ou suspender o acesso e cobrar as licenças adicionais correspondentes aos usuários efetivamente utilizados, sem prejuízo de outras medidas cabíveis. Cada pessoa adicional deve ter licença e login próprios, como convidada da conta.",
+    "item6_title": "Planos, Preço e Renovação Automática",
+    "item6_desc": "O MetaBuilderPRO é oferecido por assinatura, por licença, nos ciclos mensal, trimestral, semestral ou anual, conforme o escolhido no checkout. O valor, a quantidade de licenças e o ciclo ficam registrados na contratação. A assinatura renova automaticamente ao fim de cada ciclo, pelo preço vigente na data de vencimento da renovação, até ser cancelada. A cobrança é feita pelo meio escolhido (cartão de crédito, Pix ou boleto) por meio de um provedor de pagamento terceirizado. Licenças acrescentadas no meio do ciclo são cobradas de forma proporcional aos dias que faltam. O acesso ao plano pago vale pelo período efetivamente pago.",
+    "item7_title": "Reajuste de Preço",
+    "item7_desc": "A AGTech pode reajustar o preço do plano. O reajuste vale apenas para renovações com vencimento a partir da data de vigência informada e nunca altera o período já pago. Em caso de aumento, o titular é avisado por e-mail com antecedência mínima de 30 dias da data de vigência, com o valor atual e o novo valor do plano contratado. Quem não concordar pode cancelar a renovação a qualquer momento, sem multa, e mantém o acesso até o fim do período pago. A continuidade da assinatura após a vigência representa a aceitação do novo valor.",
+    "item8_title": "Cancelamento, Arrependimento e Reembolso",
+    "item8_desc": "O titular pode cancelar a renovação a qualquer momento na aba Assinatura: as cobranças futuras são interrompidas, não há multa e o acesso continua até o fim do período já pago. Quando a contratação é feita à distância por consumidor, ele pode desistir em até 7 dias corridos da contratação, com devolução dos valores pagos (Código de Defesa do Consumidor, art. 49). Fora dessa hipótese, valores de períodos já iniciados não são reembolsados, salvo cobrança indevida ou em duplicidade, falha comprovada do serviço ou decisão da AGTech. O reembolso, total ou parcial, é feito pelo mesmo meio de pagamento (Pix ou cartão), e o prazo para o crédito depende da instituição financeira.",
+    "item9_title": "Campanhas Promocionais",
+    "item9_desc": "Campanhas de preço têm regras próprias, informadas no checkout: percentual de desconto, número de meses e licenças incluídas. O preço promocional visto na contratação vale pelos meses da campanha e, em caso de reajuste da tabela, nunca é maior do que o preço visto; se a tabela de preços diminuir, o preço promocional acompanha a redução. Durante a campanha o preço promocional substitui os descontos de volume e de ciclo, e o desconto de indicação incide apenas sobre a parte cobrada a preço de tabela. Terminados os meses da campanha, vale o preço de tabela vigente. Licenças acrescentadas depois da contratação pagam o preço de tabela. A campanha vale para clientes novos.",
+    "item10_title": "Atraso, Carência e Suspensão",
+    "item10_desc": "A falta de pagamento até o vencimento coloca a assinatura em atraso. O titular é avisado por e-mail e pode manter o acesso durante um período de carência informado nos avisos de cobrança. Encerrada a carência sem pagamento, a AGTech pode suspender o acesso até a regularização; o pagamento da cobrança em aberto restabelece o acesso automaticamente. A suspensão não apaga os dados do titular. Contas gratuitas que apenas iniciaram o checkout e nunca pagaram não são suspensas, e a cobrança aberta delas pode ser cancelada após 10 dias.",
     "button": "ENTENDIDO"
   },
   "profile": {
