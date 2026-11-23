@@ -16,12 +16,13 @@ export async function fetchWorkspaceProjects(
   return Promise.all(projects.map(async (project: any) => {
     const projectId = project.id
 
-    const [{ data: models }, { data: uiViewsPublished }, { data: relations }, { data: authConfig }, { data: enumerations }] = await Promise.all([
+    const [{ data: models }, { data: uiViewsPublished }, { data: relations }, { data: authConfig }, { data: enumerations }, { data: bpmWorkflows }] = await Promise.all([
       supabase.from('models').select('*, fields(*)').eq('project_id', projectId),
       supabase.from('ui_views').select('*, ui_components(*)').eq('project_id', projectId).eq('status', 'published').order('created_at', { ascending: true }),
       supabase.from('relations').select('*').eq('project_id', projectId),
       supabase.from('project_auth_config').select('*').eq('project_id', projectId).maybeSingle(),
       supabase.from('project_enumerations').select('*').eq('project_id', projectId),
+      supabase.from('bpm_workflows').select('id, name, flow_data, is_active').eq('project_id', projectId).eq('is_active', true),
     ])
 
     // Sem telas publicadas, usa todas
@@ -43,6 +44,7 @@ export async function fetchWorkspaceProjects(
       components,
       relations: relations || [],
       enumerations: enumerations || [],
+      bpm_workflows: bpmWorkflows || [],
       auth_config: authConfig ? {
         auth_type: (authConfig as any).auth_type,
         table_name: (authConfig as any).db_table_name,

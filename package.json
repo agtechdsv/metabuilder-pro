@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/gen-bi-runtime.mjs && node scripts/build-engine-bundle.mjs",
+    "prebuild": "node scripts/gen-bi-runtime.mjs && node scripts/gen-bpm-runtime.mjs && node scripts/build-engine-bundle.mjs",
     "build": "next build",
     "start": "next start",
     "gen:bi": "node scripts/gen-bi-runtime.mjs",
+    "gen:bpm": "node scripts/gen-bpm-runtime.mjs",
     "test": "vitest run",
     "lint": "eslint",
     "tauri": "tauri",

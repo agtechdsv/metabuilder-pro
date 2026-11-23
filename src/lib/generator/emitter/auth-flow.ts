@@ -6,6 +6,7 @@ import { getAccessDictionary } from '../accessI18n'
 import { LDAP_LIB_SOURCE } from './ldap-auth'
 import { rlsAttrColumns } from '../../bi/access'
 import { modelPolicyAttrColumns } from '../layers/access'
+import { bpmPublicPaths } from '../layers/bpm'
 
 function toCamel(str: string): string {
   return str
@@ -564,7 +565,7 @@ export async function GET(request: Request) {
 import type { NextRequest } from 'next/server'
 import { verifySession } from '@/lib/session'
 
-const PUBLIC_PATHS = ['/login', '/api/login', '/api/health']
+const PUBLIC_PATHS = ${JSON.stringify(['/login', '/api/login', '/api/health', ...bpmPublicPaths(ast)]).replace(/"/g, "'").replace(/,/g, ', ')}
 ${hasAccess ? `// telas do app (mais longas primeiro: "/clientes-geospatial" antes de "/clientes")\nconst ACCESS_ROUTES: Array<{ path: string; slug: string }> = ${JSON.stringify(accessRoutes)}\n` : ''}
 
 export async function proxy(request: NextRequest) {

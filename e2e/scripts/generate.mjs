@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 const here = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(here, '..', '..')
 const name = process.argv[2] || 'pg-node'
-const variants = { 'pg-node': { opts: {}, appDir: '' } }
+const variants = { 'pg-node': { opts: {}, appDir: '', env: {} }, 'pg-node-bpm': { opts: {}, appDir: '', env: { E2E_BPM: '1' } } }
 const v = variants[name]
 if (!v) { console.error('Variante desconhecida:', name, '— disponíveis:', Object.keys(variants).join(', ')); process.exit(1) }
 
@@ -20,7 +20,7 @@ const run = (cmd, args, cwd, env = {}) => {
 }
 
 console.log(`\n▶ Gerando o app "${name}"...`)
-run('npx', ['vitest', 'run', 'src/lib/generator/__tests__/e2eGenerate.test.ts'], root, { E2E_GEN_DIR: genDir, E2E_GEN_OPTS: JSON.stringify(v.opts) })
+run('npx', ['vitest', 'run', 'src/lib/generator/__tests__/e2eGenerate.test.ts'], root, { E2E_GEN_DIR: genDir, E2E_GEN_OPTS: JSON.stringify(v.opts), ...(v.env || {}) })
 if (!fs.existsSync(path.join(appDir, 'node_modules'))) { console.log('\n▶ Instalando dependências (só na primeira vez)...'); run('npm', ['install', '--no-audit', '--no-fund'], appDir) }
 console.log('\n▶ Compilando (next build)...')
 run('npx', ['next', 'build'], appDir)

@@ -1,0 +1,221 @@
+{
+  "models": { "m_orders": "orders", "m_clients": "clients", "m_log": "audit_log" },
+  "tables": {
+    "clients": [{ "id": 7, "name": "Maria", "email": "maria@exemplo.com" }]
+  },
+  "cases": [
+    {
+      "name": "INSERT com condição verdadeira executa o UPDATE (PostgreSQL)",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          { "id": "t", "type": "trigger", "data": { "triggerType": ["INSERT"], "triggerModelId": "m_orders" } },
+          { "id": "c", "type": "condition", "data": { "conditionGroups": [{ "logic": "AND", "rules": [{ "field": "total", "operator": ">", "value": "100" }] }] } },
+          { "id": "a", "type": "action", "data": { "actionType": "update", "actionModelId": "m_orders", "actionFilters": [{ "field": "id", "operator": "==", "value": "{{orders.id}}" }], "actionFields": [{ "field": "status", "value": "revisar" }] } }
+        ],
+        "edges": [
+          { "source": "t", "target": "c" },
+          { "source": "c", "target": "a", "sourceHandle": "true" }
+        ]
+      },
+      "event": { "mode": "async", "table": "orders", "type": "INSERT", "row": { "id": 5, "total": 250 } },
+      "expect": { "queries": [{ "sql": "UPDATE \"orders\" SET \"status\" = $1 WHERE \"id\" = $2", "params": ["revisar", "5"] }], "runs": [{ "status": "success", "source": "evento INSERT" }] }
+    },
+    {
+      "name": "mesmo fluxo em Oracle usa :n",
+      "dialect": "oracle",
+      "flow": {
+        "nodes": [
+          { "id": "t", "type": "trigger", "data": { "triggerType": ["INSERT"], "triggerModelId": "m_orders" } },
+          { "id": "a", "type": "action", "data": { "actionType": "update", "actionModelId": "m_orders", "actionFilters": [{ "field": "id", "operator": "==", "value": "{{orders.id}}" }], "actionFields": [{ "field": "status", "value": "revisar" }] } }
+        ],
+        "edges": [{ "source": "t", "target": "a" }]
+      },
+      "event": { "mode": "async", "table": "orders", "type": "INSERT", "row": { "id": 5, "total": 250 } },
+      "expect": { "queries": [{ "sql": "UPDATE \"orders\" SET \"status\" = :1 WHERE \"id\" = :2", "params": ["revisar", "5"] }], "runs": [{ "status": "success" }] }
+    },
+    {
+      "name": "condição falsa não executa nada",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          { "id": "t", "type": "trigger", "data": { "triggerType": ["INSERT"], "triggerModelId": "m_orders" } },
+          { "id": "c", "type": "condition", "data": { "conditionGroups": [{ "logic": "AND", "rules": [{ "field": "total", "operator": ">", "value": "100" }] }] } },
+          { "id": "a", "type": "action", "data": { "actionType": "delete", "actionModelId": "m_orders", "actionFilters": [{ "field": "id", "operator": "==", "value": "{{orders.id}}" }] } }
+        ],
+        "edges": [
+          { "source": "t", "target": "c" },
+          { "source": "c", "target": "a", "sourceHandle": "true" }
+        ]
+      },
+      "event": { "mode": "async", "table": "orders", "type": "INSERT", "row": { "id": 5, "total": 10 } },
+      "expect": { "queries": [], "runs": [{ "status": "success" }] }
+    },
+    {
+      "name": "UPDATE e DELETE sem filtro são ignorados (segurança)",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          { "id": "t", "type": "trigger", "data": { "triggerType": ["UPDATE"], "triggerModelId": "m_orders" } },
+          { "id": "a", "type": "action", "data": { "actionType": "update", "actionModelId": "m_orders", "actionFields": [{ "field": "status", "value": "x" }] } },
+          { "id": "b", "type": "action", "data": { "actionType": "delete", "actionModelId": "m_orders" } }
+        ],
+        "edges": [{ "source": "t", "target": "a" }, { "source": "a", "target": "b" }]
+      },
+      "event": { "mode": "async", "table": "orders", "type": "UPDATE", "row": { "id": 1 } },
+      "expect": { "queries": [], "runs": [{ "status": "success" }] }
+    },
+    {
+      "name": "nome de campo malicioso é saneado (sem injeção)",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          { "id": "t", "type": "trigger", "data": { "triggerType": ["INSERT"], "triggerModelId": "m_orders" } },
+          { "id": "a", "type": "action", "data": { "actionType": "insert", "actionModelId": "m_log", "actionFields": [{ "field": "msg\"); DROP TABLE x;--", "value": "oi" }] } }
+        ],
+        "edges": [{ "source": "t", "target": "a" }]
+      },
+      "event": { "mode": "async", "table": "orders", "type": "INSERT", "row": { "id": 1 } },
+      "expect": { "queries": [{ "sql": "INSERT INTO \"audit_log\" (\"msgDROPTABLEx\") VALUES ($1)", "params": ["oi"] }], "runs": [{ "status": "success" }] }
+    },
+    {
+      "name": "variável de outra tabela busca pelo id da chave estrangeira (clients_id / client_id)",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          { "id": "t", "type": "trigger", "data": { "triggerType": ["INSERT"], "triggerModelId": "m_orders" } },
+          { "id": "a", "type": "action", "data": { "actionType": "insert", "actionModelId": "m_log", "actionFields": [{ "field": "msg", "value": "Pedido de {{clients.name}}" }] } }
+        ],
+        "edges": [{ "source": "t", "target": "a" }]
+      },
+      "event": { "mode": "async", "table": "orders", "type": "INSERT", "row": { "id": 1, "client_id": 7 } },
+      "expect": { "queries": [{ "sql": "SELECT * FROM \"clients\" WHERE \"id\" = $1 LIMIT 1", "params": [7] }, { "sql": "INSERT INTO \"audit_log\" (\"msg\") VALUES ($1)", "params": ["Pedido de Maria"] }], "runs": [{ "status": "success" }] }
+    },
+    {
+      "name": "tabela que não é modelo do projeto não é consultada",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          { "id": "t", "type": "trigger", "data": { "triggerType": ["INSERT"], "triggerModelId": "m_orders" } },
+          { "id": "a", "type": "action", "data": { "actionType": "insert", "actionModelId": "m_log", "actionFields": [{ "field": "msg", "value": "{{secrets.token}}" }] } }
+        ],
+        "edges": [{ "source": "t", "target": "a" }]
+      },
+      "event": { "mode": "async", "table": "orders", "type": "INSERT", "row": { "id": 1, "secret_id": 1 } },
+      "expect": { "queries": [{ "sql": "INSERT INTO \"audit_log\" (\"msg\") VALUES ($1)", "params": ["{{secrets.token}}"] }], "runs": [{ "status": "success" }] }
+    },
+    {
+      "name": "BEFORE_INSERT bloqueia com a mensagem do fluxo",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          { "id": "t", "type": "trigger", "data": { "triggerType": ["BEFORE_INSERT"], "triggerModelId": "m_orders" } },
+          { "id": "c", "type": "condition", "data": { "conditionGroups": [{ "logic": "AND", "rules": [{ "field": "total", "operator": "<=", "value": "0" }] }] } },
+          { "id": "r", "type": "response", "data": { "responseAllowAction": false, "responseMessage": "Total {{orders.total}} inválido" } }
+        ],
+        "edges": [{ "source": "t", "target": "c" }, { "source": "c", "target": "r", "sourceHandle": "true" }]
+      },
+      "event": { "mode": "sync", "table": "orders", "type": "BEFORE_INSERT", "row": { "total": 0 } },
+      "expect": { "sync": { "success": false, "error": "Total 0 inválido", "data": { "total": 0 } }, "queries": [], "runs": [{ "status": "success", "blocked": true }] }
+    },
+    {
+      "name": "BEFORE_INSERT com condição falsa deixa passar",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          { "id": "t", "type": "trigger", "data": { "triggerType": ["BEFORE_INSERT"], "triggerModelId": "m_orders" } },
+          { "id": "c", "type": "condition", "data": { "conditionGroups": [{ "logic": "AND", "rules": [{ "field": "total", "operator": "<=", "value": "0" }] }] } },
+          { "id": "r", "type": "response", "data": { "responseAllowAction": false, "responseMessage": "bloqueado" } }
+        ],
+        "edges": [{ "source": "t", "target": "c" }, { "source": "c", "target": "r", "sourceHandle": "true" }]
+      },
+      "event": { "mode": "sync", "table": "orders", "type": "BEFORE_INSERT", "row": { "total": 20 } },
+      "expect": { "sync": { "success": true, "error": null, "data": { "total": 20 } }, "queries": [], "runs": [{ "status": "success", "blocked": false }] }
+    },
+    {
+      "name": "BEFORE_UPDATE muda os dados em memória (mutate) e devolve mensagem",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          { "id": "t", "type": "trigger", "data": { "triggerType": ["BEFORE_UPDATE"], "triggerModelId": "m_orders" } },
+          { "id": "m", "type": "action", "data": { "actionType": "mutate", "actionFields": [{ "field": "status", "value": "analise" }] } },
+          { "id": "r", "type": "response", "data": { "responseAllowAction": true, "responseMessage": "Enviado para análise" } }
+        ],
+        "edges": [{ "source": "t", "target": "m" }, { "source": "m", "target": "r" }]
+      },
+      "event": { "mode": "sync", "table": "orders", "type": "BEFORE_UPDATE", "row": { "id": 3, "status": "novo" } },
+      "expect": { "sync": { "success": true, "message": "Enviado para análise", "data": { "id": 3, "status": "analise" } }, "queries": [] }
+    },
+    {
+      "name": "e-mail para destinatário personalizado, com variável no assunto e quebra de linha",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          { "id": "t", "type": "trigger", "data": { "triggerType": ["INSERT"], "triggerModelId": "m_orders" } },
+          { "id": "a", "type": "action", "data": { "actionType": "email", "emailRecipientType": "custom", "customEmailField": "fixo@exemplo.com", "actionSubject": "Pedido {{orders.id}}", "actionBody": "Linha 1\nLinha 2", "emailTemplate": "modern" } }
+        ],
+        "edges": [{ "source": "t", "target": "a" }]
+      },
+      "event": { "mode": "async", "table": "orders", "type": "INSERT", "row": { "id": 9 } },
+      "expect": { "mails": [{ "to": "fixo@exemplo.com", "subject": "Pedido 9", "body": "Linha 1<br/>Linha 2", "template": "modern" }], "runs": [{ "status": "success" }] }
+    },
+    {
+      "name": "e-mail sem destinatário registra erro na execução",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          { "id": "t", "type": "trigger", "data": { "triggerType": ["INSERT"], "triggerModelId": "m_orders" } },
+          { "id": "a", "type": "action", "data": { "actionType": "email", "emailRecipientType": "custom", "customEmailField": "", "actionSubject": "x", "actionBody": "y" } }
+        ],
+        "edges": [{ "source": "t", "target": "a" }]
+      },
+      "event": { "mode": "async", "table": "orders", "type": "INSERT", "row": { "id": 9 } },
+      "expect": { "mails": [], "runs": [{ "status": "error" }] }
+    },
+    {
+      "name": "fluxo em laço é interrompido em 100 passos e reportado como loop",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          { "id": "t", "type": "trigger", "data": { "triggerType": ["INSERT"], "triggerModelId": "m_orders" } },
+          { "id": "a", "type": "condition", "data": { "conditionGroups": [] } },
+          { "id": "b", "type": "condition", "data": { "conditionGroups": [] } }
+        ],
+        "edges": [
+          { "source": "t", "target": "a" },
+          { "source": "a", "target": "b", "sourceHandle": "true" },
+          { "source": "b", "target": "a", "sourceHandle": "true" }
+        ]
+      },
+      "event": { "mode": "async", "table": "orders", "type": "INSERT", "row": { "id": 1 } },
+      "expect": { "queries": [], "runs": [{ "status": "loop" }] }
+    },
+    {
+      "name": "webhook de saída com falha vira erro na execução, sem derrubar o fluxo",
+      "dialect": "postgres",
+      "httpFails": 500,
+      "flow": {
+        "nodes": [
+          { "id": "t", "type": "trigger", "data": { "triggerType": ["INSERT"], "triggerModelId": "m_orders" } },
+          { "id": "a", "type": "action", "data": { "actionType": "webhook", "webhookUrl": "https://exemplo.com/h/{{orders.id}}", "webhookMethod": "POST", "webhookBody": "{\"id\":\"{{orders.id}}\"}" } }
+        ],
+        "edges": [{ "source": "t", "target": "a" }]
+      },
+      "event": { "mode": "async", "table": "orders", "type": "INSERT", "row": { "id": 4 } },
+      "expect": { "http": [{ "method": "POST", "url": "https://exemplo.com/h/4", "data": { "id": "4" }, "timeout": 10000 }], "runs": [{ "status": "error" }] }
+    },
+    {
+      "name": "gatilho de webhook de entrada expõe {{webhook.campo}}",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          { "id": "t", "type": "trigger", "data": { "triggerType": ["webhook"] } },
+          { "id": "a", "type": "action", "data": { "actionType": "insert", "actionModelId": "m_log", "actionFields": [{ "field": "msg", "value": "recebi {{webhook.codigo}}" }] } }
+        ],
+        "edges": [{ "source": "t", "target": "a" }]
+      },
+      "event": { "mode": "webhook", "data": { "codigo": "A1" } },
+      "expect": { "queries": [{ "sql": "INSERT INTO \"audit_log\" (\"msg\") VALUES ($1)", "params": ["recebi A1"] }], "runs": [{ "status": "success", "source": "WEBHOOK" }] }
+    }
+  ]
+}

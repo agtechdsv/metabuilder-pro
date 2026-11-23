@@ -1,6 +1,7 @@
 import { AppAST, ModelNode, FieldNode } from '../ast'
 import { toPascalCase } from './routes/helpers'
 import { applyWriteGuard } from '../emitter/access-admin'
+import { applyBpmHooks } from './bpm'
 
 
 /**
@@ -55,6 +56,8 @@ export function generateActions(ast: AppAST, files: Map<string, string>) {
             ? generateSqlServerActions(model, ast.models)
             : generatePgActions(model, ast.models)
 
+    // automações (BPM): só as tabelas que algum fluxo escuta ganham os ganchos (antes da gestão de acesso: a conferência de acesso vai por fora)
+    actionContent = applyBpmHooks(actionContent, model, ast.bpm)
     if (ast.dbStack !== 'postgres' && ast.dbStack !== 'oracle') actionContent = applyStaticTableFlags(actionContent, model)
     // gestão de acesso: quem só tem leitura nas telas da tabela não grava (qualquer banco)
     if (ast.accessAdmin) actionContent = applyWriteGuard(actionContent, model)

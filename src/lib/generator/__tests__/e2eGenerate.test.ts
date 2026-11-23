@@ -1,5 +1,6 @@
 import { it, vi } from 'vitest'
 import fs from 'node:fs'
+import { createHash } from 'node:crypto'
 import path from 'node:path'
 import { buildProjectSource } from '../projectSource'
 
@@ -79,6 +80,29 @@ const world = () => fakeSupabase({
     { id: 'r5', from_model_id: 'mc', to_model_id: 'mc', from_field_id: 'k', to_field_id: 'a' },
   ],
   project_enumerations: [], project_auth_config: null,
+  // E2E_BPM=1: o app leva automações (e2e/tests/bpm.spec.ts): valida ao criar cliente e registra um produto depois de criado
+  bpm_workflows: process.env.E2E_BPM ? [
+    { id: 'wf-block', name: 'Bloqueia cliente', is_active: true, flow_data: {
+      nodes: [
+        { id: 't', type: 'trigger', data: { triggerType: ['BEFORE_INSERT'], triggerModelId: 'mc' } },
+        { id: 'c', type: 'condition', data: { conditionGroups: [{ logic: 'AND', rules: [{ field: 'observacoes', operator: '==', value: 'BLOQUEAR' }] }] } },
+        { id: 'r', type: 'response', data: { responseAllowAction: false, responseMessage: 'Cliente {{clientes.nome_empresa}} bloqueado pelo fluxo' } },
+      ],
+      edges: [{ source: 't', target: 'c' }, { source: 'c', target: 'r', sourceHandle: 'true' }] } },
+    { id: 'wf-after', name: 'Registra produto', is_active: true, flow_data: {
+      nodes: [
+        { id: 't', type: 'trigger', data: { triggerType: ['INSERT'], triggerModelId: 'mc' } },
+        { id: 'a', type: 'action', data: { actionType: 'insert', actionModelId: 'mr', actionFields: [{ field: 'nome', value: 'Auto {{clientes.nome_empresa}}' }] } },
+      ],
+      edges: [{ source: 't', target: 'a' }] } },
+    // webhook de entrada: segredo "segredo-teste" (só o hash vai no fluxo)
+    { id: 'wf-hook', name: 'Webhook de produto', is_active: true, flow_data: {
+      nodes: [
+        { id: 't', type: 'trigger', data: { triggerType: ['webhook'], triggerWebhookMethod: 'POST', triggerWebhookSecretHash: createHash('sha256').update('segredo-teste').digest('hex') } },
+        { id: 'a', type: 'action', data: { actionType: 'insert', actionModelId: 'mr', actionFields: [{ field: 'nome', value: 'Hook {{webhook.codigo}}' }] } },
+      ],
+      edges: [{ source: 't', target: 'a' }] } },
+  ] : [],
 })
 
 it.skipIf(!process.env.E2E_GEN_DIR)('gera o app de teste de ponta a ponta', async () => {

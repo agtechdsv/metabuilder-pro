@@ -335,6 +335,7 @@ export function generateAnalyticsPage(route: RouteNode, ast: AppAST): string {
         usecaseModalHeight: b.usecaseModalHeight,
         usecaseSelectedFields: b.usecaseSelectedFields || [],
         usecaseParams: b.usecaseParams || '',
+        linkedBpmWorkflows: b.linkedBpmWorkflows,
         linkTarget: b.linkTarget || '',
       }
       return `          <CustomActionButton action={${JSON.stringify(actionConfig)}} variant="header" />`

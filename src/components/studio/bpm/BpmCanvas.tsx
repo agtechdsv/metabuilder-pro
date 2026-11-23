@@ -21,6 +21,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import dagre from 'dagre';
 
+import { bpmExportSupport } from '@/lib/bpm/exportSupport';
 import { useBpmMetadata } from './hooks/useBpmMetadata';
 import { useBpmWorkflows } from './hooks/useBpmWorkflows';
 import { useBpmCanvasNodes } from './hooks/useBpmCanvasNodes';
@@ -237,9 +238,24 @@ function BpmCanvasContent({
             </select>
           </div>
 
+          {currentWorkflowId !== 'new' && (() => {
+            // o que deste fluxo vai no app exportado (Node + PostgreSQL/Oracle)
+            const s = bpmExportSupport(nodes);
+            const tone = s.level === 'full' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : s.level === 'partial' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-neutral-500/10 text-neutral-500 border-neutral-500/20';
+            const tip = [
+              s.unsupported.length > 0 ? t('bpm.canvas.export_unsupported').replace('{list}', s.unsupported.join(', ')) : '',
+              s.warnings.includes('email_system_recipients') ? t('bpm.canvas.export_warn_email') : '',
+            ].filter(Boolean).join(' ');
+            return (
+              <span data-testid="bpm-export-badge" title={tip || undefined} className={`px-2.5 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-wider ${tone}`}>
+                {t(`bpm.canvas.export_${s.level}`)}
+              </span>
+            );
+          })()}
+
           {currentWorkflowId !== 'new' && (
             <>
-              <button 
+              <button
                 onClick={handleRename}
                 className="flex items-center gap-2 px-3 py-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-400 rounded-xl text-xs font-bold transition-all"
                 title={t('bpm.canvas.rename_flow')}

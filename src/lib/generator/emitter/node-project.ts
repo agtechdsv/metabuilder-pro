@@ -3,6 +3,7 @@ import { generateRoutes } from '../layers/routes'
 import { generateActions } from '../layers/actions'
 import { generateAccessLayer } from '../layers/access'
 import { generateBiEngine } from '../layers/bi-engine'
+import { generateBpmLayer, patchBpmCustomActions } from '../layers/bpm'
 import { finalizeHelpFeedback } from '../layers/helpFeedback'
 import { generateComponents } from '../layers/components'
 import { generateBaseFiles } from './base-files'
@@ -28,7 +29,9 @@ export function generateNodeProject(ast: AppAST): Map<string, string> {
   generateAccessLayer(ast, files)
   generateActions(ast, files)
   generateBiEngine(ast, files)
+  generateBpmLayer(ast, files)
   generateComponents(ast, files)
+  patchBpmCustomActions(ast, files)
 
   // 3. Página de Login
   generateLoginPage(ast, files)

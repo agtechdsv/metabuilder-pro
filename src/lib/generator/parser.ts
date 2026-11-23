@@ -1,6 +1,7 @@
 import { cleanRowPolicy, cleanTableAccessMode } from '../rowPolicy/policy'
 import { cleanAuditConfig, effectiveAudit } from '../rowPolicy/audit'
 import { buildAccessAdmin } from './accessAdmin'
+import { buildBpmExport } from './bpmExport'
 import {
   AppAST,
   BackendStack,
@@ -924,6 +925,7 @@ function parseCustomActions(customActions: any[], allViews: any[] = []): ViewBut
       usecaseModalHeight,
       usecaseSelectedFields,
       usecaseParams,
+      linkedBpmWorkflows: Array.isArray(act.linked_bpm_workflows) && act.linked_bpm_workflows.length ? act.linked_bpm_workflows : undefined,
     }
 
     // 1. Linha do Grid de Pesquisa / Card de Agenda / Kanban / Galeria
@@ -983,6 +985,7 @@ function customActionDef(act: any, allViews: any[]): CustomActionDef {
     usecaseModalHeight: act.usecase_modal_height,
     usecaseSelectedFields: act.usecase_selected_fields || [],
     usecaseParams: act.usecase_params || '',
+    linkedBpmWorkflows: Array.isArray(act.linked_bpm_workflows) && act.linked_bpm_workflows.length ? act.linked_bpm_workflows : undefined,
     linkTarget,
   }
 }
@@ -2967,6 +2970,7 @@ export function parseMetaBuilderJSON(
     supabaseAnonKey: options?.supabaseAnonKey,
     authConfig,
     biSchema: buildBiSchema(rawModels, rawFields, rawRelations),
+    bpm: buildBpmExport(rawJson.bpm_workflows, models, dbStack, options?.backendStack),
     navigation,
     models,
     routes,

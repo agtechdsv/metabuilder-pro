@@ -659,6 +659,7 @@ export function customActionConfigJson(a: CustomActionDef): string {
     usecaseModalHeight: a.usecaseModalHeight,
     usecaseSelectedFields: a.usecaseSelectedFields || [],
     usecaseParams: a.usecaseParams || '',
+    linkedBpmWorkflows: a.linkedBpmWorkflows,
     linkTarget: a.linkTarget || '',
   })
 }

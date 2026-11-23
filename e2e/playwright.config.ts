@@ -7,6 +7,7 @@ import path from 'node:path'
  * Usa o Chrome instalado na máquina (nada para baixar).
  */
 const PG_NODE_PORT = 3101
+const PG_NODE_BPM_PORT = 3103
 
 export default defineConfig({
   testDir: './tests',
@@ -19,9 +20,12 @@ export default defineConfig({
   globalSetup: './global-setup.ts',
   use: { channel: 'chrome', headless: true, trace: 'retain-on-failure', screenshot: 'only-on-failure', locale: 'pt-BR' },
   projects: [
-    { name: 'pg-node', use: { baseURL: `http://localhost:${PG_NODE_PORT}` } },
+    { name: 'pg-node', testIgnore: /bpm.spec/, use: { baseURL: `http://localhost:${PG_NODE_PORT}` } },
+    // app com automações (BPM): npm run gen -- pg-node-bpm
+    { name: 'pg-node-bpm', testMatch: /bpm.spec/, use: { baseURL: `http://localhost:${PG_NODE_BPM_PORT}` } },
   ],
   webServer: [
     { command: `npx next start -p ${PG_NODE_PORT}`, cwd: './.apps/pg-node', url: `http://localhost:${PG_NODE_PORT}/login`, reuseExistingServer: true, timeout: 60_000, env: { EXPORT_DIR: path.resolve(import.meta.dirname, '.apps', 'exports-pg-node') } },
+    { command: `npx next start -p ${PG_NODE_BPM_PORT}`, cwd: './.apps/pg-node-bpm', url: `http://localhost:${PG_NODE_BPM_PORT}/login`, reuseExistingServer: true, timeout: 60_000, env: { EXPORT_DIR: path.resolve(import.meta.dirname, '.apps', 'exports-pg-node-bpm'), BPM_VERBOSE: '1' } },
   ],
 })

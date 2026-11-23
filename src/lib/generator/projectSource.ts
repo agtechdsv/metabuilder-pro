@@ -81,12 +81,14 @@ export async function loadProjectAst(
   const { data: project, error: projError } = await supabase.from('projects').select('*').eq('id', projectId).single()
   if (projError || !project) throw new ProjectSourceError('Projeto não encontrado', 404)
 
-  const [{ data: models }, { data: views }, { data: relations }, { data: authConfig }, { data: enumerations }] = await Promise.all([
+  const [{ data: models }, { data: views }, { data: relations }, { data: authConfig }, { data: enumerations }, { data: bpmWorkflows }] = await Promise.all([
     supabase.from('models').select('*, fields(*)').eq('project_id', projectId),
     supabase.from('ui_views').select('*, ui_components(*)').eq('project_id', projectId).eq('status', 'published'),
     supabase.from('relations').select('*').eq('project_id', projectId),
     supabase.from('project_auth_config').select('*').eq('project_id', projectId).maybeSingle(),
     supabase.from('project_enumerations').select('*').eq('project_id', projectId),
+    // fluxos de automação (BPM) ativos: o app exportado leva o retrato deles
+    supabase.from('bpm_workflows').select('id, name, flow_data, is_active').eq('project_id', projectId).eq('is_active', true),
   ])
 
   // Sem telas publicadas, usa todas
@@ -133,6 +135,7 @@ export async function loadProjectAst(
     components,
     relations: relations || [],
     enumerations: enumerations || [],
+    bpm_workflows: bpmWorkflows || [],
     auth_config: authRaw,
   }
 

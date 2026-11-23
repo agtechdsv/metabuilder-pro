@@ -229,6 +229,7 @@ ${helpIconJsx(visibleHelp(f.config?.label)) ? helpIconJsx(visibleHelp(f.config?.
         usecaseModalHeight: b.usecaseModalHeight,
         usecaseSelectedFields: b.usecaseSelectedFields || [],
         usecaseParams: b.usecaseParams || '',
+        linkedBpmWorkflows: b.linkedBpmWorkflows,
         linkTarget: b.linkTarget || '',
       }
       return `                      <CustomActionButton action={${JSON.stringify(actionConfig)}} item={item} />`
@@ -491,6 +492,7 @@ ${route.buttons.filter(b => b.placement === 'header').map(b => {
       usecaseModalHeight: b.usecaseModalHeight,
       usecaseSelectedFields: b.usecaseSelectedFields || [],
       usecaseParams: b.usecaseParams || '',
+      linkedBpmWorkflows: b.linkedBpmWorkflows,
       linkTarget: b.linkTarget || '',
     }
     return `          <CustomActionButton action={${JSON.stringify(actionConfig)}} variant="header" />`

@@ -491,6 +491,7 @@ export function generateGallerySchema(route: RouteNode): string {
       usecaseModalHeight: b.usecaseModalHeight,
       usecaseSelectedFields: b.usecaseSelectedFields || [],
       usecaseParams: b.usecaseParams || '',
+      linkedBpmWorkflows: b.linkedBpmWorkflows,
       linkTarget: b.linkTarget || '',
     }))
 
@@ -516,6 +517,7 @@ export function generateGallerySchema(route: RouteNode): string {
           usecaseModalHeight: a.usecase_modal_height,
           usecaseSelectedFields: a.usecase_selected_fields || [],
           usecaseParams: a.usecase_params || '',
+          linkedBpmWorkflows: a.linked_bpm_workflows?.length ? a.linked_bpm_workflows : undefined,
           linkTarget: a.linkTarget || a.url || a.target_url || (a.usecase_slug ? `/${a.usecase_slug}` : ''),
         })
       })

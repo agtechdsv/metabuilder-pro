@@ -126,6 +126,13 @@ export function nodeEnvExample(ast: AppAST): string {
     ? ['', '# Login por LDAP / Active Directory', 'LDAP_URL=', 'LDAP_BASE_DN=', 'LDAP_BIND_DN=', 'LDAP_BIND_PASSWORD=', 'LDAP_SEARCH_FILTER=(sAMAccountName={{username}})']
     : []
   const supa = ast.dbStack === 'supabase' ? ['', '# Supabase (valores públicos, usados na compilação da imagem)', 'NEXT_PUBLIC_SUPABASE_URL=', 'NEXT_PUBLIC_SUPABASE_ANON_KEY='] : []
+  const bpm = ast.bpm
+    ? ['', '# Automações (BPM): e-mail pelo SMTP da empresa (nos fluxos com ação de e-mail)', 'SMTP_HOST=', 'SMTP_PORT=587', 'SMTP_USER=', 'SMTP_PASSWORD=',
+      '# Remetente (padrão: SMTP_USER) e destinatário quando o fluxo não achar ninguém', 'BPM_MAIL_FROM=', 'BPM_MAIL_FALLBACK=',
+      '# Quem recebe o aviso quando um fluxo termina com erro (vazio = sem aviso)', 'BPM_ERROR_EMAIL=',
+      '# Agendamentos: on (padrão) ou off. O servidor precisa ficar ligado nos horários dos fluxos agendados', 'BPM_SCHEDULER=on',
+      '# Fuso dos agendamentos e por quantos dias o histórico (tabela mb_bpm_runs) é guardado', 'BPM_TIMEZONE=America/Sao_Paulo', 'BPM_RUNS_RETENTION_DAYS=30']
+    : []
   return `# =========================================================================
 # .env.example — variáveis do app em PRODUÇÃO
 # Copie para ".env" (ao lado do docker-compose.prod.yml) e preencha. Sem aspas. Nunca publique o .env.
@@ -144,7 +151,25 @@ MB_SESSION_SECRET=
 # Pasta das cópias das exportações (dentro do contêiner; é um volume) e por quanto tempo ficam (horas; 0 = não expira)
 EXPORT_DIR=/data/exports
 EXPORT_RETENTION_HOURS=${ast.downloadRetentionHours === null ? 0 : (ast.downloadRetentionHours ?? 24)}
-${[...ldap, ...supa].join('\n')}
+${[...ldap, ...supa, ...bpm].join('\n')}
+`
+}
+
+/** Seção do DEPLOY.md sobre as automações (BPM), só nos apps que levam fluxos. */
+function bpmDeploySection(ast: AppAST): string {
+  if (!ast.bpm) return ''
+  const n = ast.bpm.flows.length
+  return `## Automações (BPM)
+
+Este app leva **${n} fluxo${n === 1 ? '' : 's'} de automação**, um *retrato* do que estava ativo no Studio quando o código foi gerado: o app só muda quando o projeto é exportado de novo.
+
+- **Validações ("Antes de criar/editar/excluir"):** rodam no servidor, antes de gravar, e podem bloquear a ação com a mensagem do fluxo.
+- **Eventos ("Ao criar/editar/excluir"), botões ligados a fluxos e webhook de entrada** (\`POST /api/bpm/webhook/<id do fluxo>\`, com o segredo do fluxo em \`Authorization: Bearer\` ou \`X-Webhook-Secret\`).
+- **Agendamentos:** o servidor precisa ficar **ligado** nos horários. Com várias réplicas, só uma executa cada disparo (trava na tabela \`mb_bpm_locks\`); para desligar os agendamentos de uma instância, \`BPM_SCHEDULER=off\`.
+- **E-mail:** sai pelo SMTP da empresa (\`SMTP_HOST\`, \`SMTP_PORT\`, \`SMTP_USER\`, \`SMTP_PASSWORD\` no \`.env\`). Sem SMTP, o fluxo continua e a execução fica registrada com erro. "Usuários e grupos do sistema" como destinatários não são resolvidos aqui: use e-mail fixo, campo da tabela ou \`BPM_MAIL_FALLBACK\`.
+- **Histórico:** cada execução é gravada na tabela \`mb_bpm_runs\` do banco do app (criada sozinha; o usuário do banco precisa poder criar tabelas na primeira execução). \`BPM_RUNS_RETENTION_DAYS\` define por quantos dias fica; \`BPM_ERROR_EMAIL\` recebe aviso de falhas.
+- **Log:** por padrão os dados dos registros não vão para o log (são dados pessoais); \`BPM_VERBOSE=1\` liga o modo detalhado, só para investigação.
+
 `
 }
 
@@ -587,7 +612,7 @@ Coloque na frente um proxy com HTTPS (Caddy, nginx, ou IIS com ARR no Windows) a
 - **Saúde:** ${java ? 'frontend `GET /api/health`; backend `GET /api-docs`.' : '`GET /api/health` (liveness e readiness).'}
 - **Exportações:** com mais de uma réplica, \`EXPORT_DIR\` precisa de um volume compartilhado, e \`MB_SESSION_SECRET\`${java ? ' e `JWT_SECRET`' : ''} têm de ser iguais em todas.
 
-## Lista de conferência
+${java ? '' : bpmDeploySection(ast)}## Lista de conferência
 
 - [ ] Segredos próprios gerados (nada de valores de exemplo) e guardados fora do repositório.
 - [ ] HTTPS ativo e \`DOMAIN\` correto.

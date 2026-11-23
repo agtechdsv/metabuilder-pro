@@ -135,6 +135,8 @@ export interface CustomActionDef {
   usecaseModalHeight?: string
   usecaseSelectedFields?: Array<CustomActionParam | string>
   usecaseParams?: string
+  /** fluxos BPM ligados ao botão (rodam no servidor do app exportado) */
+  linkedBpmWorkflows?: string[]
   linkTarget?: string
 }
 
@@ -158,6 +160,8 @@ export interface ViewButton {
   usecaseModalHeight?: string
   usecaseSelectedFields?: Array<CustomActionParam | string>
   usecaseParams?: string
+  /** fluxos BPM ligados ao botão (rodam no servidor do app exportado) */
+  linkedBpmWorkflows?: string[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -538,6 +542,19 @@ export interface NavigationItem {
 // App AST — projeto único
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Fluxos BPM do projeto prontos para o app exportado: o app não acessa a plataforma, então leva o retrato dos fluxos e o mapa modelo → tabela. */
+export interface BpmExport {
+  dialect: 'postgres' | 'oracle'
+  /** id do modelo (como o fluxo o referencia) → nome da tabela no banco */
+  models: Record<string, string>
+  flows: Array<{ id: string; name: string; flow_data: { nodes: any[]; edges: any[] } }>
+  /** tabelas em que algum fluxo escuta INSERT/UPDATE/DELETE ou BEFORE_*: só as ações dessas tabelas ganham os ganchos */
+  hookedTables: string[]
+  /** há fluxo com gatilho de webhook de entrada / de agendamento */
+  hasWebhook: boolean
+  hasSchedule: boolean
+}
+
 export interface AppAST {
   projectId?: string
   /** Horas que as exportações ficam guardadas (Studio: Retenção de exports). null = sem expiração; ausente = 24. */
@@ -555,6 +572,8 @@ export interface AppAST {
   accessAdmin?: AccessAdminConfig
   /** Tabelas e relações no formato do projeto (entrada do planejador de BI embutido no app exportado) */
   biSchema?: { models: any[]; relations: any[] }
+  /** Fluxos de automação (BPM) levados no app Node exportado (retrato dos fluxos ativos no momento da geração); ausente = sem fluxos */
+  bpm?: BpmExport
   navigation: NavigationItem[] // estrutura de menu (espelho do project.navigation)
   models: ModelNode[]
   routes: RouteNode[]
