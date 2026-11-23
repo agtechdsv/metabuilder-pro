@@ -30,9 +30,17 @@ export interface CampaignTerms {
   months: number
   /** quantas licenças foram compradas na campanha (as acrescentadas depois pagam preço regular) */
   licenses: number
+  /**
+   * Preço promocional por licença/mês que o cliente viu ao comprar (valor base x % da campanha), TRAVADO na compra: um reajuste da tabela não o altera.
+   * Sem ele (campanhas antigas), vale % da tabela de hoje, como antes.
+   */
+  unitPrice?: number
 }
 
 export const round2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 100
+
+/** Preço promocional por licença/mês a travar na compra: valor base x % da campanha, em centavos. */
+export const campaignUnitPriceFor = (rules: { base_price: number | string }, percent: number | string): number => round2(Number(rules.base_price) * (Number(percent) / 100))
 const num = (v: unknown, fallback = 0): number => { const n = Number(v); return Number.isFinite(n) ? n : fallback }
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n))
 
@@ -102,7 +110,9 @@ export function chargeBreakdown(input: ChargeInput): ChargeBreakdown {
   const campaignLicenses = campaign ? clamp(Math.floor(num(campaign.licenses, licenses)), 0, licenses) : 0
   const extraLicenses = licenses - campaignLicenses
   // o menor entre o preço da campanha e o preço regular: a campanha nunca sai pior que a compra normal
-  const campaignUnit = campaign ? Math.min(basePrice(input.rules) * (num(campaign.percent, 50) / 100), regularUnit) : regularUnit
+  // (preço travado na compra, se houver; senão % da tabela de hoje)
+  const campaignTable = campaign && num(campaign.unitPrice, 0) > 0 ? num(campaign.unitPrice) : basePrice(input.rules) * (num(campaign?.percent, 50) / 100)
+  const campaignUnit = campaign ? Math.min(campaignTable, regularUnit) : regularUnit
 
   const regularMonths = months - campaignMonths
   const campaignPart = campaignLicenses * campaignMonths * campaignUnit

@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
 import { campaignFromProfile, findEligibleCampaign, referralPercentFor } from "../_shared/iclub.ts";
-import { CYCLE_MONTHS, chargeBreakdown, isCycle, isCycleEnabled, nextChargeValue, type CampaignTerms } from "../_shared/pricing.ts";
+import { CYCLE_MONTHS, campaignUnitPriceFor, chargeBreakdown, isCycle, isCycleEnabled, nextChargeValue, type CampaignTerms } from "../_shared/pricing.ts";
 import { buildPaymentRef, isOwnCustomerRef, ownCustomerRef } from "../_shared/familyRefs.ts";
 import { reactivationDueDate } from "../_shared/billingCore.ts";
 
@@ -116,7 +116,8 @@ serve(async (req) => {
       if (!paidBefore) {
         newCampaign = await findEligibleCampaign(supabaseClient, user.email);
         if (newCampaign) {
-          campaignTerms = { percent: Number(newCampaign.discount_percent), months: Number(newCampaign.months), licenses: Number(licenses) };
+          // o preço promocional que o cliente vê agora fica TRAVADO na compra: um reajuste da tabela depois não o altera
+          campaignTerms = { percent: Number(newCampaign.discount_percent), months: Number(newCampaign.months), licenses: Number(licenses), unitPrice: campaignUnitPriceFor(rules, newCampaign.discount_percent) };
         }
       }
     }
@@ -492,6 +493,7 @@ serve(async (req) => {
             campaign_percent: newCampaign ? Number(newCampaign.discount_percent) : null,
             campaign_months: newCampaign ? Number(newCampaign.months) : null,
             campaign_licenses: newCampaign ? Number(licenses) : null,
+            campaign_unit_price: newCampaign ? campaignUnitPriceFor(rules, newCampaign.discount_percent) : null,
             campaign_months_used: 0
           })
         .eq("id", user.id);

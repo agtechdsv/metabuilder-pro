@@ -520,8 +520,17 @@ export async function savePricingRules(rules: {
     // check if exists
     const { data: existing } = await adminSupabase
       .from('pricing_rules')
-      .select('id')
+      .select('id, base_price')
       .limit(1)
+
+    // AUMENTAR o valor base com assinantes ativos exige o aviso prévio do reajuste agendado (Regras de Preços > Reajustar): aqui só se salva sem aumento.
+    if (existing && existing.length > 0 && Number(rules.base_price) > Number(existing[0].base_price)) {
+      const { count } = await adminSupabase.from('profiles').select('id', { count: 'exact', head: true })
+        .not('asaas_subscription_id', 'is', null).neq('subscription_status', 'canceled').gt('subscription_licenses', 0)
+      if ((count ?? 0) > 0) {
+        return { success: false, error: 'Para AUMENTAR o valor base use "Reajustar" (aviso mínimo de 30 dias aos assinantes). Reduções e os demais campos podem ser salvos aqui.' }
+      }
+    }
 
     let error;
     if (existing && existing.length > 0) {

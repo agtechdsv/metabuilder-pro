@@ -17,6 +17,10 @@
       "schedule": "0 4 * * *"
     },
     {
+      "path": "/api/cron/price-change",
+      "schedule": "30 4 * * *"
+    },
+    {
       "path": "/api/cron/billing-notices",
       "schedule": "0 11 * * *"
     },

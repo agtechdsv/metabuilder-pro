@@ -48,7 +48,7 @@ serve(async (req) => {
     // Fetch user profile
     const { data: profile, error: profileError } = await supabaseClient
       .from("profiles")
-      .select("id, asaas_subscription_id, asaas_customer_id, subscription_licenses, subscription_cycle, subscription_status, campaign_id, campaign_percent, campaign_months, campaign_licenses, campaign_months_used")
+      .select("id, asaas_subscription_id, asaas_customer_id, subscription_licenses, subscription_cycle, subscription_status, campaign_id, campaign_percent, campaign_months, campaign_licenses, campaign_months_used, campaign_unit_price")
       .eq("id", user.id)
       .single();
 

@@ -1,4 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { myPriceChangeNoticeAction } from '@/app/actions/priceChange'
+import type { MyPriceNotice } from '@/lib/billing/priceChangeService'
 import { CreditCard, ExternalLink, Loader2, Search, ShieldAlert, Sliders, X } from 'lucide-react'
 import { invoiceLinkKind } from '@/lib/billing/invoiceLink'
 import { paymentDisplayDate } from '@/lib/billing/paymentDate'
@@ -31,6 +33,9 @@ export function ClientSubscriptionView({
 }: ClientSubscriptionViewProps) {
   const { t } = useI18n()
   const [qrOpen, setQrOpen] = useState(false)
+  // reajuste de preço agendado que vale para este cliente (null = nenhum): aviso discreto com o valor atual e o novo
+  const [priceNotice, setPriceNotice] = useState<MyPriceNotice | null>(null)
+  useEffect(() => { let alive = true; void myPriceChangeNoticeAction().then(n => { if (alive) setPriceNotice(n) }); return () => { alive = false } }, [])
   // FREE que só abriu o checkout: texto suave, sem "evite interrupções"
   const isFree = !localProfile?.subscription_licenses && !localProfile?.is_super_admin
   // fatura ainda longe de vencer (a próxima renovação): aviso discreto de "Próxima fatura", sem "evite interrupções"
@@ -88,6 +93,20 @@ export function ClientSubscriptionView({
             <Sliders className="w-4 h-4" />
             {t('client_views.subscription.reactivate_button', 'Reativar assinatura')}
           </button>
+        </div>
+      )}
+
+      {/* Reajuste de preço agendado: vale nas renovações a partir da data; nada muda até lá */}
+      {priceNotice && !isCanceled && (
+        <div data-testid="price-change-notice" className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 shadow-sm space-y-1.5">
+          <h4 className="text-xs font-black text-neutral-800 dark:text-neutral-200 uppercase tracking-widest">
+            {t('client_views.subscription.price_notice_title', 'Reajuste de preço a partir de {date}').replace('{date}', priceNotice.effectiveOn.split('-').reverse().join('/'))}
+          </h4>
+          <p className="text-xs text-neutral-600 dark:text-neutral-400 max-w-2xl">
+            {t('client_views.subscription.price_notice_desc', 'O valor da sua assinatura ({cycle}) passará de {current} para {next} na sua primeira renovação a partir dessa data. Até lá nada muda. Se preferir, você pode cancelar a renovação a qualquer momento e mantém o acesso até o fim do período pago.')
+              .replace('{cycle}', getCycleLabel(priceNotice.cycle)).replace('{current}', formatPrice(priceNotice.currentAmount)).replace('{next}', formatPrice(priceNotice.newAmount))}
+            {priceNotice.campaignActive ? ' ' + t('client_views.subscription.price_notice_promo', 'O preço promocional da sua campanha não muda até o fim dos meses promocionais.') : ''}
+          </p>
         </div>
       )}
 

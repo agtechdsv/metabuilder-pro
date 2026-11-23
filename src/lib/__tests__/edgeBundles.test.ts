@@ -17,7 +17,7 @@ describe('Edge Functions em arquivo único (colar no painel)', () => {
   it('o gerador roda sem apontar nomes repetidos e cada arquivo compila', () => {
     execFileSync(process.execPath, [path.join(root, 'scripts', 'bundle-edge-functions.mjs')], { cwd: root, stdio: 'pipe' })
     const names = readdirSync(outDir).filter(n => existsSync(path.join(outDir, n, 'index.ts')))
-    expect(names.sort()).toEqual(['admin-cancel-billing', 'asaas-cancel', 'asaas-checkout', 'asaas-update-subscription', 'asaas-webhook', 'iclub-release', 'partner-payout', 'partner-transfer-validation'])
+    expect(names.sort()).toEqual(['admin-cancel-billing', 'asaas-cancel', 'asaas-checkout', 'asaas-update-subscription', 'asaas-webhook', 'iclub-release', 'partner-payout', 'partner-transfer-validation', 'price-change-apply'])
     for (const name of names) {
       const src = readFileSync(path.join(outDir, name, 'index.ts'), 'utf8')
       const js = ts.transpileModule(src, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText

@@ -19,6 +19,12 @@ export interface BillingMailData {
   suspendOn?: string | null
   graceDays?: number
   wasSuspended?: boolean
+  /** reajuste de preço: dia em que o novo valor passa a valer (YYYY-MM-DD), valor atual e novo da assinatura do cliente (por ciclo), ciclo e se ele ainda está em meses de campanha */
+  effectiveOn?: string | null
+  currentAmount?: number | null
+  newAmount?: number | null
+  cycle?: string | null
+  campaignActive?: boolean
   /** estorno PARCIAL: quanto foi devolvido (amount é o valor total do pagamento); `partial` escolhe o texto do estorno parcial */
   refundedAmount?: number | null
   partial?: boolean
@@ -35,7 +41,20 @@ const day = (iso: string | null | undefined, lang: MailLang) => {
 }
 
 type Fn = (d: BillingMailData, lang: MailLang) => string
-interface Text { subject: string; title: string; intro: Fn; button?: string; note?: Fn }
+interface Text { subject: string | Fn; title: string; intro: Fn; button?: string; note?: Fn }
+
+// ---- reajuste de preço: o ciclo por extenso ("por mês", "por semestre") e a nota da campanha ----
+const CYCLE_NAME: Record<MailLang, Record<string, string>> = {
+  pt: { monthly: 'mês', quarterly: 'trimestre', semiannual: 'semestre', yearly: 'ano' },
+  en: { monthly: 'month', quarterly: 'quarter', semiannual: 'half-year', yearly: 'year' },
+  es: { monthly: 'mes', quarterly: 'trimestre', semiannual: 'semestre', yearly: 'año' },
+}
+const per = (d: BillingMailData, l: MailLang) => CYCLE_NAME[l][d.cycle || 'monthly'] ?? CYCLE_NAME[l].monthly
+const PROMO_NOTE: Record<MailLang, Fn> = {
+  pt: d => (d.campaignActive ? 'O preço promocional da sua campanha não muda até o fim dos meses promocionais.' : ''),
+  en: d => (d.campaignActive ? 'The promotional price of your campaign does not change until the promotional months end.' : ''),
+  es: d => (d.campaignActive ? 'El precio promocional de su campaña no cambia hasta el fin de los meses promocionales.' : ''),
+}
 
 const suspendLine = {
   pt: (d: BillingMailData, l: MailLang) => (d.suspendOn && (d.graceDays ?? 0) > 0 ? `Para manter o acesso, pague até ${day(d.suspendOn, l)}: depois dessa data a conta será suspensa.` : 'O acesso pode ser suspenso a qualquer momento.'),
@@ -54,6 +73,9 @@ const TEXTS: Record<MailLang, Record<string, Text>> = {
     payment_received: { subject: 'Recebemos o seu pagamento', title: 'Pagamento recebido', intro: (d, l) => `Olá, ${d.name}! Recebemos o seu pagamento de ${money(d.amount, l)}. Obrigado!${d.wasSuspended ? ' O seu acesso foi restabelecido.' : ''}`, button: 'Abrir meu painel' },
     card_refused: { subject: 'Não conseguimos cobrar o seu cartão', title: 'Cobrança no cartão recusada', intro: (d, l) => `Olá, ${d.name}. A cobrança de ${money(d.amount, l)} no seu cartão foi recusada. Atualize o cartão ou pague de outra forma para não perder o acesso.`, button: 'Atualizar pagamento' },
     refunded: { subject: 'Seu pagamento foi estornado', title: 'Pagamento estornado', intro: (d, l) => `Olá, ${d.name}. O pagamento de ${money(d.amount, l)} foi estornado. Se você não pediu isso, fale com a gente.` },
+    price_change: { subject: (d, l) => `Reajuste de preço do MetaBuilder PRO a partir de ${day(d.effectiveOn, l)}`, title: 'Reajuste de preço', intro: (d, l) => `Olá, ${d.name}. A partir de ${day(d.effectiveOn, l)}, o valor do plano PRO será reajustado. O novo valor vale na sua primeira renovação a partir dessa data: a sua assinatura passará de ${money(d.currentAmount, l)} para ${money(d.newAmount, l)} por ${per(d, l)}. Até lá nada muda: o que já foi gerado continua como está. Se preferir não continuar, você pode cancelar a renovação a qualquer momento na aba Assinatura, sem multa, e mantém o acesso até o fim do período pago.`, note: PROMO_NOTE.pt, button: 'Ver minha assinatura' },
+    price_change_reminder: { subject: (d, l) => `Lembrete: o valor do plano PRO muda em ${day(d.effectiveOn, l)}`, title: 'O reajuste está chegando', intro: (d, l) => `Olá, ${d.name}. Lembrando: em ${day(d.effectiveOn, l)} o valor do plano PRO será reajustado. Na primeira renovação a partir dessa data, a sua assinatura passará de ${money(d.currentAmount, l)} para ${money(d.newAmount, l)} por ${per(d, l)}. Se preferir não continuar, cancele a renovação na aba Assinatura; o acesso segue até o fim do período pago.`, note: PROMO_NOTE.pt, button: 'Ver minha assinatura' },
+    price_change_renewal: { subject: 'Sua próxima renovação terá o novo valor', title: 'Sua renovação terá o novo valor', intro: (d, l) => `Olá, ${d.name}. A sua assinatura renova em ${day(d.dueDate, l)} e, nessa renovação, já vale o novo valor do plano PRO: de ${money(d.currentAmount, l)} para ${money(d.newAmount, l)} por ${per(d, l)}. Se preferir não renovar, cancele a renovação na aba Assinatura antes dessa data; o acesso segue até o fim do período pago.`, note: PROMO_NOTE.pt, button: 'Ver minha assinatura' },
     refunded_partial: { subject: 'Parte do seu pagamento foi estornada', title: 'Estorno parcial', intro: (d, l) => `Olá, ${d.name}. Estornamos ${d.refundedAmount ? money(d.refundedAmount, l) : 'parte'} do seu pagamento de ${money(d.amount, l)}. Sua assinatura continua ativa.` },
     canceled: { subject: 'A renovação da sua assinatura foi cancelada', title: 'Renovação cancelada', intro: (d, l) => `Olá, ${d.name}. Cancelamos a renovação automática da sua assinatura. Seu acesso continua até ${day(d.validUntil, l)}. Você pode reativar quando quiser.`, button: 'Reativar assinatura' },
     ending_soon: { subject: 'Seu acesso ao MetaBuilder PRO termina em breve', title: 'Seu acesso termina em breve', intro: (d, l) => `Olá, ${d.name}. Seu acesso termina em ${day(d.validUntil, l)}. Para continuar, reative a assinatura.`, button: 'Reativar assinatura' },
@@ -69,6 +91,9 @@ const TEXTS: Record<MailLang, Record<string, Text>> = {
     payment_received: { subject: 'We received your payment', title: 'Payment received', intro: (d, l) => `Hello, ${d.name}! We received your payment of ${money(d.amount, l)}. Thank you!${d.wasSuspended ? ' Your access has been restored.' : ''}`, button: 'Open my dashboard' },
     card_refused: { subject: 'We could not charge your card', title: 'Card charge declined', intro: (d, l) => `Hello, ${d.name}. The charge of ${money(d.amount, l)} on your card was declined. Update your card or pay another way so you do not lose access.`, button: 'Update payment' },
     refunded: { subject: 'Your payment was refunded', title: 'Payment refunded', intro: (d, l) => `Hello, ${d.name}. The payment of ${money(d.amount, l)} was refunded. If you did not ask for this, contact us.` },
+    price_change: { subject: (d, l) => `MetaBuilder PRO price update starting ${day(d.effectiveOn, l)}`, title: 'Price update', intro: (d, l) => `Hello, ${d.name}. Starting ${day(d.effectiveOn, l)}, the PRO plan price will be updated. The new price applies at your first renewal on or after that date: your subscription will go from ${money(d.currentAmount, l)} to ${money(d.newAmount, l)} per ${per(d, l)}. Until then nothing changes: what has already been generated stays as it is. If you prefer not to continue, you can cancel the renewal at any time in the Subscription tab, with no penalty, and keep access until the end of the paid period.`, note: PROMO_NOTE.en, button: 'View my subscription' },
+    price_change_reminder: { subject: (d, l) => `Reminder: the PRO plan price changes on ${day(d.effectiveOn, l)}`, title: 'The price update is coming', intro: (d, l) => `Hello, ${d.name}. A reminder: on ${day(d.effectiveOn, l)} the PRO plan price will be updated. At your first renewal on or after that date, your subscription will go from ${money(d.currentAmount, l)} to ${money(d.newAmount, l)} per ${per(d, l)}. If you prefer not to continue, cancel the renewal in the Subscription tab; access continues until the end of the paid period.`, note: PROMO_NOTE.en, button: 'View my subscription' },
+    price_change_renewal: { subject: 'Your next renewal will have the new price', title: 'Your renewal will have the new price', intro: (d, l) => `Hello, ${d.name}. Your subscription renews on ${day(d.dueDate, l)} and that renewal already uses the new PRO plan price: from ${money(d.currentAmount, l)} to ${money(d.newAmount, l)} per ${per(d, l)}. If you prefer not to renew, cancel the renewal in the Subscription tab before that date; access continues until the end of the paid period.`, note: PROMO_NOTE.en, button: 'View my subscription' },
     refunded_partial: { subject: 'Part of your payment was refunded', title: 'Partial refund', intro: (d, l) => `Hello, ${d.name}. We refunded ${d.refundedAmount ? money(d.refundedAmount, l) : 'part'} of your payment of ${money(d.amount, l)}. Your subscription remains active.` },
     canceled: { subject: 'Your subscription renewal was canceled', title: 'Renewal canceled', intro: (d, l) => `Hello, ${d.name}. We canceled the automatic renewal of your subscription. Your access continues until ${day(d.validUntil, l)}. You can reactivate whenever you want.`, button: 'Reactivate subscription' },
     ending_soon: { subject: 'Your MetaBuilder PRO access ends soon', title: 'Your access ends soon', intro: (d, l) => `Hello, ${d.name}. Your access ends on ${day(d.validUntil, l)}. To continue, reactivate your subscription.`, button: 'Reactivate subscription' },
@@ -84,6 +109,9 @@ const TEXTS: Record<MailLang, Record<string, Text>> = {
     payment_received: { subject: 'Recibimos su pago', title: 'Pago recibido', intro: (d, l) => `¡Hola, ${d.name}! Recibimos su pago de ${money(d.amount, l)}. ¡Gracias!${d.wasSuspended ? ' Su acceso fue restablecido.' : ''}`, button: 'Abrir mi panel' },
     card_refused: { subject: 'No pudimos cobrar su tarjeta', title: 'Cobro en la tarjeta rechazado', intro: (d, l) => `Hola, ${d.name}. El cobro de ${money(d.amount, l)} en su tarjeta fue rechazado. Actualice la tarjeta o pague de otra forma para no perder el acceso.`, button: 'Actualizar pago' },
     refunded: { subject: 'Su pago fue reembolsado', title: 'Pago reembolsado', intro: (d, l) => `Hola, ${d.name}. El pago de ${money(d.amount, l)} fue reembolsado. Si usted no lo pidió, contáctenos.` },
+    price_change: { subject: (d, l) => `Actualización de precio de MetaBuilder PRO desde el ${day(d.effectiveOn, l)}`, title: 'Actualización de precio', intro: (d, l) => `Hola, ${d.name}. Desde el ${day(d.effectiveOn, l)}, el precio del plan PRO se actualizará. El nuevo precio vale en su primera renovación a partir de esa fecha: su suscripción pasará de ${money(d.currentAmount, l)} a ${money(d.newAmount, l)} por ${per(d, l)}. Hasta entonces nada cambia: lo que ya se generó sigue igual. Si prefiere no continuar, puede cancelar la renovación en cualquier momento en la pestaña Suscripción, sin penalización, y mantiene el acceso hasta el fin del período pagado.`, note: PROMO_NOTE.es, button: 'Ver mi suscripción' },
+    price_change_reminder: { subject: (d, l) => `Recordatorio: el precio del plan PRO cambia el ${day(d.effectiveOn, l)}`, title: 'La actualización de precio se acerca', intro: (d, l) => `Hola, ${d.name}. Un recordatorio: el ${day(d.effectiveOn, l)} el precio del plan PRO se actualizará. En la primera renovación a partir de esa fecha, su suscripción pasará de ${money(d.currentAmount, l)} a ${money(d.newAmount, l)} por ${per(d, l)}. Si prefiere no continuar, cancele la renovación en la pestaña Suscripción; el acceso sigue hasta el fin del período pagado.`, note: PROMO_NOTE.es, button: 'Ver mi suscripción' },
+    price_change_renewal: { subject: 'Su próxima renovación tendrá el nuevo precio', title: 'Su renovación tendrá el nuevo precio', intro: (d, l) => `Hola, ${d.name}. Su suscripción se renueva el ${day(d.dueDate, l)} y esa renovación ya usa el nuevo precio del plan PRO: de ${money(d.currentAmount, l)} a ${money(d.newAmount, l)} por ${per(d, l)}. Si prefiere no renovar, cancele la renovación en la pestaña Suscripción antes de esa fecha; el acceso sigue hasta el fin del período pagado.`, note: PROMO_NOTE.es, button: 'Ver mi suscripción' },
     refunded_partial: { subject: 'Se reembolsó parte de su pago', title: 'Reembolso parcial', intro: (d, l) => `Hola, ${d.name}. Reembolsamos ${d.refundedAmount ? money(d.refundedAmount, l) : 'una parte'} de su pago de ${money(d.amount, l)}. Su suscripción sigue activa.` },
     canceled: { subject: 'La renovación de su suscripción fue cancelada', title: 'Renovación cancelada', intro: (d, l) => `Hola, ${d.name}. Cancelamos la renovación automática de su suscripción. Su acceso continúa hasta el ${day(d.validUntil, l)}. Puede reactivarla cuando quiera.`, button: 'Reactivar suscripción' },
     ending_soon: { subject: 'Su acceso a MetaBuilder PRO termina pronto', title: 'Su acceso termina pronto', intro: (d, l) => `Hola, ${d.name}. Su acceso termina el ${day(d.validUntil, l)}. Para continuar, reactive la suscripción.`, button: 'Reactivar suscripción' },
@@ -121,14 +149,14 @@ export function customerBillingMail(kind: string, lang: MailLang, d: BillingMail
   // suspensão, cartão recusado e checkout abandonado levam à aba Assinatura (QR Code e cartão na própria tela); os demais, à fatura
   const pay = `${dashboard}?tab=subscription${/^pay_[A-Za-z0-9]+$/.test(d.paymentId || '') ? `&pay=${d.paymentId}` : ''}`
   // cancelada e "acesso termina" levam à aba Assinatura, onde está o aviso e o botão de reativar
-  const url = kind === 'suspended' || kind === 'card_refused' || kind === 'checkout_reminder' || kind === 'canceled' || kind === 'ending_soon' ? pay : kind === 'payment_received' ? dashboard : (d.invoiceUrl || dashboard)
+  const url = kind === 'suspended' || kind === 'card_refused' || kind === 'checkout_reminder' || kind === 'canceled' || kind === 'ending_soon' || kind.startsWith('price_change') ? pay : kind === 'payment_received' ? dashboard : (d.invoiceUrl || dashboard)
   const note = t.note ? t.note(d, lang) : ''
   const html = mailShell(t.title,
     `<p style="margin:0 0 20px 0;">${esc(t.intro(d, lang))}</p>` + (rows.length ? infoBox(L.box, rows) : '') +
     (note ? `<p style="margin:0 0 18px 0;color:#b45309;font-weight:600;">${esc(note)}</p>` : '') + (t.button ? button(t.button, url) : ''),
     `© ${new Date().getFullYear()} METABUILDER PRO · ${L.why}`)
   const text = [t.title, '', t.intro(d, lang), ...(rows.length ? ['', ...rows.map(([k, v]) => `${k}: ${v}`)] : []), ...(note ? ['', note] : []), ...(t.button ? ['', `${t.button}: ${url}`] : [])].join('\n')
-  return { subject: t.subject, html, text }
+  return { subject: typeof t.subject === 'function' ? t.subject(d, lang) : t.subject, html, text }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------

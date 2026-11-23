@@ -7,7 +7,14 @@ export type MailLang = "pt" | "en" | "es";
 export const CUSTOMER_KINDS = [
   "invoice_created", "reminder_3d", "reminder_due", "overdue_1d", "overdue_3d", "suspended", "payment_received",
   "card_refused", "refunded", "canceled", "ending_soon", "checkout_reminder",
+  "price_change", "price_change_reminder", "price_change_renewal",
 ] as const;
+/**
+ * Avisos de REAJUSTE DE PREÇO (ao cliente). Saem SEMPRE, mesmo com os avisos de cobrança desligados: são o aviso prévio do reajuste, exigido por boa-fé e pelo
+ * que prometemos nos Termos. "price_change" = aviso ao agendar; "price_change_reminder" = lembrete 7 dias antes da vigência;
+ * "price_change_renewal" = lembrete 30 dias antes da renovação de quem paga trimestral, semestral ou anual (a renovação dele cai depois da vigência).
+ */
+export const PRICE_CHANGE_KINDS = ["price_change", "price_change_reminder", "price_change_renewal"] as const;
 /** Avisos ao ADMIN. */
 export const ADMIN_KINDS = ["admin_overdue", "admin_refund", "admin_unresolved", "admin_digest", "admin_key_alert"] as const;
 /**
@@ -20,7 +27,7 @@ export const PAYOUT_KINDS = ["partner_payout_paid", "admin_payout_summary"] as c
 export const WELCOME_KIND = "welcome" as const;
 export type NoticeKind = (typeof CUSTOMER_KINDS)[number] | (typeof ADMIN_KINDS)[number] | (typeof PAYOUT_KINDS)[number] | typeof WELCOME_KIND;
 /** O que sai mesmo com os avisos de cobrança desligados (avisos transacionais). */
-export const ALWAYS_SEND_KINDS = [...PAYOUT_KINDS, WELCOME_KIND, "admin_key_alert"] as const;
+export const ALWAYS_SEND_KINDS = [...PAYOUT_KINDS, WELCOME_KIND, "admin_key_alert", ...PRICE_CHANGE_KINDS] as const;
 
 export interface BillingSettings {
   /** desligado: nada e enviado e o atraso bloqueia no mesmo dia, como sempre foi */

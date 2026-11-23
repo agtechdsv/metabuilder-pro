@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Plus, Trash2, Save, Loader2, Info, X, Check } from 'lucide-react'
 import { getPricingRules, savePricingRules } from '@/app/actions/admin'
 import { useToast } from '@/components/ui/Toast'
+import { RepriceCard } from '@/components/admin/RepriceCard'
 
 export function PricingRulesAdmin() {
   const [isLoading, setIsLoading] = useState(true)
@@ -117,6 +118,9 @@ export function PricingRulesAdmin() {
 
   return (
     <div className="space-y-8 animate-in fade-in">
+      {/* aumentar o valor base: só pelo reajuste agendado, com aviso aos assinantes */}
+      <RepriceCard />
+
       <div className="flex justify-between items-center bg-white dark:bg-neutral-900/40 p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm">
         <div>
           <h2 className="text-xl font-black text-neutral-900 dark:text-white">Regras de Precificação Dinâmica</h2>

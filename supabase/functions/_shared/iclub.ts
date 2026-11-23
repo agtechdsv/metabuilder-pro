@@ -25,7 +25,11 @@ export async function loadRules(supabase: any): Promise<PricingRules | null> {
 /** A campanha gravada na assinatura (vazia se o cliente não comprou em campanha). */
 export function campaignFromProfile(p: any): CampaignTerms | null {
   if (!p?.campaign_id || !(Number(p.campaign_months) > 0)) return null;
-  return { percent: Number(p.campaign_percent) || 50, months: Number(p.campaign_months), licenses: Number(p.campaign_licenses) || Number(p.subscription_licenses) || 1 };
+  const unitPrice = Number(p.campaign_unit_price);
+  return {
+    percent: Number(p.campaign_percent) || 50, months: Number(p.campaign_months), licenses: Number(p.campaign_licenses) || Number(p.subscription_licenses) || 1,
+    ...(Number.isFinite(unitPrice) && unitPrice > 0 ? { unitPrice } : {}), // preço promocional travado na compra
+  };
 }
 
 /** Desconto de indicação que vale agora para o usuário (ativo, ou pendente com a carência vencida), já limitado pelo teto do SuperAdmin. */
@@ -49,9 +53,9 @@ export async function findEligibleCampaign(supabase: any, email: string | null |
  * Coloca a assinatura no Asaas com o valor da PRÓXIMA cobrança (campanha, desconto de indicação e licenças já considerados) e acerta as cobranças
  * pendentes dela. Chamar depois de cada pagamento confirmado e de cada mudança que altere o valor (indicação, cancelamento, troca de plano).
  */
-export async function syncNextCharge(supabase: any, userId: string): Promise<ChargeBreakdown | null> {
+export async function syncNextCharge(supabase: any, userId: string, opts: { fromDueDate?: string } = {}): Promise<ChargeBreakdown | null> {
   const { data: p } = await supabase.from("profiles")
-    .select("asaas_subscription_id, subscription_status, subscription_licenses, subscription_cycle, campaign_id, campaign_percent, campaign_months, campaign_licenses, campaign_months_used")
+    .select("asaas_subscription_id, subscription_status, subscription_licenses, subscription_cycle, campaign_id, campaign_percent, campaign_months, campaign_licenses, campaign_months_used, campaign_unit_price")
     .eq("id", userId).maybeSingle();
   if (!p?.asaas_subscription_id || !isCycle(p.subscription_cycle) || p.subscription_status === "canceled") return null;
   const rules = await loadRules(supabase);
@@ -66,7 +70,8 @@ export async function syncNextCharge(supabase: any, userId: string): Promise<Cha
 
   try {
     const put = await fetch(`${asaasUrl()}/subscriptions/${p.asaas_subscription_id}`, {
-      method: "PUT", headers: asaasHeaders(), body: JSON.stringify({ value: next.total, updatePendingPayments: true }),
+      // reajuste de preço (fromDueDate): só as cobranças com vencimento a partir da vigência mudam; as anteriores (vencidas ou em aberto) ficam como estão
+      method: "PUT", headers: asaasHeaders(), body: JSON.stringify({ value: next.total, updatePendingPayments: !opts.fromDueDate }),
     });
     if (!put.ok) console.error("[syncNextCharge] PUT subscription falhou:", await put.text().catch(() => ""));
 
@@ -75,6 +80,7 @@ export async function syncNextCharge(supabase: any, userId: string): Promise<Cha
     if (pend.ok) {
       const list = (await pend.json())?.data || [];
       for (const pay of list) {
+        if (opts.fromDueDate && String(pay.dueDate || "") < opts.fromDueDate) continue;
         if (Math.abs(Number(pay.value) - next.total) > 0.009) {
           const r = await fetch(`${asaasUrl()}/payments/${pay.id}`, { method: "POST", headers: asaasHeaders(), body: JSON.stringify({ value: next.total }) });
           if (!r.ok) console.error("[syncNextCharge] ajuste da cobrança pendente falhou:", pay.id, await r.text().catch(() => ""));

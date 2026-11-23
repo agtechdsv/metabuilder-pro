@@ -24,7 +24,7 @@ export async function loadBillingSettings(admin: Admin): Promise<BillingSettings
 }
 
 /** Coloca um aviso na fila (único por tipo e referência). Devolve true se entrou agora. */
-async function queue(admin: Admin, n: { kind: NoticeKind; userId?: string | null; ref: string; payload?: Record<string, unknown> }): Promise<boolean> {
+export async function queue(admin: Admin, n: { kind: NoticeKind; userId?: string | null; ref: string; payload?: Record<string, unknown> }): Promise<boolean> {
   const { data, error } = await admin.from('billing_notices')
     .upsert({ user_id: n.userId ?? null, kind: n.kind, ref: n.ref, payload: n.payload ?? {} }, { onConflict: 'kind,ref', ignoreDuplicates: true }).select('id')
   if (error) { console.error('[avisos] falha ao enfileirar:', error.message); return false }
@@ -281,7 +281,14 @@ export async function processQueue(admin: Admin, cfg: BillingSettings): Promise<
           const { data: pay } = await admin.from('payments').select('status').eq('asaas_payment_id', p.paymentId).maybeSingle()
           if (pay && (pay.status === 'paid' || pay.status === 'refunded')) { await mark('sent', 'ignorado: já pago'); out.skipped++; continue }
         }
+        // reajuste de preço cancelado, ou assinatura cancelada nesse meio tempo: o aviso não faz mais sentido
+        if (String(it.kind).startsWith('price_change')) {
+          const { data: ch } = p.changeId ? await admin.from('pricing_changes').select('status').eq('id', p.changeId).maybeSingle() : { data: null }
+          const { data: st } = await admin.from('profiles').select('subscription_status').eq('id', it.user_id).maybeSingle()
+          if (!ch || ch.status === 'canceled' || st?.subscription_status === 'canceled') { await mark('sent', 'ignorado: reajuste cancelado ou assinatura cancelada'); out.skipped++; continue }
+        }
         const mail = customerBillingMail(it.kind, resolveLang(prof.billing_language), {
+          effectiveOn: p.effectiveOn ?? null, currentAmount: p.currentAmount ?? null, newAmount: p.newAmount ?? null, cycle: p.cycle ?? null, campaignActive: p.campaignActive === true,
           name: String(prof.full_name || '').trim() || prof.email, amount: p.amount ?? null, dueDate: p.dueDate ?? null, invoiceUrl: p.invoiceUrl ?? null, paymentId: p.paymentId ?? null, billingType: p.billingType ?? null,
           validUntil: p.validUntil ?? p.expiresAt ?? null, graceDays: cfg.graceDays, suspendOn: suspensionDate(p.overdueSince || prof.overdue_since, cfg.graceDays)?.toISOString() ?? null,
           wasSuspended: !!p.wasSuspended, refundedAmount: p.refundedAmount ?? null, partial: p.partial === true, appUrl: appUrl(),
