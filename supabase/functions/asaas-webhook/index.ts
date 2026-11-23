@@ -6,7 +6,7 @@ import { applyTransferEvent, cancelPartnerReferral, recordPartnerCommission, rev
 import { billingSettings, pingNotify, queueNotice, queuePayoutNotice } from "../_shared/billing.ts";
 import { isCheckoutOnly, noticeRef, payoutIsFinal, type NoticeKind } from "../_shared/billingCore.ts";
 import { isForeignAsaasEvent, keyAlertDecision, loadAsaasApps } from "../_shared/asaasApps.ts";
-import { closeRefundLog } from "../_shared/adminBilling.ts";
+import { closeRefundLog, partialRefundValue } from "../_shared/adminBilling.ts";
 import { appOfRef, isOwnRef, parsePaymentRef } from "../_shared/familyRefs.ts";
 
 serve(async (req) => {
@@ -388,9 +388,18 @@ serve(async (req) => {
     else if (event === "PAYMENT_PARTIALLY_REFUNDED" || event === "PAYMENT_REFUND_DENIED" || event === "PAYMENT_REFUND_IN_PROGRESS") {
       const ctx = await resolveContext();
       if (payment?.id) {
-        await closeRefundLog(supabase, payment.id, event, { value: payment.value ?? null });
+        const partial = event === "PAYMENT_PARTIALLY_REFUNDED";
+        // o valor devolvido (payment.value é o TOTAL do pagamento): lido ANTES de fechar o registro, que é de onde ele vem
+        const refunded = partial ? await partialRefundValue(supabase, payment.id, payment) : null;
+        await closeRefundLog(supabase, payment.id, event, partial ? { value: refunded, paymentValue: payment.value ?? null } : { value: payment.value ?? null });
+        // vários estornos parciais do mesmo pagamento são avisos diferentes: a referência leva o valor e quantos estornos já existem
+        const partialRef = [payment.id, event, refunded ?? "x", Array.isArray(payment.refunds) ? payment.refunds.length : 0];
         if (event !== "PAYMENT_REFUND_IN_PROGRESS") {
-          await notify("admin_refund", null, noticeRef([payment.id, event]), { event, paymentId: payment.id, userId: ctx?.userId || null, amount: payment.value });
+          await notify("admin_refund", null, noticeRef(partial ? partialRef : [payment.id, event]), { event, paymentId: payment.id, userId: ctx?.userId || null, amount: payment.value, refundedAmount: refunded });
+        }
+        // o cliente também é avisado do estorno parcial (o do total já é avisado no ramo de PAYMENT_REFUNDED)
+        if (partial && ctx?.userId) {
+          await notify("refunded", ctx.userId, noticeRef(["partial", ...partialRef]), { paymentId: payment.id, amount: payment.value, refundedAmount: refunded, partial: true });
         }
       }
       console.log(`[${event}] payment ${payment?.id} user ${ctx?.userId}`);

@@ -19,6 +19,9 @@ export interface BillingMailData {
   suspendOn?: string | null
   graceDays?: number
   wasSuspended?: boolean
+  /** estorno PARCIAL: quanto foi devolvido (amount é o valor total do pagamento); `partial` escolhe o texto do estorno parcial */
+  refundedAmount?: number | null
+  partial?: boolean
   /** endereço do site (sem barra no fim) */
   appUrl: string
 }
@@ -51,6 +54,7 @@ const TEXTS: Record<MailLang, Record<string, Text>> = {
     payment_received: { subject: 'Recebemos o seu pagamento', title: 'Pagamento recebido', intro: (d, l) => `Olá, ${d.name}! Recebemos o seu pagamento de ${money(d.amount, l)}. Obrigado!${d.wasSuspended ? ' O seu acesso foi restabelecido.' : ''}`, button: 'Abrir meu painel' },
     card_refused: { subject: 'Não conseguimos cobrar o seu cartão', title: 'Cobrança no cartão recusada', intro: (d, l) => `Olá, ${d.name}. A cobrança de ${money(d.amount, l)} no seu cartão foi recusada. Atualize o cartão ou pague de outra forma para não perder o acesso.`, button: 'Atualizar pagamento' },
     refunded: { subject: 'Seu pagamento foi estornado', title: 'Pagamento estornado', intro: (d, l) => `Olá, ${d.name}. O pagamento de ${money(d.amount, l)} foi estornado. Se você não pediu isso, fale com a gente.` },
+    refunded_partial: { subject: 'Parte do seu pagamento foi estornada', title: 'Estorno parcial', intro: (d, l) => `Olá, ${d.name}. Estornamos ${d.refundedAmount ? money(d.refundedAmount, l) : 'parte'} do seu pagamento de ${money(d.amount, l)}. Sua assinatura continua ativa.` },
     canceled: { subject: 'A renovação da sua assinatura foi cancelada', title: 'Renovação cancelada', intro: (d, l) => `Olá, ${d.name}. Cancelamos a renovação automática da sua assinatura. Seu acesso continua até ${day(d.validUntil, l)}. Você pode reativar quando quiser.`, button: 'Reativar assinatura' },
     ending_soon: { subject: 'Seu acesso ao MetaBuilder PRO termina em breve', title: 'Seu acesso termina em breve', intro: (d, l) => `Olá, ${d.name}. Seu acesso termina em ${day(d.validUntil, l)}. Para continuar, reative a assinatura.`, button: 'Reativar assinatura' },
     checkout_reminder: { subject: 'Falta só o pagamento para ativar o seu plano PRO', title: 'Seu plano PRO está esperando', intro: (d, l) => `Olá, ${d.name}! Você começou a assinatura do plano PRO e falta só o pagamento de ${money(d.amount, l)}. Sua conta gratuita continua funcionando normalmente. Quando quiser concluir, é só pagar por aqui.`, button: 'Concluir pagamento' },
@@ -65,6 +69,7 @@ const TEXTS: Record<MailLang, Record<string, Text>> = {
     payment_received: { subject: 'We received your payment', title: 'Payment received', intro: (d, l) => `Hello, ${d.name}! We received your payment of ${money(d.amount, l)}. Thank you!${d.wasSuspended ? ' Your access has been restored.' : ''}`, button: 'Open my dashboard' },
     card_refused: { subject: 'We could not charge your card', title: 'Card charge declined', intro: (d, l) => `Hello, ${d.name}. The charge of ${money(d.amount, l)} on your card was declined. Update your card or pay another way so you do not lose access.`, button: 'Update payment' },
     refunded: { subject: 'Your payment was refunded', title: 'Payment refunded', intro: (d, l) => `Hello, ${d.name}. The payment of ${money(d.amount, l)} was refunded. If you did not ask for this, contact us.` },
+    refunded_partial: { subject: 'Part of your payment was refunded', title: 'Partial refund', intro: (d, l) => `Hello, ${d.name}. We refunded ${d.refundedAmount ? money(d.refundedAmount, l) : 'part'} of your payment of ${money(d.amount, l)}. Your subscription remains active.` },
     canceled: { subject: 'Your subscription renewal was canceled', title: 'Renewal canceled', intro: (d, l) => `Hello, ${d.name}. We canceled the automatic renewal of your subscription. Your access continues until ${day(d.validUntil, l)}. You can reactivate whenever you want.`, button: 'Reactivate subscription' },
     ending_soon: { subject: 'Your MetaBuilder PRO access ends soon', title: 'Your access ends soon', intro: (d, l) => `Hello, ${d.name}. Your access ends on ${day(d.validUntil, l)}. To continue, reactivate your subscription.`, button: 'Reactivate subscription' },
     checkout_reminder: { subject: 'Only the payment is missing to activate your PRO plan', title: 'Your PRO plan is waiting', intro: (d, l) => `Hello, ${d.name}! You started the PRO plan subscription and only the payment of ${money(d.amount, l)} is missing. Your free account keeps working normally. Whenever you want to finish, just pay here.`, button: 'Complete payment' },
@@ -79,6 +84,7 @@ const TEXTS: Record<MailLang, Record<string, Text>> = {
     payment_received: { subject: 'Recibimos su pago', title: 'Pago recibido', intro: (d, l) => `¡Hola, ${d.name}! Recibimos su pago de ${money(d.amount, l)}. ¡Gracias!${d.wasSuspended ? ' Su acceso fue restablecido.' : ''}`, button: 'Abrir mi panel' },
     card_refused: { subject: 'No pudimos cobrar su tarjeta', title: 'Cobro en la tarjeta rechazado', intro: (d, l) => `Hola, ${d.name}. El cobro de ${money(d.amount, l)} en su tarjeta fue rechazado. Actualice la tarjeta o pague de otra forma para no perder el acceso.`, button: 'Actualizar pago' },
     refunded: { subject: 'Su pago fue reembolsado', title: 'Pago reembolsado', intro: (d, l) => `Hola, ${d.name}. El pago de ${money(d.amount, l)} fue reembolsado. Si usted no lo pidió, contáctenos.` },
+    refunded_partial: { subject: 'Se reembolsó parte de su pago', title: 'Reembolso parcial', intro: (d, l) => `Hola, ${d.name}. Reembolsamos ${d.refundedAmount ? money(d.refundedAmount, l) : 'una parte'} de su pago de ${money(d.amount, l)}. Su suscripción sigue activa.` },
     canceled: { subject: 'La renovación de su suscripción fue cancelada', title: 'Renovación cancelada', intro: (d, l) => `Hola, ${d.name}. Cancelamos la renovación automática de su suscripción. Su acceso continúa hasta el ${day(d.validUntil, l)}. Puede reactivarla cuando quiera.`, button: 'Reactivar suscripción' },
     ending_soon: { subject: 'Su acceso a MetaBuilder PRO termina pronto', title: 'Su acceso termina pronto', intro: (d, l) => `Hola, ${d.name}. Su acceso termina el ${day(d.validUntil, l)}. Para continuar, reactive la suscripción.`, button: 'Reactivar suscripción' },
     checkout_reminder: { subject: 'Solo falta el pago para activar su plan PRO', title: 'Su plan PRO le está esperando', intro: (d, l) => `¡Hola, ${d.name}! Usted inició la suscripción al plan PRO y solo falta el pago de ${money(d.amount, l)}. Su cuenta gratuita sigue funcionando con normalidad. Cuando quiera terminar, solo pague por aquí.`, button: 'Completar el pago' },
@@ -95,15 +101,18 @@ const METHOD = { PIX: 'Pix', BOLETO: { pt: 'Boleto', en: 'Bank slip', es: 'Bolet
 const methodName = (t: string | null | undefined, lang: MailLang) => (t === 'PIX' ? 'Pix' : t === 'BOLETO' ? METHOD.BOLETO[lang] : t === 'CREDIT_CARD' ? METHOD.CREDIT_CARD[lang] : '')
 
 /** Tipos de aviso ao cliente que este módulo sabe montar. */
-export const BILLING_CUSTOMER_KINDS = Object.keys(TEXTS.pt)
+// "refunded_partial" é só a variante do texto de "refunded" (estorno parcial), e não um tipo de aviso na fila
+export const BILLING_CUSTOMER_KINDS = Object.keys(TEXTS.pt).filter(k => k !== 'refunded_partial')
 
 /** Monta o e-mail de um aviso ao cliente (null se o tipo for desconhecido). O botão leva à fatura, se houver, ou ao painel do cliente. */
 export function customerBillingMail(kind: string, lang: MailLang, d: BillingMailData): MailContent | null {
-  const t = TEXTS[lang]?.[kind]
+  // estorno parcial tem texto próprio (o aviso de estorno total diz que "o pagamento foi estornado")
+  const isPartialRefund = kind === 'refunded' && d.partial === true
+  const t = TEXTS[lang]?.[isPartialRefund ? 'refunded_partial' : kind]
   if (!t) return null
   const L = LABELS[lang]
   const rows: [string, string][] = []
-  if (d.amount != null) rows.push([L.amount, money(d.amount, lang)])
+  if (d.amount != null && !isPartialRefund) rows.push([L.amount, money(d.amount, lang)])
   if (d.dueDate) rows.push([L.due, day(d.dueDate, lang)])
   const m = methodName(d.billingType, lang)
   if (m) rows.push([L.method, m])
@@ -111,7 +120,8 @@ export function customerBillingMail(kind: string, lang: MailLang, d: BillingMail
   const dashboard = `${d.appUrl}/client/dashboard`
   // suspensão, cartão recusado e checkout abandonado levam à aba Assinatura (QR Code e cartão na própria tela); os demais, à fatura
   const pay = `${dashboard}?tab=subscription${/^pay_[A-Za-z0-9]+$/.test(d.paymentId || '') ? `&pay=${d.paymentId}` : ''}`
-  const url = kind === 'suspended' || kind === 'card_refused' || kind === 'checkout_reminder' ? pay : kind === 'payment_received' || kind === 'canceled' || kind === 'ending_soon' ? dashboard : (d.invoiceUrl || dashboard)
+  // cancelada e "acesso termina" levam à aba Assinatura, onde está o aviso e o botão de reativar
+  const url = kind === 'suspended' || kind === 'card_refused' || kind === 'checkout_reminder' || kind === 'canceled' || kind === 'ending_soon' ? pay : kind === 'payment_received' ? dashboard : (d.invoiceUrl || dashboard)
   const note = t.note ? t.note(d, lang) : ''
   const html = mailShell(t.title,
     `<p style="margin:0 0 20px 0;">${esc(t.intro(d, lang))}</p>` + (rows.length ? infoBox(L.box, rows) : '') +
@@ -132,6 +142,8 @@ export interface AdminBillingData {
   dueDate?: string | null
   event?: string | null
   paymentId?: string | null
+  /** estorno parcial: quanto foi devolvido (amount é o total do pagamento) */
+  refundedAmount?: number | null
   /** resumo diário */
   digest?: { overdue: number; dueSoon: number; suspendedToday: number; received24h: number; failedNotices: number } | null
   /** alerta da chave de API do Asaas: nome da chave e quando expira (o que o Asaas informar; nunca o valor da chave) */
@@ -158,6 +170,8 @@ export function adminBillingMail(kind: string, d: AdminBillingData): MailContent
   const url = `${d.appUrl}/admin/platform`
   const row = (k: string, v: unknown): [string, string] => [k, String(v ?? '-')]
   let title = '', intro = '', rows: [string, string][] = []
+  let partialRows = false
+  const brl = (n: number) => money(n, 'pt')
   if (kind === 'admin_overdue') {
     title = 'Cobrança vencida'; intro = `A cobrança de ${who} venceu e não foi paga.`
     rows = [row('Cliente', who), row('Valor', d.amount != null ? `R$ ${Number(d.amount).toFixed(2)}` : '-'), row('Vencimento', d.dueDate), row('Cobrança', d.paymentId)]
@@ -165,12 +179,16 @@ export function adminBillingMail(kind: string, d: AdminBillingData): MailContent
     // estorno parcial e estorno negado não revogam nada: o texto não pode dizer o contrário
     if (d.event === 'PAYMENT_PARTIALLY_REFUNDED') {
       title = 'Estorno parcial'; intro = 'Houve um estorno parcial de um pagamento. A cobrança continua paga; comissões e recompensas não foram alteradas.'
+      partialRows = true
     } else if (d.event === 'PAYMENT_REFUND_DENIED') {
       title = 'Estorno negado'; intro = 'O Asaas negou o estorno pedido. Nada foi devolvido ao cliente; confira o motivo no painel do Asaas.'
     } else {
       title = 'Estorno ou chargeback'; intro = `Houve ${d.event === 'PAYMENT_CHARGEBACK_REQUESTED' ? 'um pedido de chargeback' : 'um estorno'} de pagamento. As comissões e recompensas ligadas a ele foram revogadas.`
     }
-    rows = [row('Cliente', who), row('Valor', d.amount != null ? `R$ ${Number(d.amount).toFixed(2)}` : '-'), row('Evento', d.event), row('Cobrança', d.paymentId)]
+    // estorno parcial: "Valor devolvido" é o estornado e "Valor do pagamento" é o total (antes aparecia só o total, como se tudo tivesse sido devolvido)
+    rows = partialRows
+      ? [row('Cliente', who), row('Valor devolvido', d.refundedAmount != null ? brl(d.refundedAmount) : 'veja no painel do Asaas'), row('Valor do pagamento', d.amount != null ? brl(d.amount) : '-'), row('Evento', d.event), row('Cobrança', d.paymentId)]
+      : [row('Cliente', who), row('Valor', d.amount != null ? brl(d.amount) : '-'), row('Evento', d.event), row('Cobrança', d.paymentId)]
   } else if (kind === 'admin_unresolved') {
     title = 'Pagamento sem cliente identificado'; intro = 'O Asaas avisou de um pagamento que o sistema não conseguiu ligar a nenhum cliente. É preciso conferir à mão no painel do Asaas.'
     rows = [row('Evento', d.event), row('Cobrança', d.paymentId), row('Valor', d.amount != null ? `R$ ${Number(d.amount).toFixed(2)}` : '-')]

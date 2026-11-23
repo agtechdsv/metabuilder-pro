@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { CreditCard, ExternalLink, Loader2, Search, ShieldAlert, Sliders, X } from 'lucide-react'
 import { invoiceLinkKind } from '@/lib/billing/invoiceLink'
 import { paymentDisplayDate } from '@/lib/billing/paymentDate'
+import { isInvoiceFarOff } from '@/lib/billing/upcomingInvoice'
 import { formatPrice, formatDate, getCycleLabel, getBillingTypeLabel, StatusBadge } from './ClientSharedComponents'
 import { useI18n } from '@/i18n'
 
@@ -32,6 +33,12 @@ export function ClientSubscriptionView({
   const [qrOpen, setQrOpen] = useState(false)
   // FREE que só abriu o checkout: texto suave, sem "evite interrupções"
   const isFree = !localProfile?.subscription_licenses && !localProfile?.is_super_admin
+  // fatura ainda longe de vencer (a próxima renovação): aviso discreto de "Próxima fatura", sem "evite interrupções"
+  const farOff = !isFree && isInvoiceFarOff(asaasSubData?.pendingInvoice?.dueDate)
+  // assinatura cancelada (a renovação parou): mostra o aviso com o botão de reativar
+  const isCanceled = localProfile?.subscription_status === 'canceled' && Number(localProfile?.subscription_licenses) > 0
+  const accessEndsAt = localProfile?.subscription_expires_at ? new Date(localProfile.subscription_expires_at) : null
+  const accessStillValid = !!accessEndsAt && accessEndsAt.getTime() > Date.now()
 
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-200">
@@ -59,18 +66,45 @@ export function ClientSubscriptionView({
         </div>
       )}
 
+      {/* Assinatura cancelada: o acesso segue até o fim do período; daqui o cliente reativa */}
+      {isCanceled && (
+        <div data-testid="reactivate-banner" className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+          <div className="space-y-1.5 flex-1">
+            <h4 className="text-xs font-black text-neutral-800 dark:text-neutral-200 uppercase tracking-widest">
+              {t('client_views.subscription.reactivate_title', 'Assinatura cancelada')}
+            </h4>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 max-w-xl">
+              {accessStillValid
+                ? t('client_views.subscription.reactivate_desc', 'A renovação automática está cancelada. Seu acesso continua até {date}. Reative para não perder o acesso depois dessa data; a primeira cobrança será só nessa data.').replace('{date}', formatDate(localProfile?.subscription_expires_at))
+                : t('client_views.subscription.reactivate_desc_expired', 'A renovação automática está cancelada e o seu acesso ao plano PRO terminou. Reative para voltar a usá-lo.')}
+            </p>
+          </div>
+          <button
+            type="button"
+            data-testid="reactivate-button"
+            onClick={() => router.push('/checkout?mode=reactivate')}
+            className="shrink-0 inline-flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-500/10 transition-all"
+          >
+            <Sliders className="w-4 h-4" />
+            {t('client_views.subscription.reactivate_button', 'Reativar assinatura')}
+          </button>
+        </div>
+      )}
+
       {/* Pending Invoice Display (PIX QR code / Copy PIX / Boleto) */}
       {asaasSubData?.pendingInvoice && (
-        <div className="bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20 rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
+        <div className={farOff
+          ? 'bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm'
+          : 'bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20 rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm'}>
           <div className="space-y-2 flex-1">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-              <h4 className="text-xs font-black text-amber-800 dark:text-amber-400 uppercase tracking-widest">
-                {isFree ? t('client_views.subscription.pending_invoice_title_free', 'Falta só o pagamento do plano PRO') : t('client_views.subscription.pending_invoice_title', 'Cobrança Pendente Encontrada')}
+              {!farOff && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />}
+              <h4 className={farOff ? 'text-xs font-black text-neutral-700 dark:text-neutral-300 uppercase tracking-widest' : 'text-xs font-black text-amber-800 dark:text-amber-400 uppercase tracking-widest'}>
+                {isFree ? t('client_views.subscription.pending_invoice_title_free', 'Falta só o pagamento do plano PRO') : farOff ? t('client_views.subscription.pending_invoice_title_next', 'Próxima fatura') : t('client_views.subscription.pending_invoice_title', 'Cobrança Pendente Encontrada')}
               </h4>
             </div>
             <p className="text-xs text-neutral-600 dark:text-neutral-400 max-w-xl">
-              {(isFree ? t('client_views.subscription.pending_invoice_desc_free', 'Você iniciou a assinatura do plano PRO e falta pagar {value}. Sua conta gratuita continua funcionando normalmente.') : t('client_views.subscription.pending_invoice_desc', 'Há um pagamento em aberto de {value} vencendo em {date}. Efetue o pagamento abaixo para evitar interrupções.'))
+              {(isFree ? t('client_views.subscription.pending_invoice_desc_free', 'Você iniciou a assinatura do plano PRO e falta pagar {value}. Sua conta gratuita continua funcionando normalmente.') : farOff ? t('client_views.subscription.pending_invoice_desc_next', 'Sua próxima fatura de {value} vence em {date}. Você já pode pagá-la, mas nada será cobrado nem suspenso antes do vencimento.') : t('client_views.subscription.pending_invoice_desc', 'Há um pagamento em aberto de {value} vencendo em {date}. Efetue o pagamento abaixo para evitar interrupções.'))
                 .replace('{value}', formatPrice(asaasSubData.pendingInvoice.value))
                 .replace('{date}', formatDate(asaasSubData.pendingInvoice.dueDate))}
             </p>
@@ -231,11 +265,12 @@ export function ClientSubscriptionView({
                 </button>
               )}
               
+              {/* cancelada: a assinatura antiga não existe mais no Asaas, então "Alterar Plano" (upgrade da assinatura atual) não vale; o caminho é reativar */}
               <button
-                onClick={() => router.push('/checkout?mode=upgrade')}
+                onClick={() => router.push(isCanceled ? '/checkout?mode=reactivate' : '/checkout?mode=upgrade')}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-2xl border border-indigo-500 transition-colors shadow-sm"
               >
-                <Sliders className="w-4 h-4" /> {t('client_views.subscription.change_plan', 'Alterar Plano')}
+                <Sliders className="w-4 h-4" /> {isCanceled ? t('client_views.subscription.reactivate_button', 'Reativar assinatura') : t('client_views.subscription.change_plan', 'Alterar Plano')}
               </button>
             </div>
           )}

@@ -104,6 +104,19 @@ export function checkoutReminderStep(createdAt: string | Date | null | undefined
   return age >= 3 ? 3 : age >= 1 ? 1 : 0;
 }
 
+/**
+ * Reativação: assinatura CANCELADA (o cliente, ou o SuperAdmin, parou a renovação) com o acesso ainda pago. Devolve o dia (YYYY-MM-DD, horário de Brasília)
+ * da primeira cobrança da assinatura nova, que é o fim do acesso: assim não se cobra duas vezes o mesmo período. null se não for reativação
+ * (status diferente de cancelada, sem data de acesso, ou acesso já terminado: aí é uma compra nova, cobrada hoje).
+ */
+export function reactivationDueDate(status: string | null | undefined, accessEndsAt: string | Date | null | undefined, now: Date): string | null {
+  if (String(status ?? "").trim().toLowerCase() !== "canceled") return null;
+  if (!accessEndsAt) return null;
+  const end = new Date(accessEndsAt).getTime();
+  if (!Number.isFinite(end) || end <= now.getTime()) return null;
+  return new Date(end - 3 * 3_600_000).toISOString().slice(0, 10); // Brasília é UTC-3 (sem horário de verão desde 2019)
+}
+
 /** A cobranca do checkout esta abandonada? Passou da janela dos lembretes (CHECKOUT_REMINDER_MAX_DAYS) sem pagar: a rotina cancela no Asaas. */
 export function isCheckoutAbandoned(createdAt: string | Date | null | undefined, now: Date): boolean {
   if (!createdAt) return false;

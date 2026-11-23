@@ -31,7 +31,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
   const { t, language } = useI18n()
   const state = useCheckoutState({ rules, initialLicenses, initialCycle, workspaceSlug, user, profile, mode })
   const {
-    isUpgrade, licenses, setLicenses, cycle, setCycle, workspace,
+    isUpgrade, isReactivation, licenses, setLicenses, cycle, setCycle, workspace,
     billingName, setBillingName, billingCpfCnpj, setBillingCpfCnpj,
     billingEmail, setBillingEmail, billingPhone, setBillingPhone,
     paymentMethod, setPaymentMethod, cardNumber, setCardNumber,
@@ -551,6 +551,14 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
                         .replace('{name}', localizedText(quote.campaign.name, language))
                         .replace('{off}', String(campaignOffPercent({ discount_percent: quote.campaign.percent })))
                         .replace('{months}', String(quote.campaign.months))}
+                    </p>
+                  </div>
+                )}
+                {isReactivation && licenses < 100 && (
+                  <div data-testid="reactivation-note" className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl">
+                    <p className="text-xs text-emerald-800 dark:text-emerald-400 font-medium">
+                      {t('checkout.reactivation_note', 'Reativação: você mantém o acesso até {date} e nada será cobrado hoje. A primeira cobrança da nova assinatura será em {date}.')
+                        .replace(/\{date\}/g, new Date(profile?.subscription_expires_at as string).toLocaleDateString(language === 'es' ? 'es-ES' : language === 'en' ? 'en-US' : 'pt-BR', { timeZone: 'America/Sao_Paulo' }))}
                     </p>
                   </div>
                 )}

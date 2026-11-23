@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
 import { campaignFromProfile, findEligibleCampaign, referralPercentFor } from "../_shared/iclub.ts";
 import { CYCLE_MONTHS, chargeBreakdown, isCycle, isCycleEnabled, nextChargeValue, type CampaignTerms } from "../_shared/pricing.ts";
 import { buildPaymentRef, isOwnCustomerRef, ownCustomerRef } from "../_shared/familyRefs.ts";
+import { reactivationDueDate } from "../_shared/billingCore.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -269,7 +270,10 @@ serve(async (req) => {
     if (paymentMethod === "boleto") {
       d.setDate(d.getDate() + 1);
     }
-    const nextDueDate = d.toISOString().split("T")[0];
+    // Reativação (assinatura cancelada com acesso ainda pago): a assinatura nova começa a cobrar só no fim do acesso, para não cobrar o mesmo período
+    // duas vezes. Quem decide é o perfil no banco (nunca o navegador). Fora desse caso, a primeira cobrança é hoje, como sempre.
+    const reactivationDue = !isUpgrade ? reactivationDueDate(prevProfile?.subscription_status, prevProfile?.subscription_expires_at, new Date()) : null;
+    const nextDueDate = reactivationDue ?? d.toISOString().split("T")[0];
 
     // Referência externa no padrão da Família PRO (mb_ws_<workspace>_<l|u>_<licenças>_cy_<ciclo>_t_<timestamp>; ~64 caracteres, limite do Asaas: 100).
     // Upgrade usa "u" no lugar de "l". Ver supabase/functions/_shared/familyRefs.ts e docs/familia-pro-referencias.md.
@@ -467,16 +471,27 @@ serve(async (req) => {
       // Update profile with subscription id and amount
       await supabaseClient
         .from("profiles")
-        .update({
-          asaas_subscription_id: asaasSubscriptionId,
-          subscription_amount: cyclePrice,
-          // a campanha comprada fica gravada (mudar a campanha depois não altera quem já comprou); sem campanha, zera
-          campaign_id: newCampaign ? newCampaign.id : null,
-          campaign_percent: newCampaign ? Number(newCampaign.discount_percent) : null,
-          campaign_months: newCampaign ? Number(newCampaign.months) : null,
-          campaign_licenses: newCampaign ? Number(licenses) : null,
-          campaign_months_used: 0
-        })
+        .update(reactivationDue
+          ? {
+            // reativação: o cliente já tem acesso pago até o fim do período; a assinatura volta a valer agora e o acesso (subscription_expires_at) NÃO muda.
+            // A campanha que ele já tinha fica como está (não é zerada).
+            asaas_subscription_id: asaasSubscriptionId,
+            subscription_amount: cyclePrice,
+            subscription_status: "active",
+            is_blocked: false,
+            subscription_cycle: cycle,
+            subscription_licenses: Number(licenses),
+          }
+          : {
+            asaas_subscription_id: asaasSubscriptionId,
+            subscription_amount: cyclePrice,
+            // a campanha comprada fica gravada (mudar a campanha depois não altera quem já comprou); sem campanha, zera
+            campaign_id: newCampaign ? newCampaign.id : null,
+            campaign_percent: newCampaign ? Number(newCampaign.discount_percent) : null,
+            campaign_months: newCampaign ? Number(newCampaign.months) : null,
+            campaign_licenses: newCampaign ? Number(licenses) : null,
+            campaign_months_used: 0
+          })
         .eq("id", user.id);
     }
     
@@ -563,7 +578,10 @@ serve(async (req) => {
         pixQrCode: pixData?.encodedImage || null,
         pixCopiaCola: pixData?.payload || null,
         barCode: firstPayment?.barCode || null,
-        identificationField: firstPayment?.identificationField || null
+        identificationField: firstPayment?.identificationField || null,
+        // reativação com a primeira cobrança no fim do acesso: nada a pagar agora (o cliente pode antecipar pela aba Assinatura)
+        reactivated: !!reactivationDue && firstPayment?.status !== "CONFIRMED" && firstPayment?.status !== "RECEIVED",
+        firstChargeDate: reactivationDue
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

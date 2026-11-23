@@ -58,6 +58,31 @@ export async function closeRefundLog(db: any, asaasPaymentId: string, event: str
   } catch (e) { console.error("[cobrancas] erro ao fechar o registro do estorno:", (e as Error)?.message); }
 }
 
+/** Último valor devolvido que o payload do Asaas informa (payment.refunds[].value). null se o payload não trouxer. */
+export function lastRefundValueFromPayload(payment: any): number | null {
+  const list = Array.isArray(payment?.refunds) ? payment.refunds : [];
+  for (let i = list.length - 1; i >= 0; i--) {
+    const v = Number(list[i]?.value);
+    if (Number.isFinite(v) && v > 0) return Math.round(v * 100) / 100;
+  }
+  return null;
+}
+
+/**
+ * Valor de um estorno PARCIAL: o que o SuperAdmin pediu (registro ainda "solicitado"; ler ANTES de fechar o registro) ou, se o estorno foi feito direto
+ * no painel do Asaas, o último valor devolvido do payload. O `payment.value` do webhook é o valor TOTAL do pagamento, e não serve para isto.
+ * null se não der para saber. Nunca lança.
+ */
+export async function partialRefundValue(db: any, asaasPaymentId: string, payment: any): Promise<number | null> {
+  try {
+    const { data } = await db.from("mb_admin_billing_log").select("amount").eq("action", "refund").eq("asaas_payment_id", asaasPaymentId)
+      .eq("status", "requested").order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const a = Number(data?.amount);
+    if (Number.isFinite(a) && a > 0) return Math.round(a * 100) / 100;
+  } catch (e) { console.error("[cobrancas] erro ao ler o valor do estorno parcial:", (e as Error)?.message); }
+  return lastRefundValueFromPayload(payment);
+}
+
 /** O que o webhook faz com o registro do estorno quando o Asaas avisa. */
 export function refundLogOutcome(event: string): "done" | "failed" | "progress" | null {
   switch (event) {

@@ -19,6 +19,9 @@ export interface CheckoutClientProps {
 
 export function useCheckoutState({ rules, initialLicenses = 1, initialCycle, workspaceSlug, user, profile, mode }: CheckoutClientProps) {
   const isUpgrade = mode === 'upgrade'
+  // reativação: assinatura cancelada com o acesso ainda pago. É uma assinatura NOVA no Asaas, com a primeira cobrança só no fim do acesso (o servidor decide pela mesma regra)
+  const accessEnd = profile?.subscription_expires_at ? new Date(profile.subscription_expires_at) : null
+  const isReactivation = !isUpgrade && profile?.subscription_status === 'canceled' && !!accessEnd && accessEnd.getTime() > Date.now()
   // idioma do cliente: o checkout o grava no perfil para os avisos de cobrança saírem no idioma dele
   const { language } = useI18n()
   const [licenses, setLicenses] = useState(isUpgrade && profile?.subscription_licenses ? Math.max(initialLicenses, profile.subscription_licenses) : initialLicenses)
@@ -262,6 +265,14 @@ export function useCheckoutState({ rules, initialLicenses = 1, initialCycle, wor
         throw new Error(data?.error || 'Erro ao processar checkout.')
       }
 
+      // Reativação: a assinatura já está ativa de novo e a primeira cobrança é no fim do acesso pago; não há pagamento a esperar agora
+      if (data.reactivated) {
+        setSuccessWorkspaceSlug(workspace.slug)
+        setCheckoutStep('success')
+        toast('Assinatura reativada! A primeira cobrança será no fim do seu acesso atual.', 'success')
+        return
+      }
+
       // Se transação de cartão foi confirmada/recebida na hora, ou se for downgrade (não gerou cobrança)
       if ((paymentMethod === 'card' || !data.paymentId) && (data.status === 'CONFIRMED' || data.status === 'RECEIVED')) {
         setSuccessWorkspaceSlug(workspace.slug)
@@ -396,7 +407,7 @@ export function useCheckoutState({ rules, initialLicenses = 1, initialCycle, wor
   ]
 
   return {
-    isUpgrade, licenses, setLicenses, cycle, setCycle, workspace,
+    isUpgrade, isReactivation, licenses, setLicenses, cycle, setCycle, workspace,
     billingName, setBillingName, billingCpfCnpj, setBillingCpfCnpj,
     billingEmail, setBillingEmail, billingPhone, setBillingPhone,
     paymentMethod, setPaymentMethod, cardNumber, setCardNumber,
