@@ -46,7 +46,7 @@ serve(async (req) => {
       const r = change.rules || {};
       const { error: ruleErr } = await supabase.from("pricing_rules").update({
         base_price: r.base_price, volume_tiers: r.volume_tiers, cycle_discounts: r.cycle_discounts, updated_at: new Date().toISOString(),
-      }).eq("id", oldRules.id);
+      }).eq("id", (oldRules as any).id); // loadRules devolve a linha inteira (select *), mas o tipo PricingRules não declara o id
       if (ruleErr) throw ruleErr;
 
       const now = new Date().toISOString();
