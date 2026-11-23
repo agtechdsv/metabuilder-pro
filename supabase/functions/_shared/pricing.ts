@@ -31,7 +31,8 @@ export interface CampaignTerms {
   /** quantas licenças foram compradas na campanha (as acrescentadas depois pagam preço regular) */
   licenses: number
   /**
-   * Preço promocional por licença/mês que o cliente viu ao comprar (valor base x % da campanha), TRAVADO na compra: um reajuste da tabela não o altera.
+   * Preço promocional por licença/mês que o cliente viu ao comprar (valor base x % da campanha), TRAVADO na compra: é o TETO do promocional. Um aumento da
+   * tabela não o encarece; uma redução da tabela o barateia (vale o menor entre ele e o % da tabela de hoje).
    * Sem ele (campanhas antigas), vale % da tabela de hoje, como antes.
    */
   unitPrice?: number
@@ -110,8 +111,10 @@ export function chargeBreakdown(input: ChargeInput): ChargeBreakdown {
   const campaignLicenses = campaign ? clamp(Math.floor(num(campaign.licenses, licenses)), 0, licenses) : 0
   const extraLicenses = licenses - campaignLicenses
   // o menor entre o preço da campanha e o preço regular: a campanha nunca sai pior que a compra normal
-  // (preço travado na compra, se houver; senão % da tabela de hoje)
-  const campaignTable = campaign && num(campaign.unitPrice, 0) > 0 ? num(campaign.unitPrice) : basePrice(input.rules) * (num(campaign?.percent, 50) / 100)
+  // "o melhor para o cliente": o promocional é o MENOR entre o preço travado na compra e o % da tabela de hoje. Tabela que sobe não o encarece (o travado
+  // protege); tabela que cai o barateia (ele nunca paga mais que um cliente novo na mesma campanha). Sem preço travado (campanha antiga): % da tabela de hoje.
+  const campaignOfTable = basePrice(input.rules) * (num(campaign?.percent, 50) / 100)
+  const campaignTable = campaign && num(campaign.unitPrice, 0) > 0 ? Math.min(num(campaign.unitPrice), campaignOfTable) : campaignOfTable
   const campaignUnit = campaign ? Math.min(campaignTable, regularUnit) : regularUnit
 
   const regularMonths = months - campaignMonths

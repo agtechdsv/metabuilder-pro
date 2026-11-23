@@ -44,7 +44,7 @@ Reduções não exigem os 30 dias, então este teste não encarece ninguém.
 1. Reajustar: novo valor **9,99**, dias **7** > Reajustar > **Confirmar e avisar**.
 2. **Esperado na tela:** toast "Reajuste agendado para DD/MM. N assinante(s) avisado(s)". O bloco vira "Reajuste agendado: R$ 10,00 → R$ 9,99 a partir de DD/MM" com **Cancelar reajuste**.
 3. **E-mail** (caixa de cada conta de teste ativa): assunto "Reajuste de preço do MetaBuilder PRO a partir de DD/MM/AAAA". Confira: valor atual e novo **do plano dela**,
-   "por mês", "primeira renovação a partir dessa data", "cancelar a renovação"; no **FeedBack** (campanha) deve aparecer a frase de que o **preço promocional não muda**; nas
+   "por mês", "primeira renovação a partir dessa data", "cancelar a renovação"; no **FeedBack** (campanha) deve aparecer a frase de que o **preço promocional não aumenta com o reajuste**; nas
    outras, não. O botão leva à aba Assinatura.
 4. **Aba Assinatura** de um assinante ativo: aviso "Reajuste de preço a partir de DD/MM" com o valor atual e o novo. Conta cancelada (LGPD) **não** vê o aviso nem recebe o e-mail.
 5. Tentar agendar de novo com o primeiro já agendado: "Já existe um reajuste agendado...".
@@ -83,7 +83,7 @@ select email, price_change_synced_id, campaign_unit_price from profiles where as
 
 5. **Esperado no Asaas:**
    - conta **sem campanha** (MetaBuilder PRO): assinatura e cobrança aberta com vencimento **a partir de hoje** em **R$ 9,99**;
-   - **FeedBack** (campanha): se ainda resta mês promocional, a próxima cobrança **continua R$ 5,00** (o preço promocional não segue a tabela); se a campanha acabou, R$ 9,99;
+   - **FeedBack** (campanha): se ainda resta mês promocional, a próxima cobrança é o **menor** entre R$ 5,00 (o que ele viu) e 50% da tabela nova: com a tabela em 9,99, **continua R$ 5,00**; com a tabela em 6,00, **R$ 3,00**; se a campanha acabou, o preço regular da tabela;
    - cobrança **vencida ou anterior** a hoje e cobranças **pagas**: **não mudam**.
 6. **Restaurar** (o valor volta a R$ 10,00 sem aviso de 30 dias, só porque é teste):
 
@@ -118,7 +118,7 @@ Para ver os e-mails em inglês ou espanhol: `update profiles set billing_languag
 ## 8. Checkout com o preço promocional travado
 
 Com a tabela em R$ 9,99 (durante o teste 4, antes de restaurar), abra o checkout de reativação de uma conta de teste cancelada **que tenha campanha** e confira o total do ciclo:
-deve ser o promocional que ela viu, e não 50% de 9,99. (Não precisa finalizar a compra.)
+deve ser o **menor** entre o promocional que ela viu (R$ 5,00) e 50% da tabela de hoje (com a tabela em 9,99, R$ 5,00; em 6,00, R$ 3,00). (Não precisa finalizar a compra.)
 
 ## Se algo falhar
 

@@ -53,19 +53,32 @@ describe('datas', () => {
 describe('preço promocional travado', () => {
   const campaign = { percent: 50, months: 2, licenses: 1, unitPrice: 5 }
 
-  it('um reajuste da tabela NÃO muda o que o cliente paga nos meses promocionais que restam', () => {
-    const at = (base: number, c: typeof campaign | Omit<typeof campaign, 'unitPrice'>) => chargeBreakdown({ rules: rules(base), licenses: 1, cycle: 'monthly', campaign: c, campaignMonthsRemaining: 1 }).total
+  const at = (base: number, c: typeof campaign | Omit<typeof campaign, 'unitPrice'>) => chargeBreakdown({ rules: rules(base), licenses: 1, cycle: 'monthly', campaign: c, campaignMonthsRemaining: 1 }).total
+
+  it('"o melhor para o cliente": um AUMENTO da tabela não encarece o promocional que ele viu', () => {
     expect(at(10, campaign)).toBe(5)
-    expect(at(12, campaign)).toBe(5) // tabela subiu, o promocional continua o que ele viu
-    expect(at(12, { percent: 50, months: 2, licenses: 1 })).toBe(6) // sem o preço travado (campanha antiga), seguia a tabela
+    expect(at(12, campaign)).toBe(5) // tabela subiu (50% = 6), o promocional continua o que ele viu
+    expect(at(12, { percent: 50, months: 2, licenses: 1 })).toBe(6) // sem o preço travado (campanha antiga), segue a tabela de hoje
+  })
+
+  it('"o melhor para o cliente": uma REDUÇÃO da tabela barateia o promocional (nunca paga mais que um cliente novo na mesma campanha)', () => {
+    expect(at(6, campaign)).toBe(3) // 50% de 6, e não os 5 que ele viu
+    expect(at(6, { percent: 50, months: 2, licenses: 1 })).toBe(3) // igual a quem compra hoje
+    expect(at(4, campaign)).toBe(2)
+  })
+
+  it('o promocional nunca passa do preço regular nem do que ele viu', () => {
+    for (const base of [2, 4, 6, 8, 10, 12, 20]) {
+      const total = at(base, campaign)
+      expect(total, `base ${base}`).toBeLessThanOrEqual(5)
+      expect(total, `base ${base}`).toBeLessThanOrEqual(base)
+      expect(total, `base ${base}`).toBeLessThanOrEqual(base / 2 + 0.001)
+    }
   })
 
   it('depois dos meses da campanha vale o preço novo da tabela', () => {
     expect(chargeBreakdown({ rules: rules(12), licenses: 1, cycle: 'monthly', campaign, campaignMonthsRemaining: 0 }).total).toBe(12)
-  })
-
-  it('o promocional nunca é maior que o preço regular (tabela que cai abaixo dele)', () => {
-    expect(chargeBreakdown({ rules: rules(4), licenses: 1, cycle: 'monthly', campaign, campaignMonthsRemaining: 1 }).total).toBe(4)
+    expect(chargeBreakdown({ rules: rules(6), licenses: 1, cycle: 'monthly', campaign, campaignMonthsRemaining: 0 }).total).toBe(6)
   })
 
   it('o valor a travar é o valor base x % da campanha, em centavos', () => {
@@ -157,7 +170,7 @@ describe('e-mails de reajuste', () => {
   })
 
   it('quem está na campanha lê que o preço promocional dele não muda; os demais não leem isso', () => {
-    expect(customerBillingMail('price_change', 'pt', d)!.text).toContain('preço promocional da sua campanha não muda')
+    expect(customerBillingMail('price_change', 'pt', d)!.text).toContain('preço promocional da sua campanha não aumenta com o reajuste')
     expect(customerBillingMail('price_change', 'pt', { ...d, campaignActive: false })!.text).not.toContain('promocional')
   })
 

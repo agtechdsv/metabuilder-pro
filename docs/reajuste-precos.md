@@ -10,8 +10,10 @@ Como mudar o valor base do plano PRO sem surpreender quem já assina. Três part
 - **Aumento exige aviso de 30 dias** (conferido no servidor). Redução pode valer na hora (0 dias).
 - Só o **valor base** é reajustado pela tela; faixas de volume e descontos de ciclo seguem como estão.
 - **Salvar Regras** não aumenta mais o valor base quando há assinantes ativos: o aumento só entra pelo **Reajustar**.
-- Quem comprou em campanha **mantém o preço promocional que viu** (travado na compra em `profiles.campaign_unit_price`) até os meses da campanha acabarem;
-  depois vale a tabela nova. Campanhas antigas ganham o valor travado com a tabela de hoje (no SQL) e, por garantia, a Edge Function trava de novo, com a
+- Quem comprou em campanha tem o preço promocional que viu **travado como teto** (`profiles.campaign_unit_price`), com a regra **"o melhor para o cliente"**
+  (decidida em 23/11/2026): nos meses promocionais que restam ele paga o **menor** entre o que viu e a % da campanha sobre a tabela de hoje. Tabela que **sobe** não
+  o encarece (50% de 10 = R$ 5,00 continua R$ 5,00 mesmo com a tabela em 12); tabela que **desce** o barateia (tabela em 6: R$ 3,00, igual a quem compra hoje). Depois
+  dos meses da campanha vale a tabela nova. Campanhas antigas ganham o valor travado com a tabela de hoje (no SQL) e, por garantia, a Edge Function trava de novo, com a
   tabela de antes do reajuste, quem ainda estiver sem o valor.
 
 ## Como usar (SuperAdmin)

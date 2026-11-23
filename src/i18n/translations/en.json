@@ -4011,7 +4011,7 @@
       "reactivate_button": "Reactivate subscription",
       "price_notice_title": "Price update starting {date}",
       "price_notice_desc": "Your subscription price ({cycle}) will go from {current} to {next} at your first renewal on or after that date. Until then nothing changes. If you prefer, you can cancel the renewal at any time and keep access until the end of the paid period.",
-      "price_notice_promo": "The promotional price of your campaign does not change until the promotional months end.",
+      "price_notice_promo": "The promotional price of your campaign does not increase with the price update until the promotional months end.",
       "pix_copy_paste": "Pix Copy & Paste",
       "copy": "Copy",
       "pix_copied": "PIX code copied!",

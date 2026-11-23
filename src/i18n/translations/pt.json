@@ -4011,7 +4011,7 @@
       "reactivate_button": "Reativar assinatura",
       "price_notice_title": "Reajuste de preço a partir de {date}",
       "price_notice_desc": "O valor da sua assinatura ({cycle}) passará de {current} para {next} na sua primeira renovação a partir dessa data. Até lá nada muda. Se preferir, você pode cancelar a renovação a qualquer momento e mantém o acesso até o fim do período pago.",
-      "price_notice_promo": "O preço promocional da sua campanha não muda até o fim dos meses promocionais.",
+      "price_notice_promo": "O preço promocional da sua campanha não aumenta com o reajuste até o fim dos meses promocionais.",
       "pix_copy_paste": "Pix Copia e Cola",
       "copy": "Copiar",
       "pix_copied": "Código PIX copiado!",

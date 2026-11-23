@@ -51,9 +51,9 @@ const CYCLE_NAME: Record<MailLang, Record<string, string>> = {
 }
 const per = (d: BillingMailData, l: MailLang) => CYCLE_NAME[l][d.cycle || 'monthly'] ?? CYCLE_NAME[l].monthly
 const PROMO_NOTE: Record<MailLang, Fn> = {
-  pt: d => (d.campaignActive ? 'O preço promocional da sua campanha não muda até o fim dos meses promocionais.' : ''),
-  en: d => (d.campaignActive ? 'The promotional price of your campaign does not change until the promotional months end.' : ''),
-  es: d => (d.campaignActive ? 'El precio promocional de su campaña no cambia hasta el fin de los meses promocionales.' : ''),
+  pt: d => (d.campaignActive ? 'O preço promocional da sua campanha não aumenta com o reajuste até o fim dos meses promocionais.' : ''),
+  en: d => (d.campaignActive ? 'The promotional price of your campaign does not increase with the price update until the promotional months end.' : ''),
+  es: d => (d.campaignActive ? 'El precio promocional de su campaña no aumenta con la actualización hasta el fin de los meses promocionales.' : ''),
 }
 
 const suspendLine = {
