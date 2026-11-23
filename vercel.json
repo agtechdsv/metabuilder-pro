@@ -21,6 +21,10 @@
       "schedule": "30 4 * * *"
     },
     {
+      "path": "/api/cron/asaas-reconcile",
+      "schedule": "0 5 * * *"
+    },
+    {
       "path": "/api/cron/billing-notices",
       "schedule": "0 11 * * *"
     },
