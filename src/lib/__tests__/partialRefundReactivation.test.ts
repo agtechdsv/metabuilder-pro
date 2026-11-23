@@ -148,6 +148,10 @@ describe('reativação da assinatura', () => {
     expect(src).toContain('reactivationDueDate(prevProfile?.subscription_status, prevProfile?.subscription_expires_at')
     expect(src).toContain('const reactivationDue = !isUpgrade ?')
     expect(src).toContain('const nextDueDate = reactivationDue ??')
+    // a campanha que o cliente já comprou vale também na reativação (e na cotação do site): sem isso o checkout cobraria o preço cheio e o webhook depois voltaria ao da campanha
+    expect(src).toContain('if (isUpgrade || reactivationDue) {')
+    expect(src.indexOf('const reactivationDue')).toBeLessThan(src.indexOf('if (isUpgrade || reactivationDue)'))
+    expect(src.match(/const reactivationDue/g)?.length).toBe(1)
     // só o objeto da reativação (sem os comentários): ativa a assinatura e NÃO grava subscription_expires_at
     const start = src.indexOf('.update(reactivationDue')
     const patch = src.slice(start, src.indexOf(': {', start + 40)).split('\n').filter(l => !l.trim().startsWith('//')).join('\n')

@@ -105,7 +105,10 @@ serve(async (req) => {
     let campaignTerms: CampaignTerms | null = null;
     let newCampaign: any = null;
     let monthsUsed = 0;
-    if (isUpgrade) {
+    // Reativação (assinatura cancelada com acesso ainda pago): o cliente mantém a campanha que já comprou, como no upgrade, e a primeira cobrança é no fim do acesso.
+    // Quem decide é o perfil no banco (nunca o navegador); vale também para a cotação, para o site mostrar o mesmo valor que será cobrado.
+    const reactivationDue = !isUpgrade ? reactivationDueDate(prevProfile?.subscription_status, prevProfile?.subscription_expires_at, new Date()) : null;
+    if (isUpgrade || reactivationDue) {
       campaignTerms = campaignFromProfile(prevProfile);
       monthsUsed = Number(prevProfile?.campaign_months_used) || 0;
     } else {
@@ -270,9 +273,8 @@ serve(async (req) => {
     if (paymentMethod === "boleto") {
       d.setDate(d.getDate() + 1);
     }
-    // Reativação (assinatura cancelada com acesso ainda pago): a assinatura nova começa a cobrar só no fim do acesso, para não cobrar o mesmo período
-    // duas vezes. Quem decide é o perfil no banco (nunca o navegador). Fora desse caso, a primeira cobrança é hoje, como sempre.
-    const reactivationDue = !isUpgrade ? reactivationDueDate(prevProfile?.subscription_status, prevProfile?.subscription_expires_at, new Date()) : null;
+    // Reativação: a assinatura nova começa a cobrar só no fim do acesso, para não cobrar o mesmo período duas vezes (reactivationDue, calculado acima).
+    // Fora desse caso, a primeira cobrança é hoje, como sempre.
     const nextDueDate = reactivationDue ?? d.toISOString().split("T")[0];
 
     // Referência externa no padrão da Família PRO (mb_ws_<workspace>_<l|u>_<licenças>_cy_<ciclo>_t_<timestamp>; ~64 caracteres, limite do Asaas: 100).
