@@ -10,7 +10,8 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
   const { t } = useI18n()
 
   const [version, setVersion] = useState('')
-  const [generateReleaseNotes, setGenerateReleaseNotes] = useState(true)
+  // desmarcado por padrão: as notas são escritas à mão (o automático por IA caía no texto "melhorias gerais")
+  const [generateReleaseNotes, setGenerateReleaseNotes] = useState(false)
   const [releaseNotes, setReleaseNotes] = useState('')
   const [buildWindows, setBuildWindows] = useState(true)
   const [buildMacOs, setBuildMacOs] = useState(true)
@@ -117,6 +118,13 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
     if (!version.trim()) {
       setStatus('error')
       setErrorMessage('Por favor, informe a versão (ex: 0.2.0)')
+      return
+    }
+
+    // sem notas e sem o automático, a release sairia sem entrada no histórico
+    if (!generateReleaseNotes && !releaseNotes.trim()) {
+      setStatus('error')
+      setErrorMessage('Escreva as release notes (ou ligue o "Release Notes Automático") antes de gerar a release.')
       return
     }
 
