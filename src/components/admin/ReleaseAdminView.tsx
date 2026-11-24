@@ -312,7 +312,7 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
                   rows={5}
                   value={releaseNotes}
                   onChange={(e) => setReleaseNotes(e.target.value)}
-                  placeholder="Descreva as novidades desta versão..."
+                  placeholder={'Descreva as novidades desta versão (Markdown e emojis valem).\nPara 3 idiomas, separe com linhas: === pt ===, === en ===, === es ===. Sem marcadores, o mesmo texto vale para os três.'}
                   className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-y"
                 />
               </motion.div>

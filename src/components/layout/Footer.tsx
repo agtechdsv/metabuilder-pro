@@ -9,10 +9,12 @@ import { PrivacyContent } from '@/components/legal/PrivacyContent'
 import { TermsContent } from '@/components/legal/TermsContent'
 import { AgTechContent } from '@/components/legal/AgTechContent'
 import { salesWhatsappUrl } from '@/lib/contact'
+import { AboutModal } from '@/components/layout/AboutModal'
 
 export function Footer() {
   const { t, language } = useI18n()
   const [legalType, setLegalType] = useState<'privacy' | 'terms' | 'agtech' | null>(null)
+  const [aboutOpen, setAboutOpen] = useState(false)
 
   return (
     <footer className="w-full border-t border-neutral-200 dark:border-neutral-900/50 pt-3 pb-3 mt-auto">
@@ -60,6 +62,13 @@ export function Footer() {
             {t('footer.whatsapp')}
           </a>
           <button
+            onClick={() => setAboutOpen(true)}
+            data-testid="footer-about"
+            className="text-sm font-bold text-neutral-400 dark:text-neutral-500 hover:text-indigo-600 hover:underline underline-offset-4 transition-all cursor-pointer"
+          >
+            {t('footer.about', 'Sobre')}
+          </button>
+          <button
             onClick={() => setLegalType('privacy')}
             className="text-sm font-bold text-neutral-400 dark:text-neutral-500 hover:text-indigo-600 hover:underline underline-offset-4 transition-all cursor-pointer"
           >
@@ -73,6 +82,8 @@ export function Footer() {
           </button>
         </div>
       </div>
+
+      <AboutModal isOpen={aboutOpen} onClose={() => setAboutOpen(false)} />
 
       {/* Modais Legais */}
       <LegalModal

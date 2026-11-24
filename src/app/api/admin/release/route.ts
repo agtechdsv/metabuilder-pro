@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { parseReleaseNotes } from '@/lib/releaseNotes'
 
 export const maxDuration = 300 // 5 minutes max duration for Vercel Pro/Enterprise (to prevent 504 Gateway Timeout)
 
@@ -101,8 +102,28 @@ export async function POST(request: Request) {
 
     // Step 3.5: Generate Changelog using Gemini (if key is present)
     let newChangelogStr = ''
+
+    // Notas escritas à mão: valem como estão (Markdown e emojis), sem passar pelo Gemini e sem depender da chave dele.
+    const manualNotes = !generateReleaseNotes && typeof releaseNotes === 'string' && releaseNotes.trim() && version !== '1.0.0'
+      ? parseReleaseNotes(releaseNotes)
+      : null
+    if (manualNotes) {
+      let currentChangelog = {}
+      try {
+        const changelogRes = await githubFetch(`contents/public/changelog.json?ref=master`)
+        currentChangelog = JSON.parse(Buffer.from(changelogRes.content, 'base64').toString('utf-8'))
+      } catch (e) {
+        console.warn('Não foi possível ler o changelog.json atual no repo, criando um novo.')
+      }
+      const today = new Date().toISOString().split('T')[0]
+      newChangelogStr = JSON.stringify({
+        [`v${version}`]: { date: today, pt: [manualNotes.pt], en: [manualNotes.en], es: [manualNotes.es] },
+        ...currentChangelog
+      }, null, 2)
+    }
+
     try {
-      if (process.env.GEMINI_API_KEY) {
+      if (!manualNotes && process.env.GEMINI_API_KEY) {
         let contentToTranslate = ''
         
         if (generateReleaseNotes) {
@@ -284,7 +305,7 @@ ${safeContent}
           build_windows: buildWindows ? 'true' : 'false',
           build_macos: buildMacOs ? 'true' : 'false',
           build_linux: buildLinux ? 'true' : 'false',
-          release_notes: generateReleaseNotes ? '' : (releaseNotes || 'Nova versão do MetaBuilder PRO disponível!'),
+          release_notes: generateReleaseNotes ? '' : (manualNotes ? manualNotes.pt : (releaseNotes || 'Nova versão do MetaBuilder PRO disponível!')),
           generate_release_notes: generateReleaseNotes ? 'true' : 'false'
         }
       })
