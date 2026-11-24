@@ -9,8 +9,11 @@ import { isTauri } from '@/utils/tauriUtils'
 
 const P = 'subscribe_invite.'
 
-/** Convite para assinar, para quem ainda não tem plano (o servidor decide se mostra; ver shouldShowSubscribeInvite). */
-export default function SubscribeInviteBanner() {
+/**
+ * Convite para assinar, para quem ainda não tem plano (o servidor decide se mostra; ver shouldShowSubscribeInvite).
+ * `onOpen`: no painel do cliente o botão abre a aba Assinatura (checkout ali mesmo), sem levar o usuário de volta à página inicial.
+ */
+export default function SubscribeInviteBanner({ onOpen }: { onOpen?: () => void }) {
   const { t } = useI18n()
   const router = useRouter()
   return (
@@ -21,8 +24,11 @@ export default function SubscribeInviteBanner() {
         <p className="mt-0.5 text-xs">{t(P + 'desc')}</p>
       </div>
       <a href={SUBSCRIBE_INVITE_HREF}
-        // na IDE vai ao checkout da própria IDE: já logado, com os dados do perfil e sem risco de assinar com outro usuário
-        onClick={e => { if (isTauri()) { e.preventDefault(); router.push(SUBSCRIBE_INVITE_IDE_HREF) } }}
+        // no painel abre a aba Assinatura; na IDE vai ao checkout da própria IDE: já logado, com os dados do perfil e sem risco de assinar com outro usuário
+        onClick={e => {
+          if (onOpen) { e.preventDefault(); onOpen(); return }
+          if (isTauri()) { e.preventDefault(); router.push(SUBSCRIBE_INVITE_IDE_HREF) }
+        }}
         className="rounded-xl bg-neutral-900 px-4 py-2 text-xs font-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black">
         {t(P + 'button')}
       </a>

@@ -58,7 +58,8 @@ describe('FREE que só abriu o checkout: nunca suspenso, só lembrete suave', ()
     expect(act).toContain("state: 'checkout_pending'")
     const dash = read('src/components/client/ClientDashboardClient.tsx')
     expect(dash).toContain('canPayAsGuest')
-    expect(dash).toContain("tab === 'subscription' && canPayAsGuest")
+    expect(dash).toContain("tab === 'subscription' && canOpenSubscription") // canOpenSubscription = canPayAsGuest (cobrança aberta) ou canSubscribeAsGuest (sem plano)
+    expect(dash).toContain('const canOpenSubscription = canPayAsGuest || canSubscribeAsGuest')
   })
 
   it('o script de correção só mexe em FREE sem pagamento', () => {
@@ -69,7 +70,7 @@ describe('FREE que só abriu o checkout: nunca suspenso, só lembrete suave', ()
   })
 
   it('os textos novos existem nos três idiomas com os mesmos marcadores', () => {
-    const keys = ['billing_banner.checkout_title', 'billing_banner.checkout_desc', 'billing_banner.checkout_button', 'client_views.subscription.pending_invoice_title_free', 'client_views.subscription.pending_invoice_desc_free', 'client_dashboard.subscription_guest_subtitle']
+    const keys = ['billing_banner.checkout_title', 'billing_banner.checkout_desc', 'billing_banner.checkout_button', 'client_views.subscription.pending_invoice_title_free', 'client_views.subscription.pending_invoice_desc_free', 'client_dashboard.subscription_guest_subtitle', 'client_dashboard.subscription_guest_new_subtitle']
     const marks = (s: string) => (String(s).match(/\{[a-z]+\}/g) || []).sort().join(',')
     const get = (o: any, p: string) => p.split('.').reduce((a, k) => (a == null ? undefined : a[k]), o)
     const pt = JSON.parse(read('src/i18n/translations/pt.json'))

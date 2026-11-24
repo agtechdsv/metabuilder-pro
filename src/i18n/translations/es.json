@@ -3964,7 +3964,8 @@
     "shared": {
       "licenses_gauge_title": "Licencias"
     },
-    "subscription_guest_subtitle": "Complete el pago del plan PRO"
+    "subscription_guest_subtitle": "Complete el pago del plan PRO",
+    "subscription_guest_new_subtitle": "Elija su plan y suscríbase sin salir del panel"
   },
   "studio": {
     "sql": {

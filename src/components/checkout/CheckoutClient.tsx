@@ -28,9 +28,11 @@ interface CheckoutClientProps {
   user: any
   profile?: any
   mode?: string
+  /** dentro do painel do cliente (aba Assinatura do convidado): sem o botão de fechar, que levaria o usuário para fora do painel */
+  embedded?: boolean
 }
 
-export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, workspaceSlug, user, profile, mode }: CheckoutClientProps) {
+export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, workspaceSlug, user, profile, mode, embedded = false }: CheckoutClientProps) {
   const { t, language } = useI18n()
   const state = useCheckoutState({ rules, initialLicenses, initialCycle, workspaceSlug, user, profile, mode })
   const {
@@ -56,7 +58,8 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 blur-[100px] pointer-events-none rounded-full"></div>
 
       {/* Close Button */}
-      <button 
+      {!embedded && (
+      <button
         onClick={() => {
           if (window.history.length > 2) {
             router.back()
@@ -69,6 +72,7 @@ export function CheckoutClient({ rules, initialLicenses = 1, initialCycle, works
       >
         <X className="w-5 h-5" />
       </button>
+      )}
 
       {/* Modal Header */}
       <div className="space-y-2 mb-10 pr-12">

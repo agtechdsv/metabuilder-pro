@@ -66,6 +66,7 @@ import { DeviceSessionsPanel } from '@/components/workspace/DeviceSessionsPanel'
 import BillingBanner from '@/components/billing/BillingBanner'
 import { LegalNoticeBanner } from '@/components/legal/LegalNoticeBanner'
 import SubscribeInviteBanner from '@/components/billing/SubscribeInviteBanner'
+import { CheckoutClient } from '@/components/checkout/CheckoutClient'
 import { useI18n } from '@/i18n/I18nContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -139,6 +140,8 @@ interface ClientDashboardClientProps {
   activityLogs?: any[]
   ownerGuests?: any[]
   showSubscribeInvite?: boolean
+  /** usuário da sessão (o checkout da aba Assinatura do convidado precisa dele) */
+  authUser?: any
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -170,6 +173,7 @@ export default function ClientDashboardClient({
   activityLogs = [],
   ownerGuests = [],
   showSubscribeInvite = false,
+  authUser,
 }: ClientDashboardClientProps) {
   const { t } = useI18n()
   const [localProfile, setLocalProfile] = useState(profile)
@@ -177,6 +181,10 @@ export default function ClientDashboardClient({
   // FREE com cobrança em aberto (checkout sem pagar): vê a aba Assinatura para pagar, mesmo sem licenças
   const hasOpenCharge = (payments || []).some((p: any) => p.status === 'pending' || p.status === 'overdue')
   const canPayAsGuest = isGuest && hasOpenCharge
+  // Convidado sem plano (e sem cobrança aberta): a aba Assinatura traz o checkout ali mesmo, sem voltar à página inicial.
+  // showSubscribeInvite já exclui bloqueado, convidado de outro dono, SuperAdmin e quem tem licenças (ver shouldShowSubscribeInvite)
+  const canSubscribeAsGuest = isGuest && !hasOpenCharge && showSubscribeInvite && !!rules && !!authUser
+  const canOpenSubscription = canPayAsGuest || canSubscribeAsGuest
   const [activeTab, setActiveTab] = useState<TabId>(isGuest ? 'downloads' : 'dashboard')
   const unreadChat = useUnreadChatCount()
 
@@ -205,18 +213,18 @@ export default function ClientDashboardClient({
       const params = new URLSearchParams(window.location.search)
       const tab = params.get('tab') as TabId
       if (tab && TABS.some(t => t.id === tab)) {
-        if (!isGuest || tab === 'metavoice' || tab === 'community' || tab === 'downloads' || (tab === 'subscription' && canPayAsGuest)) {
+        if (!isGuest || tab === 'metavoice' || tab === 'community' || tab === 'downloads' || (tab === 'subscription' && canOpenSubscription)) {
           setActiveTab(tab)
         }
       }
     }
-  }, [isGuest, canPayAsGuest])
+  }, [isGuest, canOpenSubscription])
 
   useEffect(() => {
-    if (isGuest && activeTab !== 'metavoice' && activeTab !== 'community' && activeTab !== 'downloads' && !(activeTab === 'subscription' && canPayAsGuest)) {
+    if (isGuest && activeTab !== 'metavoice' && activeTab !== 'community' && activeTab !== 'downloads' && !(activeTab === 'subscription' && canOpenSubscription)) {
       setActiveTab('downloads')
     }
-  }, [isGuest, activeTab, canPayAsGuest])
+  }, [isGuest, activeTab, canOpenSubscription])
 
 
   const {
@@ -312,7 +320,7 @@ export default function ClientDashboardClient({
       {!isGuest && <LegalNoticeBanner />}
 
       {/* Convite para assinar: quem ainda não tem plano (e não foi convidado por outro dono) */}
-      {isGuest && showSubscribeInvite && <SubscribeInviteBanner />}
+      {isGuest && showSubscribeInvite && activeTab !== 'subscription' && <SubscribeInviteBanner onOpen={canOpenSubscription ? () => setActiveTab('subscription') : undefined} />}
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -330,7 +338,7 @@ export default function ClientDashboardClient({
               </h1>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
                 {activeTab === 'subscription'
-                  ? t('client_dashboard.subscription_guest_subtitle', 'Conclua o pagamento do plano PRO')
+                  ? (canSubscribeAsGuest ? t('client_dashboard.subscription_guest_new_subtitle', 'Escolha seu plano e assine sem sair do painel') : t('client_dashboard.subscription_guest_subtitle', 'Conclua o pagamento do plano PRO'))
                   : activeTab === 'community' 
                   ? t('client_dashboard.community_subtitle', 'Conecte-se com outros Owners e Desenvolvedores') 
                   : activeTab === 'downloads'
@@ -405,8 +413,8 @@ export default function ClientDashboardClient({
       <div className={cn("flex flex-col sm:flex-row gap-4 w-full", isGuest ? "sm:justify-end" : "sm:items-center sm:justify-between")}>
           {/* Guests (devs): show 3-tab bar with Downloads, MetaBuilders, MetaVoice */}
           {isGuest && (
-            <div className={cn('flex sm:grid gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-full xl:w-fit overflow-x-auto no-scrollbar', canPayAsGuest ? 'sm:grid-cols-4' : 'sm:grid-cols-3')}>
-              {(canPayAsGuest ? (['subscription', 'downloads', 'community', 'metavoice'] as const) : (['downloads', 'community', 'metavoice'] as const)).map(tabId => {
+            <div className={cn('flex sm:grid gap-2 p-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 w-full xl:w-fit overflow-x-auto no-scrollbar', canOpenSubscription ? 'sm:grid-cols-4' : 'sm:grid-cols-3')}>
+              {(canOpenSubscription ? (['subscription', 'downloads', 'community', 'metavoice'] as const) : (['downloads', 'community', 'metavoice'] as const)).map(tabId => {
                 const tab = TABS.find(t => t.id === tabId)!
                 return (
                   <button
@@ -599,7 +607,10 @@ export default function ClientDashboardClient({
           )}
 
           {/* ── TAB: Assinatura ───────────────────────────────────────── */}
-          {activeTab === 'subscription' && (
+          {activeTab === 'subscription' && canSubscribeAsGuest && (
+            <CheckoutClient rules={rules} user={authUser} profile={localProfile} embedded />
+          )}
+          {activeTab === 'subscription' && !canSubscribeAsGuest && (
             <ClientSubscriptionView
               loadingAsaasData={loadingAsaasData}
               asaasSubData={asaasSubData}

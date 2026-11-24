@@ -10,15 +10,35 @@ describe('convite para assinar', () => {
     expect(shouldShowSubscribeInvite({ subscriptionStatus: null, subscriptionLicenses: null })).toBe(true)
   })
 
-  it('não aparece para dono ativo ou cancelado (que já tem a tela de assinatura)', () => {
+  it('não aparece para dono ativo ou cancelado com licenças (que já tem a tela de assinatura)', () => {
     expect(shouldShowSubscribeInvite({ subscriptionStatus: 'active', subscriptionLicenses: 3 })).toBe(false)
     expect(shouldShowSubscribeInvite({ subscriptionStatus: 'canceled', subscriptionLicenses: 3 })).toBe(false)
+  })
+
+  it('cancelado SEM licenças (desistiu do checkout) volta a poder assinar; bloqueado nunca', () => {
+    expect(shouldShowSubscribeInvite({ subscriptionStatus: 'canceled', subscriptionLicenses: 0 })).toBe(true)
+    expect(shouldShowSubscribeInvite({ subscriptionStatus: 'canceled', subscriptionLicenses: null })).toBe(true)
+    expect(shouldShowSubscribeInvite({ subscriptionStatus: 'blocked', subscriptionLicenses: 0 })).toBe(false)
   })
 
   it('não aparece com licenças contratadas, para SuperAdmin nem para convidado de outro dono', () => {
     expect(shouldShowSubscribeInvite({ subscriptionLicenses: 1 })).toBe(false)
     expect(shouldShowSubscribeInvite({ isSuperAdmin: true })).toBe(false)
     expect(shouldShowSubscribeInvite({ isInvitedGuest: true })).toBe(false)
+  })
+
+  it('no painel do cliente o convidado assina na aba Assinatura (checkout embutido), sem voltar à página inicial', () => {
+    const dash = readFileSync(join(process.cwd(), 'src/components/client/ClientDashboardClient.tsx'), 'utf8')
+    // elegível: sem licenças, sem cobrança aberta (essa já tem o fluxo de pagar), com o convite liberado pelo servidor (que exclui bloqueado e convidado de outro dono)
+    expect(dash).toContain('const canSubscribeAsGuest = isGuest && !hasOpenCharge && showSubscribeInvite && !!rules && !!authUser')
+    expect(dash).toContain('<CheckoutClient rules={rules} user={authUser} profile={localProfile} embedded />')
+    expect(dash).toContain("onOpen={canOpenSubscription ? () => setActiveTab('subscription') : undefined}")
+    // a aba só abre para quem pode (a regra vale também para ?tab=subscription na URL)
+    expect(dash).toContain("(tab === 'subscription' && canOpenSubscription)")
+    const banner = readFileSync(join(process.cwd(), 'src/components/billing/SubscribeInviteBanner.tsx'), 'utf8')
+    expect(banner).toContain('if (onOpen) { e.preventDefault(); onOpen(); return }')
+    const checkout = readFileSync(join(process.cwd(), 'src/components/checkout/CheckoutClient.tsx'), 'utf8')
+    expect(checkout).toContain('{!embedded && (')
   })
 
   it('leva à seção de planos da página inicial', () => {
