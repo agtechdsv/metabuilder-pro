@@ -1,4 +1,25 @@
 {
+  "v1.0.3": {
+    "date": "2026-11-23",
+    "pt": [
+      "Novo Controle de Zoom Flutuante na IDE: ajuste visual com precisão em passos de 5% (de 70% a 150%) através de uma barra inteligente e arrastável que memoriza sua posição e preferência.",
+      "Central de Gestão de Notas Fiscais (NFS-e): nova fila com agendamento de emissão, acompanhamento em Clientes > Notas Fiscais, lembretes automáticos diários e fluxo integrado de envio de PDF ao cliente.",
+      "Pagamento Pix com Confirmação em Tempo Real: a tela de assinatura agora atualiza automaticamente no momento da confirmação do pagamento, com modal ampliado para leitura rápida do QR Code.",
+      "Cobrança Inteligente e Acesso Direto: links diretos e seguros para regularização imediata de faturas pendentes e jornada aprimorada para planos gratuitos, com lembretes suaves e sem bloqueios indevidos."
+    ],
+    "en": [
+      "New Floating Zoom Control in the IDE: fine-tune your workspace scale in 5% steps (from 70% to 150%) using a draggable, responsive bar that remembers your position and preferences.",
+      "Invoice Management Hub (NFS-e): track and manage invoice issuance queues, receive daily automated alerts for pending notes, and easily issue and send PDFs directly to customers.",
+      "Real-Time Pix Payment Confirmation: your subscription screen now updates automatically as soon as payment is confirmed, featuring an enlarged QR Code modal for effortless scanning.",
+      "Smarter Billing & Direct Invoice Links: secure direct-access payment links from emails and banners, paired with a smoother experience and gentle reminders for free-tier users without unexpected suspensions."
+    ],
+    "es": [
+      "Nuevo Control de Zoom Flotante en la IDE: ajuste el espacio de trabajo con precisión en pasos del 5% (del 70% al 150%) mediante una barra arrastrable que recuerda su posición preferida.",
+      "Centro de Gestión de Facturas (NFS-e): seguimiento de emisión programada con cola automatizada, alertas diarias de pendientes y emisión manual simplificada con envío de PDF al cliente.",
+      "Confirmación de Pago Pix en Tiempo Real: la pantalla de suscripción se actualiza automáticamente al detectar el pago, incluyendo una vista ampliada del código QR para un escaneo rápido.",
+      "Cobranza Inteligente y Enlaces Directos: acceso seguro e inmediato a facturas pendientes mediante enlaces directos y una experiencia protegida con recordatorios suaves para cuentas gratuitas sin bloqueos indebidos."
+    ]
+  },
   "v1.0.2": {
     "date": "2026-11-19",
     "pt": [
