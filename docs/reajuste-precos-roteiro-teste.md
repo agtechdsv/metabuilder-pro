@@ -83,7 +83,7 @@ select email, price_change_synced_id, campaign_unit_price from profiles where as
 
 5. **Esperado no Asaas:**
    - conta **sem campanha** (MetaBuilder PRO): assinatura e cobrança aberta com vencimento **a partir de hoje** em **R$ 9,99**;
-   - **FeedBack** (campanha): se ainda resta mês promocional, a próxima cobrança é o **menor** entre R$ 5,00 (o que ele viu) e 50% da tabela nova: com a tabela em 9,99, **continua R$ 5,00**; com a tabela em 6,00, **R$ 3,00**; se a campanha acabou, o preço regular da tabela;
+   - **FeedBack** (campanha): se ainda resta mês promocional, a próxima cobrança é o **menor** entre R$ 5,00 (o que ele viu) e 50% da tabela nova: com a tabela em 9,99, **continua R$ 5,00**; com a tabela em 6,00, 50% daria R$ 3,00, mas o **Asaas não aceita cobrança abaixo de R$ 5,00**, então vale o piso: **R$ 5,00** (corrigido em 24/11/2026; antes a função tentava R$ 3,00 e o Asaas recusava); se a campanha acabou, o preço regular da tabela;
    - cobrança **vencida ou anterior** a hoje e cobranças **pagas**: **não mudam**.
 6. **Restaurar** (o valor volta a R$ 10,00 sem aviso de 30 dias, só porque é teste):
 
@@ -118,7 +118,12 @@ Para ver os e-mails em inglês ou espanhol: `update profiles set billing_languag
 ## 8. Checkout com o preço promocional travado
 
 Com a tabela em R$ 9,99 (durante o teste 4, antes de restaurar), abra o checkout de reativação de uma conta de teste cancelada **que tenha campanha** e confira o total do ciclo:
-deve ser o **menor** entre o promocional que ela viu (R$ 5,00) e 50% da tabela de hoje (com a tabela em 9,99, R$ 5,00; em 6,00, R$ 3,00). (Não precisa finalizar a compra.)
+deve ser o **menor** entre o promocional que ela viu (R$ 5,00) e 50% da tabela de hoje (com a tabela em 9,99, R$ 5,00; em 6,00, 50% daria R$ 3,00, mas vale o **piso do Asaas de R$ 5,00 por cobrança**). (Não precisa finalizar a compra.)
+
+## Se o teste 4 já foi rodado com o código antigo
+
+Em 24/11/2026 o Asaas recusou o ajuste da conta de campanha (R$ 3,00, abaixo do mínimo de R$ 5,00) e a função marcou a conta como sincronizada mesmo assim. Para refazer com o código corrigido, rode
+`scripts/reajuste-precos-ressincronizar.sql`, publique as funções e o site, e dê **Run** no cron. Confira no Asaas que a assinatura e a cobrança aberta ficaram em R$ 5,00.
 
 ## Se algo falhar
 

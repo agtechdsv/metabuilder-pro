@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { ALWAYS_SEND_KINDS, CUSTOMER_KINDS, PRICE_CHANGE_KINDS } from '../../../supabase/functions/_shared/billingCore'
-import { campaignUnitPriceFor, chargeBreakdown, type PricingRules } from '../../../supabase/functions/_shared/pricing'
+import { MIN_CHARGE, campaignUnitPriceFor, chargeBreakdown, type PricingRules } from '../../../supabase/functions/_shared/pricing'
 import { BILLING_CUSTOMER_KINDS, customerBillingMail } from '../billing/billingMailText'
 import {
   MIN_INCREASE_NOTICE_DAYS, addDays, buildNewRules, campaignStillActive, changeForRenewal, daysBetween, isLongCycle, noticeAmounts, oldRulesOf, renewalReminderDue,
@@ -62,17 +62,28 @@ describe('preço promocional travado', () => {
   })
 
   it('"o melhor para o cliente": uma REDUÇÃO da tabela barateia o promocional (nunca paga mais que um cliente novo na mesma campanha)', () => {
-    expect(at(6, campaign)).toBe(3) // 50% de 6, e não os 5 que ele viu
-    expect(at(6, { percent: 50, months: 2, licenses: 1 })).toBe(3) // igual a quem compra hoje
-    expect(at(4, campaign)).toBe(2)
+    expect(at(12, campaign)).toBe(5) // tabela sobe: o travado (5) protege
+    expect(at(8, { percent: 50, months: 2, licenses: 1 })).toBe(5) // 50% de 8 = 4, mas o Asaas não cobra menos que R$ 5,00
+    // 50% de 6 = R$ 3,00, que o Asaas recusa ("não pode ser menor que R$ 5,00"): vale o piso, e o cálculo avisa que o aplicou
+    expect(at(6, campaign)).toBe(MIN_CHARGE)
+    expect(chargeBreakdown({ rules: rules(6), licenses: 1, cycle: 'monthly', campaign, campaignMonthsRemaining: 2 }).minApplied).toBe(true)
+    expect(at(4, campaign)).toBe(MIN_CHARGE)
+  })
+
+  it('piso de R$ 5,00 por cobrança (mínimo do Asaas): vale para qualquer total positivo, mas total zero continua zero', () => {
+    expect(chargeBreakdown({ rules: rules(6), licenses: 1, cycle: 'monthly' }).total).toBe(6)
+    expect(chargeBreakdown({ rules: rules(6), licenses: 1, cycle: 'monthly' }).minApplied).toBeUndefined()
+    expect(chargeBreakdown({ rules: rules(4), licenses: 1, cycle: 'monthly' }).total).toBe(MIN_CHARGE)
+    expect(chargeBreakdown({ rules: rules(0), licenses: 1, cycle: 'monthly' }).total).toBe(0)
   })
 
   it('o promocional nunca passa do preço regular nem do que ele viu', () => {
     for (const base of [2, 4, 6, 8, 10, 12, 20]) {
       const total = at(base, campaign)
       expect(total, `base ${base}`).toBeLessThanOrEqual(5)
-      expect(total, `base ${base}`).toBeLessThanOrEqual(base)
-      expect(total, `base ${base}`).toBeLessThanOrEqual(base / 2 + 0.001)
+      // o promocional é o menor entre o travado, o % da tabela e o regular; o piso do Asaas (R$ 5,00) só sobe o que ficaria abaixo dele
+      expect(total, `base ${base}`).toBeLessThanOrEqual(Math.max(base, MIN_CHARGE))
+      expect(total, `base ${base}`).toBeLessThanOrEqual(Math.max(base / 2, MIN_CHARGE) + 0.001)
     }
   })
 
@@ -193,7 +204,10 @@ describe('ligação no servidor', () => {
     expect(freeze).toBeLessThan(rule)
     expect(rule).toBeLessThan(mark)
     expect(fn).toContain('.lte("effective_on", today)')
-    expect(fn).toContain('{ fromDueDate: change.effective_on }')
+    expect(fn).toContain('{ fromDueDate: change.effective_on, failures }')
+    // só dá o cliente como sincronizado se o Asaas aceitou tudo; com falha ele fica na fila e o reajuste não vira "recalculado por inteiro"
+    expect(fn.indexOf('failures.length > 0')).toBeLessThan(fn.indexOf('price_change_synced_id: change.id'))
+    expect(fn).toContain('failed === 0')
     expect(fn).toContain('price_change_synced_id')
     const sync = read('supabase/functions/_shared/iclub.ts')
     expect(sync).toContain('updatePendingPayments: !opts.fromDueDate')

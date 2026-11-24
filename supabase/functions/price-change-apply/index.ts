@@ -58,6 +58,7 @@ serve(async (req) => {
 
     // 2) recalcula as assinaturas, em lotes, do reajuste aplicado mais antigo ainda não recalculado por inteiro
     let resynced = 0;
+    let failed = 0;
     let pending = false;
     const { data: open, error: openErr } = await supabase.from("pricing_changes").select("id, effective_on").eq("status", "applied").eq("resync_done", false).order("applied_at", { ascending: true }).limit(1);
     if (openErr) throw openErr;
@@ -68,15 +69,23 @@ serve(async (req) => {
         .or(`price_change_synced_id.is.null,price_change_synced_id.neq.${change.id}`).order("id", { ascending: true }).limit(BATCH);
       if (usersErr) throw usersErr;
       for (const u of users || []) {
-        try { await syncNextCharge(supabase, u.id, { fromDueDate: change.effective_on }); } catch (e) { console.error("[price-change-apply] erro ao recalcular", u.id, (e as Error)?.message); }
+        // só dá o cliente como sincronizado se o Asaas aceitou tudo; senão ele fica na fila e a rotina tenta de novo no dia seguinte
+        const failures: string[] = [];
+        try { await syncNextCharge(supabase, u.id, { fromDueDate: change.effective_on, failures }); } catch (e) { failures.push((e as Error)?.message || "erro"); }
+        if (failures.length > 0) {
+          console.error("[price-change-apply] recálculo incompleto, será tentado de novo:", u.id, failures.join(" | "));
+          failed++;
+          continue;
+        }
         await supabase.from("profiles").update({ price_change_synced_id: change.id }).eq("id", u.id);
         resynced++;
       }
       pending = (users?.length || 0) >= BATCH;
-      if (!pending) await supabase.from("pricing_changes").update({ resync_done: true, updated_at: new Date().toISOString() }).eq("id", change.id);
+      // com falha, o reajuste continua "não recalculado por inteiro": a próxima rodada tenta de novo só quem falhou
+      if (!pending && failed === 0) await supabase.from("pricing_changes").update({ resync_done: true, updated_at: new Date().toISOString() }).eq("id", change.id);
     }
 
-    return json({ success: true, applied, resynced, pending });
+    return json({ success: true, applied, resynced, failed, pending });
   } catch (e: any) {
     console.error("[price-change-apply] erro:", e);
     return json({ error: e?.message || "Erro interno" }, 500);

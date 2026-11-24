@@ -12,7 +12,7 @@ Como mudar o valor base do plano PRO sem surpreender quem já assina. Três part
 - **Salvar Regras** não aumenta mais o valor base quando há assinantes ativos: o aumento só entra pelo **Reajustar**.
 - Quem comprou em campanha tem o preço promocional que viu **travado como teto** (`profiles.campaign_unit_price`), com a regra **"o melhor para o cliente"**
   (decidida em 23/11/2026): nos meses promocionais que restam ele paga o **menor** entre o que viu e a % da campanha sobre a tabela de hoje. Tabela que **sobe** não
-  o encarece (50% de 10 = R$ 5,00 continua R$ 5,00 mesmo com a tabela em 12); tabela que **desce** o barateia (tabela em 6: R$ 3,00, igual a quem compra hoje). Depois
+  o encarece (50% de 10 = R$ 5,00 continua R$ 5,00 mesmo com a tabela em 12); tabela que **desce** o barateia (tabela em 6: 50% = R$ 3,00, mas nenhuma cobrança sai abaixo de **R$ 5,00**, o mínimo do Asaas; vale o piso). Depois
   dos meses da campanha vale a tabela nova. Campanhas antigas ganham o valor travado com a tabela de hoje (no SQL) e, por garantia, a Edge Function trava de novo, com a
   tabela de antes do reajuste, quem ainda estiver sem o valor.
 

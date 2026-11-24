@@ -53,7 +53,9 @@ export async function findEligibleCampaign(supabase: any, email: string | null |
  * Coloca a assinatura no Asaas com o valor da PRÓXIMA cobrança (campanha, desconto de indicação e licenças já considerados) e acerta as cobranças
  * pendentes dela. Chamar depois de cada pagamento confirmado e de cada mudança que altere o valor (indicação, cancelamento, troca de plano).
  */
-export async function syncNextCharge(supabase: any, userId: string, opts: { fromDueDate?: string } = {}): Promise<ChargeBreakdown | null> {
+export async function syncNextCharge(supabase: any, userId: string, opts: { fromDueDate?: string; failures?: string[] } = {}): Promise<ChargeBreakdown | null> {
+  // opts.failures: quem chama (ex.: o reajuste de preços) passa uma lista e, se ela voltar com itens, o Asaas recusou algo e o cliente NÃO deve ser dado como sincronizado
+  const fail = (msg: string) => { opts.failures?.push(msg.slice(0, 300)) }
   const { data: p } = await supabase.from("profiles")
     .select("asaas_subscription_id, subscription_status, subscription_licenses, subscription_cycle, campaign_id, campaign_percent, campaign_months, campaign_licenses, campaign_months_used, campaign_unit_price")
     .eq("id", userId).maybeSingle();
@@ -73,7 +75,7 @@ export async function syncNextCharge(supabase: any, userId: string, opts: { from
       // reajuste de preço (fromDueDate): só as cobranças com vencimento a partir da vigência mudam; as anteriores (vencidas ou em aberto) ficam como estão
       method: "PUT", headers: asaasHeaders(), body: JSON.stringify({ value: next.total, updatePendingPayments: !opts.fromDueDate }),
     });
-    if (!put.ok) console.error("[syncNextCharge] PUT subscription falhou:", await put.text().catch(() => ""));
+    if (!put.ok) { const body = await put.text().catch(() => ""); console.error("[syncNextCharge] PUT subscription falhou:", body); fail(`assinatura: ${body}`); }
 
     // garante nas cobranças pendentes (caso o Asaas não tenha aplicado updatePendingPayments)
     const pend = await fetch(`${asaasUrl()}/payments?subscription=${p.asaas_subscription_id}&status=PENDING`, { headers: asaasHeaders() });
@@ -83,12 +85,15 @@ export async function syncNextCharge(supabase: any, userId: string, opts: { from
         if (opts.fromDueDate && String(pay.dueDate || "") < opts.fromDueDate) continue;
         if (Math.abs(Number(pay.value) - next.total) > 0.009) {
           const r = await fetch(`${asaasUrl()}/payments/${pay.id}`, { method: "POST", headers: asaasHeaders(), body: JSON.stringify({ value: next.total }) });
-          if (!r.ok) console.error("[syncNextCharge] ajuste da cobrança pendente falhou:", pay.id, await r.text().catch(() => ""));
+          if (!r.ok) { const body = await r.text().catch(() => ""); console.error("[syncNextCharge] ajuste da cobrança pendente falhou:", pay.id, body); fail(`cobrança ${pay.id}: ${body}`); }
         }
       }
+    } else {
+      fail(`lista de cobranças pendentes: HTTP ${pend.status}`);
     }
   } catch (e) {
     console.error("[syncNextCharge] erro ao falar com o Asaas:", e);
+    fail(`erro ao falar com o Asaas: ${(e as Error)?.message || e}`);
   }
   return next;
 }

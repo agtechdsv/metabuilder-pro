@@ -40,6 +40,13 @@ export interface CampaignTerms {
 
 export const round2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 100
 
+/**
+ * Valor mínimo de UMA cobrança no Asaas (R$ 5,00): abaixo disso ele recusa criar ou alterar a cobrança ("não pode ser menor que R$ 5,00").
+ * Por isso nenhum total de cobrança sai abaixo disto, mesmo que campanha, desconto de ciclo ou base baixa deem menos (descoberto em 2026-11-24:
+ * base em R$ 6,00 + campanha de 50% dava R$ 3,00 e o reajuste não passava no Asaas).
+ */
+export const MIN_CHARGE = 5
+
 /** Preço promocional por licença/mês a travar na compra: valor base x % da campanha, em centavos. */
 export const campaignUnitPriceFor = (rules: { base_price: number | string }, percent: number | string): number => round2(Number(rules.base_price) * (Number(percent) / 100))
 const num = (v: unknown, fallback = 0): number => { const n = Number(v); return Number.isFinite(n) ? n : fallback }
@@ -98,6 +105,8 @@ export interface ChargeBreakdown {
   referralPercent: number
   referralDiscount: number
   total: number
+  /** true quando o total calculado ficou abaixo do mínimo por cobrança do Asaas e foi elevado a MIN_CHARGE */
+  minApplied?: boolean
 }
 
 export function chargeBreakdown(input: ChargeInput): ChargeBreakdown {
@@ -123,13 +132,16 @@ export function chargeBreakdown(input: ChargeInput): ChargeBreakdown {
 
   const referralPercent = clamp(num(input.referralPercent, 0), 0, 100)
   const referralDiscount = regularPart * (referralPercent / 100)
+  const rawTotal = round2(campaignPart + regularPart - referralDiscount)
+  const minApplied = rawTotal > 0 && rawTotal < MIN_CHARGE // total zero (sem cobrança) continua zero
 
   return {
     months, campaignMonths, regularMonths, campaignLicenses, extraLicenses,
     regularUnit: round2(regularUnit), campaignUnit: round2(campaignUnit),
     campaignPart: round2(campaignPart), regularPart: round2(regularPart),
     referralPercent, referralDiscount: round2(referralDiscount),
-    total: round2(campaignPart + regularPart - referralDiscount),
+    total: minApplied ? MIN_CHARGE : rawTotal,
+    ...(minApplied ? { minApplied: true } : {}),
   }
 }
 
