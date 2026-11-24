@@ -41,12 +41,12 @@ export async function getRepriceStateAction(): Promise<{ success: true; state: R
 }
 
 /** Agenda o reajuste (valor base novo e dias até valer) e avisa os assinantes por e-mail. O prazo mínimo para aumento é conferido no servidor. */
-export async function scheduleRepriceAction(input: { newBase: unknown; days: unknown }): Promise<{ success: true; effectiveOn: string; notified: number } | { success: false; code: RepriceCode }> {
+export async function scheduleRepriceAction(input: { newBase: unknown; days: unknown }): Promise<{ success: true; effectiveOn: string; notified: number; appliedNow: boolean } | { success: false; code: RepriceCode }> {
   const ctx = await requireSuperAdmin()
   if (!ctx) return { success: false, code: 'forbidden' }
   try {
     const r = await scheduleChange(ctx.admin, { actorId: ctx.userId, newBase: input?.newBase, days: input?.days })
-    return r.success ? { success: true, effectiveOn: r.change.effective_on, notified: r.notified } : r
+    return r.success ? { success: true, effectiveOn: r.change.effective_on, notified: r.notified, appliedNow: r.appliedNow } : r
   } catch (e) {
     console.error('[reajuste] erro ao agendar:', (e as Error)?.message)
     return { success: false, code: 'unknown' }

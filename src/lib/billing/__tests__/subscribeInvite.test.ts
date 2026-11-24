@@ -41,8 +41,8 @@ describe('convite para assinar', () => {
     expect(checkout).toContain('{!embedded && (')
   })
 
-  it('leva à seção de planos da página inicial', () => {
-    expect(SUBSCRIBE_INVITE_HREF).toBe('/#pricing')
+  it('fora do painel (página de workspace) leva à aba Assinatura do painel, não à página inicial', () => {
+    expect(SUBSCRIBE_INVITE_HREF).toBe('/client/dashboard?tab=subscription')
   })
 
   it('na IDE vai ao checkout da própria IDE, nunca ao navegador do sistema (que pode estar logado com outro usuário)', () => {

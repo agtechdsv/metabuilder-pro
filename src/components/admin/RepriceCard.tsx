@@ -14,7 +14,7 @@ const ERRORS: Record<RepriceCode, string> = {
   invalid_value: 'Informe um valor base válido, maior que zero.',
   same_value: 'O valor novo é igual ao atual.',
   invalid_days: 'Informe os dias até valer (número inteiro, de 0 a 365).',
-  notice_too_short: `Aumento exige aviso de pelo menos ${MIN_INCREASE_NOTICE_DAYS} dias.`,
+  notice_too_short: `Aumento exige aviso de pelo menos ${MIN_INCREASE_NOTICE_DAYS} dias (só é dispensado quando não há assinante a avisar).`,
   already_scheduled: 'Já existe um reajuste agendado. Cancele-o antes de agendar outro.',
   forbidden: 'Só o SuperAdmin pode reajustar.',
   not_found: 'Reajuste não encontrado (talvez já tenha sido aplicado ou cancelado).',
@@ -44,7 +44,8 @@ export function RepriceCard() {
   if (loading) return <div className="flex items-center gap-2 p-4 text-xs text-neutral-500"><Loader2 className="h-4 w-4 animate-spin" /> Carregando reajustes...</div>
   if (!state) return null
 
-  const check = validateReprice({ currentBase: state.currentBase, newBase, days })
+  // sem assinante a avisar, o aumento pode valer na hora (o servidor confere de novo, com a contagem do banco)
+  const check = validateReprice({ currentBase: state.currentBase, newBase, days, subscribers: state.subscribers })
   const effective = check.ok ? addDays(todayBR(), check.days) : null
   const problem = newBase.trim() === '' ? '' : check.ok ? '' : ERRORS[check.code]
 
@@ -54,7 +55,9 @@ export function RepriceCard() {
     setBusy(false)
     setConfirming(false)
     if (r.success) {
-      toast(`Reajuste agendado para ${dmy(r.effectiveOn)}. ${r.notified} assinante(s) avisado(s) por e-mail.`, 'success')
+      toast(r.appliedNow
+        ? `Valor base atualizado agora. ${r.notified} assinante(s) avisado(s) por e-mail.`
+        : `Reajuste agendado para ${dmy(r.effectiveOn)}. ${r.notified} assinante(s) avisado(s) por e-mail.`, 'success')
       setNewBase('')
       await load()
     } else toast(ERRORS[r.code] || ERRORS.unknown, 'error')
@@ -119,6 +122,7 @@ export function RepriceCard() {
             <p data-testid="reprice-preview" className="text-xs text-neutral-600 dark:text-neutral-300">
               {check.increase ? 'Aumento' : 'Redução'} de {money(state.currentBase)} para {money(check.newBase)}. Vale nas renovações com vencimento a partir de <strong>{dmy(effective)}</strong>.
               Serão avisados <strong>{state.subscribers}</strong> assinante(s) por e-mail agora.
+              {check.noticeWaived && <> Sem assinantes a avisar, o aviso de {state.minNoticeDays} dias é dispensado: com 0 dias o valor base muda na hora.</>}
             </p>
           )}
 

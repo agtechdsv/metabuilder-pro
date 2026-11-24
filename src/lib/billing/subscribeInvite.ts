@@ -22,7 +22,7 @@ export function shouldShowSubscribeInvite(p: SubscribeInviteInput): boolean {
   return true
 }
 
-/** Destino do botão fora do painel (workspace): a seção de planos da página inicial (onde se escolhem licenças e ciclo, e a campanha aparece). */
-export const SUBSCRIBE_INVITE_HREF = '/#pricing'
+/** Destino do botão (na página de workspace): a aba Assinatura do painel do cliente, onde o convidado escolhe licenças e ciclo e assina sem voltar à página inicial. */
+export const SUBSCRIBE_INVITE_HREF = '/client/dashboard?tab=subscription'
 /** Na IDE a home é a tela de entrada (sem planos) e o navegador do sistema pode estar logado com outro usuário: vai direto ao checkout da própria IDE. */
 export const SUBSCRIBE_INVITE_IDE_HREF = '/checkout'

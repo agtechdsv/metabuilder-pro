@@ -96,13 +96,33 @@ export async function drainQueue(admin: Admin): Promise<void> {
   }
 }
 
-export type ScheduleResult = { success: true; change: PriceChangeRow; notified: number } | { success: false; code: RepriceCode }
+export type ScheduleResult = { success: true; change: PriceChangeRow; notified: number; appliedNow: boolean } | { success: false; code: RepriceCode }
+
+/**
+ * "0 dias" vale na hora: chama a Edge Function que aplica o que já chegou na data (a mesma que o cron diário chama), em vez de esperar a rotina das 04:30 UTC.
+ * Se falhar, o reajuste continua agendado e a rotina diária aplica (nunca perde o pedido).
+ */
+async function applyDueChangesNow(): Promise<boolean> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return false
+  try {
+    const res = await fetch(`${url}/functions/v1/price-change-apply`, { method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: '{}', cache: 'no-store' })
+    const body = await res.json().catch(() => ({}))
+    return res.ok && Number(body.applied) > 0
+  } catch (e) {
+    console.error('[reajuste] não foi possível aplicar na hora; a rotina diária aplica:', (e as Error)?.message)
+    return false
+  }
+}
 
 /** Agenda o reajuste e avisa todos os assinantes por e-mail agora. O prazo mínimo (30 dias para aumento) é conferido aqui, no servidor. */
 export async function scheduleChange(admin: Admin, input: { actorId: string; newBase: unknown; days: unknown }, now = new Date()): Promise<ScheduleResult> {
   const rules = await currentRules(admin)
   if (!rules) return { success: false, code: 'unknown' }
-  const check = validateReprice({ currentBase: rules.base_price, newBase: input.newBase, days: input.days })
+  // os assinantes a avisar vêm do banco, nunca do navegador: o aviso mínimo de 30 dias só é dispensado se não houver NENHUM
+  const subs = await subscribers(admin)
+  const check = validateReprice({ currentBase: rules.base_price, newBase: input.newBase, days: input.days, subscribers: subs.length })
   if (!check.ok) return { success: false, code: check.code }
   if (await scheduledChange(admin)) return { success: false, code: 'already_scheduled' }
 
@@ -115,7 +135,6 @@ export async function scheduleChange(admin: Admin, input: { actorId: string; new
   const change = row as PriceChangeRow
 
   // aviso a cada assinante, com o valor dele
-  const subs = await subscribers(admin)
   const refs = await referralPercents(admin, subs.map(s => s.id as string))
   let notified = 0
   for (const s of subs) {
@@ -124,7 +143,8 @@ export async function scheduleChange(admin: Admin, input: { actorId: string; new
   }
   await admin.from('pricing_changes').update({ notified_at: new Date().toISOString() }).eq('id', change.id)
   await drainQueue(admin)
-  return { success: true, change: { ...change, notified_at: new Date().toISOString() }, notified }
+  const appliedNow = check.days === 0 ? await applyDueChangesNow() : false
+  return { success: true, change: { ...change, notified_at: new Date().toISOString() }, notified, appliedNow }
 }
 
 /** Cancela o reajuste agendado (os avisos que ainda estão na fila deixam de sair; quem já foi avisado continua avisado, e nada muda no preço). */

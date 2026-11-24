@@ -35,11 +35,15 @@ export function daysBetween(from: string, to: string): number {
 }
 
 export type RepriceCheck =
-  | { ok: true; newBase: number; days: number; increase: boolean }
+  | { ok: true; newBase: number; days: number; increase: boolean; /** só presente (true) quando o aviso mínimo foi dispensado por não haver assinante a avisar */ noticeWaived?: boolean }
   | { ok: false; code: Extract<RepriceCode, 'invalid_value' | 'same_value' | 'invalid_days' | 'notice_too_short'> }
 
-/** Confere o pedido do SuperAdmin (valor base novo e dias até valer). Os valores vêm do navegador: nada é confiado. */
-export function validateReprice(input: { currentBase: unknown; newBase: unknown; days: unknown }): RepriceCheck {
+/**
+ * Confere o pedido do SuperAdmin (valor base novo e dias até valer). Os valores vêm do navegador: nada é confiado.
+ * `subscribers`: quantos assinantes seriam avisados. O aviso de 30 dias existe para proteger quem paga: com ZERO assinantes não há ninguém a proteger,
+ * e o aumento pode valer na hora. Sem informar (undefined), a regra fica a estrita de sempre (30 dias).
+ */
+export function validateReprice(input: { currentBase: unknown; newBase: unknown; days: unknown; subscribers?: unknown }): RepriceCheck {
   const current = Number(input.currentBase)
   const raw = typeof input.newBase === 'string' ? Number(input.newBase.replace(',', '.')) : Number(input.newBase)
   if (!Number.isFinite(raw) || raw <= 0 || raw > MAX_BASE_PRICE) return { ok: false, code: 'invalid_value' }
@@ -51,7 +55,10 @@ export function validateReprice(input: { currentBase: unknown; newBase: unknown;
   if (!Number.isInteger(d) || d < 0 || d > MAX_NOTICE_DAYS) return { ok: false, code: 'invalid_days' }
   if (Number.isFinite(current) && Math.round(current * 100) === Math.round(newBase * 100)) return { ok: false, code: 'same_value' }
   const increase = Number.isFinite(current) ? newBase > current : true
-  if (increase && d < MIN_INCREASE_NOTICE_DAYS) return { ok: false, code: 'notice_too_short' }
+  if (increase && d < MIN_INCREASE_NOTICE_DAYS) {
+    if (input.subscribers === 0) return { ok: true, newBase, days: d, increase, noticeWaived: true } // exatamente o número 0 (nada de vazio, nulo ou texto)
+    return { ok: false, code: 'notice_too_short' }
+  }
   return { ok: true, newBase, days: d, increase }
 }
 

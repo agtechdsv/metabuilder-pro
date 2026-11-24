@@ -19,6 +19,27 @@ describe('pedido de reajuste', () => {
     expect(validateReprice({ currentBase: 10, newBase: 8, days: 0 })).toEqual({ ok: true, newBase: 8, days: 0, increase: false })
   })
 
+  it('sem assinante a avisar, o aumento vale na hora; com assinante (ou sem informar) a regra dos 30 dias segue', () => {
+    expect(validateReprice({ currentBase: 6, newBase: 349, days: 0, subscribers: 0 })).toEqual({ ok: true, newBase: 349, days: 0, increase: true, noticeWaived: true })
+    expect(validateReprice({ currentBase: 6, newBase: 349, days: 10, subscribers: 0 })).toMatchObject({ ok: true, noticeWaived: true })
+    // com 30 dias ou mais não há o que dispensar
+    expect(validateReprice({ currentBase: 6, newBase: 349, days: 30, subscribers: 0 })).toEqual({ ok: true, newBase: 349, days: 30, increase: true })
+    // um assinante que seja: aviso obrigatório. Só o NÚMERO 0 dispensa (nada de vazio, nulo, texto ou ausente)
+    expect(validateReprice({ currentBase: 6, newBase: 349, days: 0, subscribers: 1 })).toEqual({ ok: false, code: 'notice_too_short' })
+    for (const s of [undefined, null, '', '0', false, NaN, -1]) expect(validateReprice({ currentBase: 6, newBase: 349, days: 0, subscribers: s }), String(s)).toEqual({ ok: false, code: 'notice_too_short' })
+    // redução nunca precisou de aviso, e a dispensa não aparece nela
+    expect(validateReprice({ currentBase: 10, newBase: 8, days: 0, subscribers: 0 })).toEqual({ ok: true, newBase: 8, days: 0, increase: false })
+  })
+
+  it('o servidor conta os assinantes no banco (não confia no navegador) e "0 dias" aplica na hora', () => {
+    const svc = read('src/lib/billing/priceChangeService.ts')
+    expect(svc).toContain('subscribers: subs.length')
+    expect(svc.indexOf('const subs = await subscribers(admin)')).toBeLessThan(svc.indexOf('validateReprice('))
+    expect(svc).toContain('check.days === 0 ? await applyDueChangesNow() : false')
+    const act = read('src/app/actions/priceChange.ts')
+    expect(act).not.toMatch(/subscribers:\s*input/) // a contagem nunca vem do corpo do pedido
+  })
+
   it('o que vem do navegador é conferido (valor, dias, igual ao atual)', () => {
     for (const v of [0, -1, NaN, 'abc', null, undefined, 2_000_000, Infinity]) expect(validateReprice({ currentBase: 10, newBase: v, days: 30 }), String(v)).toEqual({ ok: false, code: 'invalid_value' })
     for (const d of [-1, 1.5, 366, 'x', '', null, undefined, NaN]) expect(validateReprice({ currentBase: 10, newBase: 12, days: d }), String(d)).toEqual({ ok: false, code: 'invalid_days' })
