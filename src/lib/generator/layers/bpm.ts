@@ -172,11 +172,11 @@ export async function update${M}(id: string, formData: FormData | Record<string,
   const merged: Record<string, any> = { ...before, ...parsed }
   // "Antes de editar": o fluxo vê o registro inteiro (o atual com as mudanças) e pode bloquear ou mudar campos
   let b: { data: Record<string, any>; message: string | null }
-  try { b = await bpmBefore(__bpmTable, 'UPDATE', merged) } catch (err: any) { return { __bpmError: err?.message || 'Ação bloqueada pelo fluxo.' } as any }
+  try { b = await bpmBefore(__bpmTable, 'UPDATE', merged, Object.keys(before).length ? before : null) } catch (err: any) { return { __bpmError: err?.message || 'Ação bloqueada pelo fluxo.' } as any }
   const out: Record<string, any> = { ...parsed }
   for (const k of Object.keys(b.data)) if (b.data[k] !== merged[k] && allowedColumns.has(k)) out[k] = b.data[k]
   const res: any = await __bpm_update${M}(id, out)
-  bpmAfter(__bpmTable, 'UPDATE', (await __bpmRow(id)) || b.data)
+  bpmAfter(__bpmTable, 'UPDATE', (await __bpmRow(id)) || b.data, Object.keys(before).length ? before : null)
   return res
 }
 
@@ -431,15 +431,15 @@ export function getBpm(): BpmCore {
 }
 
 /** "Antes de..." roda antes de gravar: se o fluxo bloqueia, lança erro com a mensagem dele; senão devolve os dados (possivelmente mudados pelo fluxo). */
-export async function bpmBefore(table: string, type: 'INSERT' | 'UPDATE' | 'DELETE', row: Record<string, any>): Promise<{ data: Record<string, any>; message: string | null }> {
-  const r = await getBpm().processSyncEvent(table, 'BEFORE_' + type, row)
+export async function bpmBefore(table: string, type: 'INSERT' | 'UPDATE' | 'DELETE', row: Record<string, any>, oldRow: Record<string, any> | null = null): Promise<{ data: Record<string, any>; message: string | null }> {
+  const r = await getBpm().processSyncEvent(table, 'BEFORE_' + type, row, oldRow)
   if (!r.success) throw new Error(r.error || 'Ação bloqueada pelo fluxo.')
   return { data: r.data, message: r.message }
 }
 
 /** "Ao criar/editar/excluir": depois de gravar, sem atrasar nem derrubar a gravação. */
-export function bpmAfter(table: string, type: 'INSERT' | 'UPDATE' | 'DELETE', row: Record<string, any>): void {
-  getBpm().processEvent(table, type, row).catch((e: any) => console.error('[BPM] Erro ao processar ' + type + ':', e?.message))
+export function bpmAfter(table: string, type: 'INSERT' | 'UPDATE' | 'DELETE', row: Record<string, any>, oldRow: Record<string, any> | null = null): void {
+  getBpm().processEvent(table, type, row, oldRow).catch((e: any) => console.error('[BPM] Erro ao processar ' + type + ':', e?.message))
 }
 
 /** O gatilho de webhook de entrada do fluxo (segredo guardado só como hash SHA-256). */

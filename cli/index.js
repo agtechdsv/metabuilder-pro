@@ -1277,6 +1277,21 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             }
             currentData = upperData;
           }
+          // Gatilho "Restringir a um campo" (De/Para): precisa do registro como era ANTES da edição. Só lê quando algum fluxo pede.
+          let bpmOldRow = null;
+          try {
+            if (bpmEngine && await bpmEngine.needsOldRow(safeTable)) {
+              if (dbType === 'oracle') {
+                const o = await oracleConnection.execute(`SELECT * FROM "${safeTable.toUpperCase()}" WHERE "${safeIdCol}" = :1`, [idValue], { outFormat: oracledb.OUT_FORMAT_OBJECT });
+                bpmOldRow = (o.rows && o.rows[0]) || null;
+              } else {
+                const o = await pgClient.query(`SELECT * FROM "${safeTable}" WHERE "${safeIdCol}" = $1`, [idValue]);
+                bpmOldRow = o.rows[0] || null;
+              }
+            }
+          } catch (e) {
+            console.error('[BPM] Falha ao ler o registro anterior à edição:', e.message);
+          }
           let updateResult = null;
           let updateAttempts = 0;
           const MAX_UPDATE_RETRIES = 5;
@@ -1323,7 +1338,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
               }
               result = updateResult;
               if (bpmEngine && result.rows && result.rows.length > 0) {
-                bpmEngine.processEvent(safeTable, 'UPDATE', result.rows[0]).then(async () => {
+                bpmEngine.processEvent(safeTable, 'UPDATE', result.rows[0], bpmOldRow).then(async () => {
                   let finalData = result.rows[0];
                   try {
                     if (dbType === 'postgres') {
@@ -1498,7 +1513,23 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           if (!bpmEngine) {
             result = { rows: [rowData] }; // Fallback
           } else {
-            const syncResult = await bpmEngine.processSyncEvent(safeTable, eventType, rowData);
+            // "Antes de editar" com restrição a um campo (De/Para): lê o registro como está hoje no banco para comparar com o que veio do formulário
+            let syncOldRow = null;
+            try {
+              const pkValue = rowData && (rowData.id !== undefined ? rowData.id : (rowData.ID !== undefined ? rowData.ID : rowData.Id));
+              if (String(eventType).toUpperCase() === 'BEFORE_UPDATE' && pkValue !== undefined && pkValue !== null && await bpmEngine.needsOldRow(safeTable)) {
+                if (dbType === 'oracle') {
+                  const o = await oracleConnection.execute(`SELECT * FROM "${safeTable.toUpperCase()}" WHERE "ID" = :1`, [pkValue], { outFormat: oracledb.OUT_FORMAT_OBJECT });
+                  syncOldRow = (o.rows && o.rows[0]) || null;
+                } else {
+                  const o = await pgClient.query(`SELECT * FROM "${safeTable}" WHERE "id" = $1`, [pkValue]);
+                  syncOldRow = o.rows[0] || null;
+                }
+              }
+            } catch (e) {
+              console.error('[BPM] Falha ao ler o registro anterior à edição:', e.message);
+            }
+            const syncResult = await bpmEngine.processSyncEvent(safeTable, eventType, rowData, syncOldRow);
             if (!syncResult.success) {
               // Bloqueio
               throw new Error(syncResult.error || 'Ação bloqueada pelo fluxo BPM.');

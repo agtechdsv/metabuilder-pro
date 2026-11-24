@@ -207,8 +207,9 @@ class BpmEngine {
     return '';
   }
 
-  processEvent(tableName, actionType, rowData) { return this.core.processEvent(tableName, actionType, rowData); }
-  processSyncEvent(tableName, actionType, rowData) { return this.core.processSyncEvent(tableName, actionType, rowData); }
+  processEvent(tableName, actionType, rowData, oldRow) { return this.core.processEvent(tableName, actionType, rowData, oldRow); }
+  processSyncEvent(tableName, actionType, rowData, oldRow) { return this.core.processSyncEvent(tableName, actionType, rowData, oldRow); }
+  needsOldRow(tableName) { return this.core.needsOldRow(tableName); }
   processWebhook(workflowId, data) { return this.core.processWebhook(workflowId, data); }
   processCustomAction(workflowIds, tableName, rowData) { return this.core.processCustomAction(workflowIds, tableName, rowData); }
 }

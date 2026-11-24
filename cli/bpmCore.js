@@ -129,6 +129,56 @@ class BpmCore {
     if (cronCount > 0) this.log.ok(`[BPM] ${cronCount} gatilho(s) agendado(s) configurado(s) com sucesso.`)
   }
 
+  /** Valor de um campo do registro (o banco pode devolver a coluna em outra caixa, como no Oracle). */
+  rowField(row, name) {
+    if (!row || !name) return undefined
+    if (Object.prototype.hasOwnProperty.call(row, name)) return row[name]
+    const wanted = String(name).toLowerCase()
+    const key = Object.keys(row).find(k => k.toLowerCase() === wanted)
+    return key === undefined ? undefined : row[key]
+  }
+
+  /** Igualdade tolerante entre o valor do banco e o digitado no Studio ("5" e 5.00 são iguais; vazio e nulo também). */
+  sameValue(a, b) {
+    const norm = (v) => (v === null || v === undefined) ? '' : (v instanceof Date ? v.toISOString() : String(v).trim())
+    const x = norm(a), y = norm(b)
+    if (x === y) return true
+    if (x !== '' && y !== '' && Number.isFinite(Number(x)) && Number.isFinite(Number(y))) return Number(x) === Number(y)
+    return false
+  }
+
+  /** "Restringir a um campo" (De/Para) do gatilho de edição: o campo precisa ter mudado e, se informados, o valor anterior (De) e o novo (Para) conferem. */
+  fieldChangeMatches(triggerNode, actionType, newRow, oldRow) {
+    const d = triggerNode.data || {}
+    if (!d.triggerSpecificField || !d.triggerField) return true
+    if (!/UPDATE/.test(String(actionType).toUpperCase())) return true // só vale para edição
+    if (!oldRow || Object.keys(oldRow).length === 0) {
+      this.log.warn(`[BPM] Gatilho restrito ao campo "${d.triggerField}", mas o valor anterior do registro não está disponível: não disparado.`)
+      return false
+    }
+    const before = this.rowField(oldRow, d.triggerField)
+    const after = this.rowField(newRow, d.triggerField)
+    if (after === undefined) return false // a edição não trouxe esse campo: ele não mudou
+    if (this.sameValue(before, after)) return false
+    const from = d.triggerFromValue, to = d.triggerToValue
+    const has = (v) => v !== undefined && v !== null && String(v).trim() !== ''
+    if (has(from) && !this.sameValue(before, from)) return false
+    if (has(to) && !this.sameValue(after, to)) return false
+    return true
+  }
+
+  /** Algum fluxo ativo escuta a edição desta tabela restrita a um campo? (quem grava só precisa ler o registro anterior nesse caso) */
+  async needsOldRow(tableName) {
+    for (const flow of this.workflows || []) {
+      for (const node of (flow.flow_data && flow.flow_data.nodes) || []) {
+        if (node.type !== 'trigger' || !node.data || !node.data.triggerSpecificField || !node.data.triggerField) continue
+        if (!toList(node.data.triggerType).some(t => /UPDATE/.test(t))) continue
+        if ((await this.getModelTable(node.data.triggerModelId)) === tableName) return true
+      }
+    }
+    return false
+  }
+
   async getModelTable(modelId) {
     if (!modelId) return null
     const table = await this.ports.models.tableOf(modelId)
@@ -612,7 +662,7 @@ class BpmCore {
     }
   }
 
-  async processEvent(tableName, actionType, rowData) {
+  async processEvent(tableName, actionType, rowData, oldRow = null) {
     this.log.debug(`[BPM-DEBUG] processEvent chamado: tableName=${tableName}, actionType=${actionType}`)
 
     if (!this.workflows || this.workflows.length === 0) {
@@ -637,6 +687,10 @@ class BpmCore {
         this.log.debug(`[BPM-DEBUG] Avaliando Trigger: table=${triggerTable} (esperado=${tableName}), types=[${triggerTypes.join(',')}] (esperado=${actionType})`)
 
         if (triggerTable === tableName && triggerTypes.includes(actionType.toUpperCase())) {
+          if (!this.fieldChangeMatches(triggerNode, actionType, rowData, oldRow)) {
+            this.log.debug(`[BPM-DEBUG] Fluxo "${flow.name}" ignorado: o campo restrito não mudou como o gatilho pede.`)
+            continue
+          }
           this.log.info(`[BPM] Disparando fluxo "${flow.name}" para a tabela ${tableName}...`)
           await this.runFlow(flow, triggerNode, tableName, rowData, `evento ${actionType.toUpperCase()}`)
         }
@@ -791,7 +845,7 @@ class BpmCore {
     return { success: finalSuccess, data: currentData, error: finalError, message: finalMessage, steps: MAX_STEPS - maxSteps, loop: queue.length > 0 }
   }
 
-  async processSyncEvent(tableName, actionType, rowData) {
+  async processSyncEvent(tableName, actionType, rowData, oldRow = null) {
     this.log.debug(`[BPM-DEBUG] processSyncEvent chamado: tableName=${tableName}, actionType=${actionType}`)
 
     let currentData = { ...rowData }
@@ -812,6 +866,7 @@ class BpmCore {
         const triggerTable = await this.getModelTable(triggerNode.data?.triggerModelId)
 
         if (triggerTable === tableName && triggerTypes.includes(actionType.toUpperCase())) {
+          if (!this.fieldChangeMatches(triggerNode, actionType, currentData, oldRow)) continue
           this.log.info(`[BPM] Disparando fluxo SÍNCRONO "${flow.name}" para a tabela ${tableName}...`)
           try {
             let result

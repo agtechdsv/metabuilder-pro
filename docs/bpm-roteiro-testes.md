@@ -39,6 +39,8 @@ Acompanhe o terminal do CLI: as linhas `[BPM] ...` mostram o que o motor fez. Pa
 | 1.13 | Fluxo em **laço** (A → B → A) | Disparar | Interrompe em 100 passos; execução `loop` | ☐ |
 | 1.14 | Fluxo em tabela **Oracle**, se tiver banco Oracle à mão | Repetir 1.1 e 1.3 | Mesmo resultado do PostgreSQL | ☐ |
 
+| 1.15 | Fluxo **Ao editar** com **Restringir a um campo** (De/Para, 24/11), campo `status`, Para `Enviado`, ação inserir em tabela de log | Mudar o status para Enviado; depois editar só outro campo | Dispara só na mudança do status. Detalhes e regras em `docs/bpm-roteiro-gatilhos.md` (teste 3) | ☐ |
+
 Webhook de entrada (1.8), PowerShell (troque `<ID>`, o endereço do site e o segredo):
 
 ```powershell
@@ -80,6 +82,8 @@ Invoke-RestMethod -Method Post -Uri "https://SEU-SITE/api/v1/webhook/<ID>" -Head
 | 2.18 | Log do servidor | **Não** mostra dados dos registros (só `[BPM] ...` sem valores). Com `BPM_VERBOSE=1` mostra os detalhes | ☐ |
 | 2.19 | Exportar um **workspace** com mais de um projeto, sendo um com fluxos | Cada app leva só os fluxos do **seu** projeto | ☐ |
 | 2.20 | App **Oracle** exportado, se tiver banco Oracle | 2.2 a 2.6 funcionam; `mb_bpm_runs` e `mb_bpm_locks` criadas sozinhas | ☐ |
+
+| 2.21 | Repetir **1.15** (De/Para) no app | Dispara só quando o campo muda para o valor "Para"; edição de outro campo não dispara | ☐ |
 
 ## Limitações conhecidas (confirme que são aceitáveis)
 

@@ -216,6 +216,574 @@
       },
       "event": { "mode": "webhook", "data": { "codigo": "A1" } },
       "expect": { "queries": [{ "sql": "INSERT INTO \"audit_log\" (\"msg\") VALUES ($1)", "params": ["recebi A1"] }], "runs": [{ "status": "success", "source": "WEBHOOK" }] }
+    },
+    {
+      "name": "De/Para: campo mudou para o valor \"Para\" dispara",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "UPDATE"
+              ],
+              "triggerModelId": "m_orders",
+              "triggerSpecificField": true,
+              "triggerField": "status",
+              "triggerToValue": "Enviado"
+            }
+          },
+          {
+            "id": "a",
+            "type": "action",
+            "data": {
+              "actionType": "insert",
+              "actionModelId": "m_log",
+              "actionFields": [
+                {
+                  "field": "msg",
+                  "value": "status {{orders.status}}"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "a"
+          }
+        ]
+      },
+      "event": {
+        "mode": "async",
+        "table": "orders",
+        "type": "UPDATE",
+        "row": {
+          "id": 1,
+          "status": "Enviado"
+        },
+        "oldRow": {
+          "id": 1,
+          "status": "Pendente"
+        }
+      },
+      "expect": {
+        "queries": [
+          {
+            "sql": "INSERT INTO \"audit_log\" (\"msg\") VALUES ($1)",
+            "params": [
+              "status Enviado"
+            ]
+          }
+        ],
+        "runs": [
+          {
+            "status": "success",
+            "source": "evento UPDATE"
+          }
+        ]
+      }
+    },
+    {
+      "name": "De/Para: edição sem mudar o campo não dispara",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "UPDATE"
+              ],
+              "triggerModelId": "m_orders",
+              "triggerSpecificField": true,
+              "triggerField": "status",
+              "triggerToValue": "Enviado"
+            }
+          },
+          {
+            "id": "a",
+            "type": "action",
+            "data": {
+              "actionType": "insert",
+              "actionModelId": "m_log",
+              "actionFields": [
+                {
+                  "field": "msg",
+                  "value": "status {{orders.status}}"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "a"
+          }
+        ]
+      },
+      "event": {
+        "mode": "async",
+        "table": "orders",
+        "type": "UPDATE",
+        "row": {
+          "id": 1,
+          "status": "Enviado",
+          "obs": "x"
+        },
+        "oldRow": {
+          "id": 1,
+          "status": "Enviado",
+          "obs": "y"
+        }
+      },
+      "expect": {
+        "queries": [],
+        "runs": []
+      }
+    },
+    {
+      "name": "De/Para: valor anterior diferente do \"De\" não dispara",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "UPDATE"
+              ],
+              "triggerModelId": "m_orders",
+              "triggerSpecificField": true,
+              "triggerField": "status",
+              "triggerFromValue": "Pendente",
+              "triggerToValue": "Enviado"
+            }
+          },
+          {
+            "id": "a",
+            "type": "action",
+            "data": {
+              "actionType": "insert",
+              "actionModelId": "m_log",
+              "actionFields": [
+                {
+                  "field": "msg",
+                  "value": "status {{orders.status}}"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "a"
+          }
+        ]
+      },
+      "event": {
+        "mode": "async",
+        "table": "orders",
+        "type": "UPDATE",
+        "row": {
+          "id": 1,
+          "status": "Enviado"
+        },
+        "oldRow": {
+          "id": 1,
+          "status": "Aberto"
+        }
+      },
+      "expect": {
+        "queries": [],
+        "runs": []
+      }
+    },
+    {
+      "name": "De/Para: \"De\" e \"Para\" conferem e disparam (Oracle devolve colunas em maiúsculas)",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "UPDATE"
+              ],
+              "triggerModelId": "m_orders",
+              "triggerSpecificField": true,
+              "triggerField": "status",
+              "triggerFromValue": "Pendente",
+              "triggerToValue": "Enviado"
+            }
+          },
+          {
+            "id": "a",
+            "type": "action",
+            "data": {
+              "actionType": "insert",
+              "actionModelId": "m_log",
+              "actionFields": [
+                {
+                  "field": "msg",
+                  "value": "ok"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "a"
+          }
+        ]
+      },
+      "event": {
+        "mode": "async",
+        "table": "orders",
+        "type": "UPDATE",
+        "row": {
+          "ID": 1,
+          "STATUS": "Enviado"
+        },
+        "oldRow": {
+          "ID": 1,
+          "STATUS": "Pendente"
+        }
+      },
+      "expect": {
+        "queries": [
+          {
+            "sql": "INSERT INTO \"audit_log\" (\"msg\") VALUES ($1)",
+            "params": [
+              "ok"
+            ]
+          }
+        ],
+        "runs": [
+          {
+            "status": "success"
+          }
+        ]
+      }
+    },
+    {
+      "name": "De/Para: só o campo (sem De/Para) dispara em qualquer mudança dele",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "UPDATE"
+              ],
+              "triggerModelId": "m_orders",
+              "triggerSpecificField": true,
+              "triggerField": "status"
+            }
+          },
+          {
+            "id": "a",
+            "type": "action",
+            "data": {
+              "actionType": "insert",
+              "actionModelId": "m_log",
+              "actionFields": [
+                {
+                  "field": "msg",
+                  "value": "status {{orders.status}}"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "a"
+          }
+        ]
+      },
+      "event": {
+        "mode": "async",
+        "table": "orders",
+        "type": "UPDATE",
+        "row": {
+          "id": 1,
+          "status": "Enviado"
+        },
+        "oldRow": {
+          "id": 1,
+          "status": "Pendente"
+        }
+      },
+      "expect": {
+        "queries": [
+          {
+            "sql": "INSERT INTO \"audit_log\" (\"msg\") VALUES ($1)",
+            "params": [
+              "status Enviado"
+            ]
+          }
+        ],
+        "runs": [
+          {
+            "status": "success"
+          }
+        ]
+      }
+    },
+    {
+      "name": "De/Para: sem o registro anterior não dispara (falha segura)",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "UPDATE"
+              ],
+              "triggerModelId": "m_orders",
+              "triggerSpecificField": true,
+              "triggerField": "status",
+              "triggerToValue": "Enviado"
+            }
+          },
+          {
+            "id": "a",
+            "type": "action",
+            "data": {
+              "actionType": "insert",
+              "actionModelId": "m_log",
+              "actionFields": [
+                {
+                  "field": "msg",
+                  "value": "status {{orders.status}}"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "a"
+          }
+        ]
+      },
+      "event": {
+        "mode": "async",
+        "table": "orders",
+        "type": "UPDATE",
+        "row": {
+          "id": 1,
+          "status": "Enviado"
+        }
+      },
+      "expect": {
+        "queries": [],
+        "runs": []
+      }
+    },
+    {
+      "name": "De/Para: número do banco e texto digitado são iguais (\"5.00\" e \"5\")",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "UPDATE"
+              ],
+              "triggerModelId": "m_orders",
+              "triggerSpecificField": true,
+              "triggerField": "qtd",
+              "triggerToValue": "5"
+            }
+          },
+          {
+            "id": "a",
+            "type": "action",
+            "data": {
+              "actionType": "insert",
+              "actionModelId": "m_log",
+              "actionFields": [
+                {
+                  "field": "msg",
+                  "value": "ok"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "a"
+          }
+        ]
+      },
+      "event": {
+        "mode": "async",
+        "table": "orders",
+        "type": "UPDATE",
+        "row": {
+          "id": 1,
+          "qtd": "5.00"
+        },
+        "oldRow": {
+          "id": 1,
+          "qtd": "3.00"
+        }
+      },
+      "expect": {
+        "queries": [
+          {
+            "sql": "INSERT INTO \"audit_log\" (\"msg\") VALUES ($1)",
+            "params": [
+              "ok"
+            ]
+          }
+        ],
+        "runs": [
+          {
+            "status": "success"
+          }
+        ]
+      }
+    },
+    {
+      "name": "De/Para no \"Antes de editar\" bloqueia só quando o campo muda para o valor",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "BEFORE_UPDATE"
+              ],
+              "triggerModelId": "m_orders",
+              "triggerSpecificField": true,
+              "triggerField": "status",
+              "triggerToValue": "Cancelado"
+            }
+          },
+          {
+            "id": "r",
+            "type": "response",
+            "data": {
+              "responseAllowAction": false,
+              "responseMessage": "Cancelar não pode"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "r"
+          }
+        ]
+      },
+      "event": {
+        "mode": "sync",
+        "table": "orders",
+        "type": "BEFORE_UPDATE",
+        "row": {
+          "id": 1,
+          "status": "Cancelado"
+        },
+        "oldRow": {
+          "id": 1,
+          "status": "Pendente"
+        }
+      },
+      "expect": {
+        "sync": {
+          "success": false,
+          "error": "Cancelar não pode"
+        },
+        "queries": [],
+        "runs": [
+          {
+            "status": "success",
+            "blocked": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "De/Para no \"Antes de editar\" deixa passar se o campo não mudou",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "BEFORE_UPDATE"
+              ],
+              "triggerModelId": "m_orders",
+              "triggerSpecificField": true,
+              "triggerField": "status",
+              "triggerToValue": "Cancelado"
+            }
+          },
+          {
+            "id": "r",
+            "type": "response",
+            "data": {
+              "responseAllowAction": false,
+              "responseMessage": "Cancelar não pode"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "r"
+          }
+        ]
+      },
+      "event": {
+        "mode": "sync",
+        "table": "orders",
+        "type": "BEFORE_UPDATE",
+        "row": {
+          "id": 1,
+          "status": "Cancelado",
+          "obs": "novo"
+        },
+        "oldRow": {
+          "id": 1,
+          "status": "Cancelado",
+          "obs": "velho"
+        }
+      },
+      "expect": {
+        "sync": {
+          "success": true
+        },
+        "queries": [],
+        "runs": []
+      }
     }
   ]
 }

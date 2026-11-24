@@ -40,8 +40,8 @@ async function run(c: Case) {
   core.setWorkflows([{ id: 'f1', name: 'Fluxo', flow_data: c.flow } as any])
   const ev: any = c.event
   let sync: any
-  if (ev.mode === 'async') await core.processEvent(ev.table, ev.type, ev.row)
-  else if (ev.mode === 'sync') sync = await core.processSyncEvent(ev.table, ev.type, ev.row)
+  if (ev.mode === 'async') await core.processEvent(ev.table, ev.type, ev.row, ev.oldRow)
+  else if (ev.mode === 'sync') sync = await core.processSyncEvent(ev.table, ev.type, ev.row, ev.oldRow)
   else await core.processWebhook('f1', ev.data)
   return { queries, mails, http, runs, sync }
 }

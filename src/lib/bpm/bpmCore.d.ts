@@ -55,8 +55,11 @@ export class BpmCore {
   workflows: BpmFlow[]
   setWorkflows(list: BpmFlow[]): void
   clearScheduledJobs(): void
-  processEvent(table: string, actionType: string, row: Record<string, any>): Promise<void>
-  processSyncEvent(table: string, actionType: string, row: Record<string, any>): Promise<BpmSyncResult>
+  /** `oldRow`: o registro antes da edição (só para o gatilho de edição restrito a um campo, De/Para). */
+  processEvent(table: string, actionType: string, row: Record<string, any>, oldRow?: Record<string, any> | null): Promise<void>
+  processSyncEvent(table: string, actionType: string, row: Record<string, any>, oldRow?: Record<string, any> | null): Promise<BpmSyncResult>
+  /** Algum fluxo ativo escuta a edição desta tabela restrita a um campo (precisa do registro anterior)? */
+  needsOldRow(table: string): Promise<boolean>
   processWebhook(workflowId: string, data: Record<string, any>): Promise<void>
   processCustomAction(workflowIds: string[], table: string, row: Record<string, any>): Promise<void>
 }

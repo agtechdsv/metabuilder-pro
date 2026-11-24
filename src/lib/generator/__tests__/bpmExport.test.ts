@@ -94,6 +94,9 @@ describe('BPM no app exportado', () => {
       expect(clientes).toContain("bpmBefore(__bpmTable, 'UPDATE'")
       expect(clientes).toContain("bpmBefore(__bpmTable, 'DELETE'")
       expect(clientes).toContain('__bpmError')
+      // gatilho de edição restrito a um campo (De/Para): o registro de antes da edição vai junto, no "Antes de editar" e no "Ao editar"
+      expect(clientes).toContain("bpmBefore(__bpmTable, 'UPDATE', merged, Object.keys(before).length ? before : null)")
+      expect(clientes).toContain("bpmAfter(__bpmTable, 'UPDATE', (await __bpmRow(id)) || b.data, Object.keys(before).length ? before : null)")
       expect(clientes).toContain('async function __bpm_createClientes(')
       expect(clientes).toContain('export async function createClientes(')
       expect(clientes).not.toContain('export async function __bpm')
