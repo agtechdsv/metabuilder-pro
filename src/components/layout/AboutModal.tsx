@@ -42,7 +42,10 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
 
   const platform = typeof navigator !== 'undefined' ? navigator.platform || '' : ''
   const editionLabel = version ? t('footer.about_version_ide', 'Versão da IDE') : t('footer.about_version_web', 'Edição')
-  const editionValue = version ? `v${version}` : t('footer.about_web_edition', 'Aplicativo web')
+  const siteVersion = process.env.NEXT_PUBLIC_APP_VERSION || ''
+  const editionValue = version
+    ? `v${version}`
+    : `${t('footer.about_web_edition', 'Aplicativo web')}${siteVersion ? ` · v${siteVersion}` : ''}`
 
   const copyInfo = async () => {
     const lines = [
