@@ -3,7 +3,7 @@ import { myPriceChangeNoticeAction } from '@/app/actions/priceChange'
 import type { MyPriceNotice } from '@/lib/billing/priceChangeService'
 import { CreditCard, ExternalLink, Loader2, Search, ShieldAlert, Sliders, X } from 'lucide-react'
 import { invoiceLinkKind } from '@/lib/billing/invoiceLink'
-import { paymentDisplayDate } from '@/lib/billing/paymentDate'
+import { paymentDisplayDate, paymentRowDate, isShownAbove } from '@/lib/billing/paymentDate'
 import { isInvoiceFarOff } from '@/lib/billing/upcomingInvoice'
 import { formatPrice, formatDate, getCycleLabel, getBillingTypeLabel, StatusBadge } from './ClientSharedComponents'
 import { useI18n } from '@/i18n'
@@ -428,13 +428,31 @@ export function ClientSubscriptionView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                {payments.map(p => (
+                {payments.map(p => {
+                  // em aberto: mostra o VENCIMENTO (a data de criação parecia uma segunda fatura ao lado de "Próxima fatura"); a que já está no bloco de cima é marcada
+                  const rowDate = paymentRowDate(p)
+                  const above = isShownAbove(p, asaasSubData?.pendingInvoice?.id)
+                  return (
                   <tr key={p.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-850/20 transition-colors">
-                    <td className="px-6 py-4 text-sm text-neutral-800 dark:text-neutral-200 font-medium">{formatDate(paymentDisplayDate(p))}</td>
+                    <td className="px-6 py-4 text-sm text-neutral-800 dark:text-neutral-200 font-medium">
+                      {formatDate(rowDate.date)}
+                      {rowDate.kind === 'due' && (
+                        <span data-testid="payment-due-caption" className="block text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                          {String(p.status).trim().toLowerCase() === 'overdue' ? t('client_views.subscription.due_overdue', 'Venceu') : t('client_views.subscription.due_on', 'Vencimento')}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">{getCycleLabel(p.cycle)}</td>
                     <td className="px-6 py-4 text-sm font-bold text-neutral-900 dark:text-white">{formatPrice(p.amount)}</td>
                     <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">{getBillingTypeLabel(p.billing_type)}</td>
-                    <td className="px-6 py-4"><StatusBadge status={p.status} /></td>
+                    <td className="px-6 py-4">
+                      <StatusBadge status={p.status} />
+                      {above && (
+                        <span data-testid="payment-shown-above" className="mt-1 block text-[10px] font-bold text-indigo-500 dark:text-indigo-400">
+                          {farOff ? t('client_views.subscription.row_next_invoice', '↑ É a próxima fatura (acima)') : t('client_views.subscription.row_open_invoice', '↑ É a cobrança em aberto (acima)')}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-right">
                       {p.invoice_url && invoiceLinkKind(p.status) ? (
                         <a
@@ -450,7 +468,8 @@ export function ClientSubscriptionView({
                       )}
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

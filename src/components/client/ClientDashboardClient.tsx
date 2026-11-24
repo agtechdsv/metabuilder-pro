@@ -126,6 +126,10 @@ interface Payment {
   created_at: string
   /** quando o Asaas avisou o pagamento (a data de pagamento mostrada ao cliente) */
   webhook_received_at?: string | null
+  /** vencimento (só o dia): a tela mostra no lugar da criação nas cobranças em aberto */
+  due_date?: string | null
+  /** id da cobrança no Asaas: liga a linha ao bloco "Próxima fatura" */
+  asaas_payment_id?: string | null
 }
 
 interface ClientDashboardClientProps {
