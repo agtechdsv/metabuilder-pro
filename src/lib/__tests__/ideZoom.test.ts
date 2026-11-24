@@ -80,7 +80,10 @@ describe('zoom da IDE: regras', () => {
 
 describe('zoom da IDE: ligação', () => {
   it('a permissão do webview está nas capacidades da IDE', () => {
-    expect(read('src-tauri/capabilities/desktop.json')).toContain('core:webview:allow-set-webview-zoom')
+    const cap = JSON.parse(read('src-tauri/capabilities/desktop.json'))
+    expect(cap.permissions).toContain('core:webview:allow-set-webview-zoom')
+    // a IDE Local e os logs do túnel são janelas próprias: sem estar na lista, o setZoom é recusado em silêncio
+    for (const w of ['main', 'ide-local', 'tunnel-logs']) expect(cap.windows, w).toContain(w)
   })
 
   it('o host e a barra ficam nos Providers, o ícone da lupa no cabeçalho depois do avatar, e tudo só age dentro do Tauri', () => {
