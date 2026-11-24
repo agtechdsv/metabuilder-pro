@@ -784,6 +784,852 @@
         "queries": [],
         "runs": []
       }
+    },
+    {
+      "name": "Condição \"contém\": acha o texto sem diferenciar maiúsculas",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "INSERT"
+              ],
+              "triggerModelId": "m_orders"
+            }
+          },
+          {
+            "id": "c",
+            "type": "condition",
+            "data": {
+              "conditionGroups": [
+                {
+                  "id": "g8hun",
+                  "groupLogic": "AND",
+                  "logic": "AND",
+                  "rules": [
+                    {
+                      "id": "rnome",
+                      "modelId": "m_orders",
+                      "field": "nome",
+                      "operator": "contains",
+                      "value": "silva"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "a",
+            "type": "action",
+            "data": {
+              "actionType": "insert",
+              "actionModelId": "m_log",
+              "actionFields": [
+                {
+                  "field": "msg",
+                  "value": "ok"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "c"
+          },
+          {
+            "source": "c",
+            "target": "a",
+            "sourceHandle": "true"
+          }
+        ]
+      },
+      "event": {
+        "mode": "async",
+        "table": "orders",
+        "type": "INSERT",
+        "row": {
+          "id": 1,
+          "nome": "Maria da Silva"
+        }
+      },
+      "expect": {
+        "queries": [
+          {
+            "sql": "INSERT INTO \"audit_log\" (\"msg\") VALUES ($1)",
+            "params": [
+              "ok"
+            ]
+          }
+        ],
+        "runs": [
+          {
+            "status": "success"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Condição \"contém\": texto ausente dá falso",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "INSERT"
+              ],
+              "triggerModelId": "m_orders"
+            }
+          },
+          {
+            "id": "c",
+            "type": "condition",
+            "data": {
+              "conditionGroups": [
+                {
+                  "id": "gutwr",
+                  "groupLogic": "AND",
+                  "logic": "AND",
+                  "rules": [
+                    {
+                      "id": "rnome",
+                      "modelId": "m_orders",
+                      "field": "nome",
+                      "operator": "contains",
+                      "value": "silva"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "a",
+            "type": "action",
+            "data": {
+              "actionType": "insert",
+              "actionModelId": "m_log",
+              "actionFields": [
+                {
+                  "field": "msg",
+                  "value": "ok"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "c"
+          },
+          {
+            "source": "c",
+            "target": "a",
+            "sourceHandle": "true"
+          }
+        ]
+      },
+      "event": {
+        "mode": "async",
+        "table": "orders",
+        "type": "INSERT",
+        "row": {
+          "id": 1,
+          "nome": "João"
+        }
+      },
+      "expect": {
+        "queries": [],
+        "runs": [
+          {
+            "status": "success"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Condição \"contém\": campo nulo nunca contém",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "INSERT"
+              ],
+              "triggerModelId": "m_orders"
+            }
+          },
+          {
+            "id": "c",
+            "type": "condition",
+            "data": {
+              "conditionGroups": [
+                {
+                  "id": "g1td4",
+                  "groupLogic": "AND",
+                  "logic": "AND",
+                  "rules": [
+                    {
+                      "id": "rnome",
+                      "modelId": "m_orders",
+                      "field": "nome",
+                      "operator": "contains",
+                      "value": "silva"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "a",
+            "type": "action",
+            "data": {
+              "actionType": "insert",
+              "actionModelId": "m_log",
+              "actionFields": [
+                {
+                  "field": "msg",
+                  "value": "ok"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "c"
+          },
+          {
+            "source": "c",
+            "target": "a",
+            "sourceHandle": "true"
+          }
+        ]
+      },
+      "event": {
+        "mode": "async",
+        "table": "orders",
+        "type": "INSERT",
+        "row": {
+          "id": 1,
+          "nome": null
+        }
+      },
+      "expect": {
+        "queries": [],
+        "runs": [
+          {
+            "status": "success"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Dois grupos ligados por E: só dispara com os dois verdadeiros",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "INSERT"
+              ],
+              "triggerModelId": "m_orders"
+            }
+          },
+          {
+            "id": "c",
+            "type": "condition",
+            "data": {
+              "conditionGroups": [
+                {
+                  "id": "g1tpg",
+                  "groupLogic": "AND",
+                  "logic": "AND",
+                  "rules": [
+                    {
+                      "id": "rtotal",
+                      "modelId": "m_orders",
+                      "field": "total",
+                      "operator": ">",
+                      "value": "100"
+                    }
+                  ]
+                },
+                {
+                  "id": "g8tkh",
+                  "groupLogic": "AND",
+                  "logic": "AND",
+                  "rules": [
+                    {
+                      "id": "rstatus",
+                      "modelId": "m_orders",
+                      "field": "status",
+                      "operator": "==",
+                      "value": "Pendente"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "a",
+            "type": "action",
+            "data": {
+              "actionType": "insert",
+              "actionModelId": "m_log",
+              "actionFields": [
+                {
+                  "field": "msg",
+                  "value": "ok"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "c"
+          },
+          {
+            "source": "c",
+            "target": "a",
+            "sourceHandle": "true"
+          }
+        ]
+      },
+      "event": {
+        "mode": "async",
+        "table": "orders",
+        "type": "INSERT",
+        "row": {
+          "id": 1,
+          "total": 200,
+          "status": "Aprovado"
+        }
+      },
+      "expect": {
+        "queries": [],
+        "runs": [
+          {
+            "status": "success"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Dois grupos ligados por E: os dois verdadeiros",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "INSERT"
+              ],
+              "triggerModelId": "m_orders"
+            }
+          },
+          {
+            "id": "c",
+            "type": "condition",
+            "data": {
+              "conditionGroups": [
+                {
+                  "id": "guy30",
+                  "groupLogic": "AND",
+                  "logic": "AND",
+                  "rules": [
+                    {
+                      "id": "rtotal",
+                      "modelId": "m_orders",
+                      "field": "total",
+                      "operator": ">",
+                      "value": "100"
+                    }
+                  ]
+                },
+                {
+                  "id": "gg54p",
+                  "groupLogic": "AND",
+                  "logic": "AND",
+                  "rules": [
+                    {
+                      "id": "rstatus",
+                      "modelId": "m_orders",
+                      "field": "status",
+                      "operator": "==",
+                      "value": "Pendente"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "a",
+            "type": "action",
+            "data": {
+              "actionType": "insert",
+              "actionModelId": "m_log",
+              "actionFields": [
+                {
+                  "field": "msg",
+                  "value": "ok"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "c"
+          },
+          {
+            "source": "c",
+            "target": "a",
+            "sourceHandle": "true"
+          }
+        ]
+      },
+      "event": {
+        "mode": "async",
+        "table": "orders",
+        "type": "INSERT",
+        "row": {
+          "id": 1,
+          "total": 200,
+          "status": "Pendente"
+        }
+      },
+      "expect": {
+        "queries": [
+          {
+            "sql": "INSERT INTO \"audit_log\" (\"msg\") VALUES ($1)",
+            "params": [
+              "ok"
+            ]
+          }
+        ],
+        "runs": [
+          {
+            "status": "success"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Dois grupos ligados por OU: basta o segundo",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "INSERT"
+              ],
+              "triggerModelId": "m_orders"
+            }
+          },
+          {
+            "id": "c",
+            "type": "condition",
+            "data": {
+              "conditionGroups": [
+                {
+                  "id": "gop1p",
+                  "groupLogic": "AND",
+                  "logic": "AND",
+                  "rules": [
+                    {
+                      "id": "rtotal",
+                      "modelId": "m_orders",
+                      "field": "total",
+                      "operator": ">",
+                      "value": "100"
+                    }
+                  ]
+                },
+                {
+                  "id": "gybod",
+                  "groupLogic": "OR",
+                  "logic": "AND",
+                  "rules": [
+                    {
+                      "id": "rstatus",
+                      "modelId": "m_orders",
+                      "field": "status",
+                      "operator": "==",
+                      "value": "Pendente"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "a",
+            "type": "action",
+            "data": {
+              "actionType": "insert",
+              "actionModelId": "m_log",
+              "actionFields": [
+                {
+                  "field": "msg",
+                  "value": "ok"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "c"
+          },
+          {
+            "source": "c",
+            "target": "a",
+            "sourceHandle": "true"
+          }
+        ]
+      },
+      "event": {
+        "mode": "async",
+        "table": "orders",
+        "type": "INSERT",
+        "row": {
+          "id": 1,
+          "total": 10,
+          "status": "Pendente"
+        }
+      },
+      "expect": {
+        "queries": [
+          {
+            "sql": "INSERT INTO \"audit_log\" (\"msg\") VALUES ($1)",
+            "params": [
+              "ok"
+            ]
+          }
+        ],
+        "runs": [
+          {
+            "status": "success"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Três grupos: avalia da esquerda para a direita ((F ou V) e F = F)",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "INSERT"
+              ],
+              "triggerModelId": "m_orders"
+            }
+          },
+          {
+            "id": "c",
+            "type": "condition",
+            "data": {
+              "conditionGroups": [
+                {
+                  "id": "gzaqg",
+                  "groupLogic": "AND",
+                  "logic": "AND",
+                  "rules": [
+                    {
+                      "id": "rtotal",
+                      "modelId": "m_orders",
+                      "field": "total",
+                      "operator": ">",
+                      "value": "100"
+                    }
+                  ]
+                },
+                {
+                  "id": "gbg8b",
+                  "groupLogic": "OR",
+                  "logic": "AND",
+                  "rules": [
+                    {
+                      "id": "rstatus",
+                      "modelId": "m_orders",
+                      "field": "status",
+                      "operator": "==",
+                      "value": "Pendente"
+                    }
+                  ]
+                },
+                {
+                  "id": "g3m74",
+                  "groupLogic": "AND",
+                  "logic": "AND",
+                  "rules": [
+                    {
+                      "id": "rnome",
+                      "modelId": "m_orders",
+                      "field": "nome",
+                      "operator": "==",
+                      "value": "zzz"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "a",
+            "type": "action",
+            "data": {
+              "actionType": "insert",
+              "actionModelId": "m_log",
+              "actionFields": [
+                {
+                  "field": "msg",
+                  "value": "ok"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "c"
+          },
+          {
+            "source": "c",
+            "target": "a",
+            "sourceHandle": "true"
+          }
+        ]
+      },
+      "event": {
+        "mode": "async",
+        "table": "orders",
+        "type": "INSERT",
+        "row": {
+          "id": 1,
+          "total": 10,
+          "status": "Pendente",
+          "nome": "abc"
+        }
+      },
+      "expect": {
+        "queries": [],
+        "runs": [
+          {
+            "status": "success"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Grupo sem regras é ignorado (não derruba a condição)",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "INSERT"
+              ],
+              "triggerModelId": "m_orders"
+            }
+          },
+          {
+            "id": "c",
+            "type": "condition",
+            "data": {
+              "conditionGroups": [
+                {
+                  "id": "gcamg",
+                  "groupLogic": "AND",
+                  "logic": "OR",
+                  "rules": []
+                },
+                {
+                  "id": "gfty1",
+                  "groupLogic": "AND",
+                  "logic": "AND",
+                  "rules": [
+                    {
+                      "id": "rtotal",
+                      "modelId": "m_orders",
+                      "field": "total",
+                      "operator": ">",
+                      "value": "100"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "a",
+            "type": "action",
+            "data": {
+              "actionType": "insert",
+              "actionModelId": "m_log",
+              "actionFields": [
+                {
+                  "field": "msg",
+                  "value": "ok"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "c"
+          },
+          {
+            "source": "c",
+            "target": "a",
+            "sourceHandle": "true"
+          }
+        ]
+      },
+      "event": {
+        "mode": "async",
+        "table": "orders",
+        "type": "INSERT",
+        "row": {
+          "id": 1,
+          "total": 200
+        }
+      },
+      "expect": {
+        "queries": [
+          {
+            "sql": "INSERT INTO \"audit_log\" (\"msg\") VALUES ($1)",
+            "params": [
+              "ok"
+            ]
+          }
+        ],
+        "runs": [
+          {
+            "status": "success"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Condição só com grupos vazios passa",
+      "dialect": "postgres",
+      "flow": {
+        "nodes": [
+          {
+            "id": "t",
+            "type": "trigger",
+            "data": {
+              "triggerType": [
+                "INSERT"
+              ],
+              "triggerModelId": "m_orders"
+            }
+          },
+          {
+            "id": "c",
+            "type": "condition",
+            "data": {
+              "conditionGroups": [
+                {
+                  "id": "grq7v",
+                  "groupLogic": "AND",
+                  "logic": "OR",
+                  "rules": []
+                }
+              ]
+            }
+          },
+          {
+            "id": "a",
+            "type": "action",
+            "data": {
+              "actionType": "insert",
+              "actionModelId": "m_log",
+              "actionFields": [
+                {
+                  "field": "msg",
+                  "value": "ok"
+                }
+              ]
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "t",
+            "target": "c"
+          },
+          {
+            "source": "c",
+            "target": "a",
+            "sourceHandle": "true"
+          }
+        ]
+      },
+      "event": {
+        "mode": "async",
+        "table": "orders",
+        "type": "INSERT",
+        "row": {
+          "id": 1,
+          "total": 1
+        }
+      },
+      "expect": {
+        "queries": [
+          {
+            "sql": "INSERT INTO \"audit_log\" (\"msg\") VALUES ($1)",
+            "params": [
+              "ok"
+            ]
+          }
+        ],
+        "runs": [
+          {
+            "status": "success"
+          }
+        ]
+      }
     }
   ]
 }

@@ -10,7 +10,8 @@ Este roteiro cobre **o que cada gatilho faz na plataforma** (com o CLI). O rotei
 - **Teste 8:** o agendamento "uma vez" repete no mesmo dia do ano seguinte (limitação do motor, dentro do roteiro).
 - **Teste 5:** removida a referência à correção de outra conversa.
 - **Teste 9:** completo, com o comando, os casos de recusa e o resultado esperado.
-- Acréscimos: "Repetir no app exportado" e "Limites que valem no vídeo".
+- **Condição:** o operador **"contém"** e os **vários grupos** (com o E/OU entre eles) agora funcionam no motor; antes o "contém" dava sempre falso e só o 1º grupo valia.
+- Acréscimos: **"Casos de borda"** (condições, ações, variáveis, vários fluxos, agendamento recorrente, De/Para e quem executa), "Repetir no app exportado" e "Limites que valem no vídeo".
 
 ## Antes de começar
 
@@ -130,6 +131,92 @@ Casos de recusa (mostre pelo menos o primeiro no vídeo):
 - O segredo também vale como `Authorization: Bearer <segredo>`.
 
 ---
+
+## Casos de borda (além do caminho feliz)
+
+Os testes acima mostram cada gatilho funcionando. Aqui estão os cantos onde o comportamento surpreende. **O resultado esperado vem da leitura do código do motor (`cli/bpmCore.js`), não de execução**: se o que você vir for diferente, é um achado, me avise com a linha do terminal.
+Use sempre banco de testes: vários casos apagam ou alteram mais de um registro de propósito. Marque ☐ ao executar.
+
+**Dois defeitos achados na leitura do código, já corrigidos no motor desta versão** (valem só com o CLI desta release; com o anterior, A7 e A8 ainda mostram o defeito):
+- **Operador "contém"** existia na Condição do Studio, mas o motor não o conhecia e a regra dava sempre falso (A8).
+- **Vários grupos de condição:** o Studio deixa criar mais de um, mas o motor avaliava só o primeiro (A7).
+
+### A. Condição
+
+| # | Montagem | O que fazer | Esperado | ✔ |
+|---|---|---|---|---|
+| A1 | **Antes de Salvar (novo)** em Pedidos; Condição `total > 100`; ramo **verdadeiro** → Resposta **bloqueando** ("Total alto"); ramo **falso** → Resposta **permitindo** com mensagem ("Total aceito") | Salvar um pedido com total 50 e outro com 500 | 500: bloqueado com a mensagem. 50: grava e mostra "Total aceito" (na plataforma; no app exportado só a mensagem de bloqueio aparece) | ☐ |
+| A2 | **Ao inserir** com Condição só com o ramo verdadeiro ligado a uma ação | Criar um registro que dá falso | Nada acontece, sem erro; a execução fica como sucesso e o CLI mostra `Condição final resultou em: false` | ☐ |
+| A3 | Condições com `>=`, `<=` e `!=` sobre um campo **inteiro** | Testar o valor exatamente igual ao limite | `>=` e `<=` são verdadeiros no limite; `!=` é falso se igual | ☐ |
+| A4 | Condição em campo **decimal** (`numeric`, ex.: 100.00) usando `==` com valor `100` | Salvar total 100 | **Falso**: o PostgreSQL devolve decimais como texto (`"100.00"`) e `==` compara texto. Para decimais use `>=`/`<=` (comparam como número) | ☐ |
+| A5 | Grupo com 2 regras **E**: `total > 100` e `status == Pendente` | 4 combinações (total alto/baixo × Pendente/outro) | Só verdadeiro quando as duas valem | ☐ |
+| A6 | Mesmo grupo com lógica **OU** | Mesmas 4 combinações | Verdadeiro quando **qualquer** uma vale | ☐ |
+| A7 | **Dois ou três grupos** na mesma Condição. O E/OU entre grupos é o seletor que aparece **entre** eles no Studio | Montar G1 `total > 100` e G2 `status == Pendente`; testar com E e depois com OU entre eles; criar um 3º grupo | Os grupos se juntam **da esquerda para a direita, sem precedência**: `(G1 ou G2) e G3`. Com E: só verdadeiro se os dois valem; com OU: basta um. Um grupo **sem nenhuma regra** é ignorado | ☐ |
+| A8 | Regra com operador **"contém"** | Campo texto `nome` com "Maria da Silva", valor `silva`; depois valor `joao`; depois um registro com `nome` nulo | Verdadeiro para `silva` (**não diferencia maiúsculas de minúsculas**); falso para `joao`; falso para nulo | ☐ |
+| A9 | Regra `observacoes == ` (valor vazio) | Registro com `observacoes` **nulo** | **Falso**: nulo vira o texto "null" na comparação, e nunca é igual a vazio. Com `!=` de qualquer valor, é verdadeiro | ☐ |
+
+### B. Ações
+
+| # | Montagem | O que fazer | Esperado | ✔ |
+|---|---|---|---|---|
+| B1 | Ação **Atualizar** em outra tabela **sem filtro** | Disparar | Ignorada: o CLI avisa `UPDATE ignorado por falta de filtros de segurança`; nada é alterado; execução sucesso | ☐ |
+| B2 | Ação **Excluir** sem filtro, e outra com filtro `id == {{pedidos.id}}` | Disparar cada uma | Sem filtro: ignorada com aviso. Com filtro: apaga só aquele registro | ☐ |
+| B3 | Ação **Atualizar** com filtro que pega vários (`status == Pendente`) | Disparar com 3 Pendentes no banco | Os **3** são atualizados (não há limite de linhas) | ☐ |
+| B4 | Ação **Inserir** sem nenhum campo mapeado | Disparar | Ignorada com aviso `INSERT ignorado pois não há campos mapeados` | ☐ |
+| B5 | Ação **Atualizar Dados do Formulário** (mutate) num gatilho **"Ao ..."** (depois da gravação) | Disparar | **Não faz nada** (silencioso): mutate só vale em "Antes de ..." e "Ao Carregar" | ☐ |
+| B6 | **Ao inserir** com 2 ações em sequência; a 1ª falha (insere em tabela com coluna obrigatória sem valor) | Criar o registro | O registro **já está gravado**; a 2ª ação **não roda**; execução marcada **erro** com a mensagem do banco | ☐ |
+| B7 | **Antes de Salvar (novo)** com uma ação que falha do mesmo jeito | Salvar | A gravação é **bloqueada** com "Erro interno na execução da automação." (falha fechada: na dúvida, não grava). Nada gravado | ☐ |
+| B8 | E-mail para **tabela dinâmica** com filtro que acha **2** registros | Disparar | **2 e-mails**, um por registro | ☐ |
+| B9 | E-mail para tabela dinâmica com filtro que não acha nenhum | Disparar | Nenhum e-mail; aviso `Nenhum registro encontrado`; execução **sucesso** (não é erro) | ☐ |
+| B10 | E-mail para tabela dinâmica, mas o campo de e-mail do registro está **vazio** | Disparar | `E-mail não enviado: Destinatário não encontrado`; execução marcada **erro** | ☐ |
+| B11 | E-mail "usuários e grupos" **sem** destinatário nenhum | Disparar | Vai para o e-mail padrão do agente (`SMTP_USER`, ou `contato@metabuilderpro.com` se não houver). **Cuidado ao testar:** pode cair numa caixa que não é sua | ☐ |
+| B12 | Webhook de saída com **cabeçalhos** que não são JSON válido, e outro com **corpo** que não é JSON | Disparar | Cabeçalho inválido: aviso e segue sem cabeçalhos. Corpo texto: enviado como texto puro | ☐ |
+
+### C. Variáveis `{{tabela.campo}}`
+
+| # | Montagem | O que fazer | Esperado | ✔ |
+|---|---|---|---|---|
+| C1 | E-mail com `{{pedidos.campo_que_nao_existe}}` | Disparar | O texto `{{pedidos.campo_que_nao_existe}}` sai **literal** no e-mail | ☐ |
+| C2 | E-mail (ou Inserir) com `{{pedidos.observacoes}}` num registro com `observacoes` **nulo** | Disparar | Sai o texto **"null"**. No Inserir, grava a palavra `null` em coluna de texto e dá **erro** em coluna numérica ou de data. Evite variável de campo que pode ser nulo | ☐ |
+| C3 | Fluxo de Pedidos usando `{{clientes.nome}}` | Disparar | O motor procura o cliente por `cliente_id` (nome da tabela sem o "s" + `_id`), depois `clientes_id`, depois `id_clientes`. Se a sua coluna tem outro nome (ex.: `id_cliente`), a variável fica **literal** | ☐ |
+| C4 | Variável de uma tabela que **não é modelo do projeto** (ex.: `{{usuarios_sistema.email}}`) | Disparar | Ignorada por segurança: fica literal | ☐ |
+
+### D. Vários fluxos e gatilhos
+
+| # | Montagem | O que fazer | Esperado | ✔ |
+|---|---|---|---|---|
+| D1 | **Dois** fluxos "Ao inserir" na mesma tabela (um e-mail e um inserir em log) | Criar um registro | Os dois rodam, cada um com a **sua** execução; se um falha, o outro roda. A ordem entre eles **não é garantida** | ☐ |
+| D2 | **Dois** "Antes de Salvar (novo)" na mesma tabela: um muda um campo (mutate), o outro bloqueia por condição nesse campo | Salvar | Depende da ordem (não garantida): se o que muda rodar primeiro, o outro vê o valor novo. **Se um bloquear, o outro nem roda.** Evite depender da ordem | ☐ |
+| D3 | **Um** gatilho com **dois eventos** marcados (Ao inserir + Ao atualizar) | Criar e depois editar | Dispara nos dois, uma execução por evento | ☐ |
+| D4 | **Dois nós de gatilho** no mesmo fluxo, ambos na mesma tabela e evento (raro) | Disparar o evento | O fluxo roda **duas vezes**, uma por nó de gatilho | ☐ |
+| D5 | Um nó de ação com **duas saídas** ligadas a duas ações | Disparar | As duas rodam, na ordem das ligações | ☐ |
+| D6 | Fluxo do teste 1 **desativado** | Criar um pedido; depois reativar e criar outro | Desativado: nada dispara. Reativado: volta a disparar **sem reiniciar** o CLI. Um fluxo **agendado** desativado deixa de disparar | ☐ |
+| D7 | Webhook de entrada com o fluxo **desativado** | Chamar o endereço com o segredo certo | Erro, nada criado | ☐ |
+
+### E. Agendado recorrente
+
+| # | Montagem | O que fazer | Esperado | ✔ |
+|---|---|---|---|---|
+| E1 | **Recorrente**, só o **dia de hoje** marcado, horário daqui a 2 minutos | Esperar | Dispara. Com **outro** dia marcado, não dispara. Dias: 0 = domingo ... 6 = sábado | ☐ |
+| E2 | Recorrente **sem nenhum dia** marcado | Esperar o horário | Dispara **todo dia** | ☐ |
+| E3 | **Dois horários** no mesmo gatilho (daqui a 2 e a 3 minutos) | Esperar | Dois disparos, um por horário | ☐ |
+| E4 | Mudar o horário de um fluxo agendado e salvar de novo | Esperar o horário antigo e o novo | Dispara **só** no novo: os agendamentos são refeitos ao salvar, sem duplicar | ☐ |
+
+### F. De/Para (campo restrito) além do teste 3
+
+| # | Montagem | O que fazer | Esperado | ✔ |
+|---|---|---|---|---|
+| F1 | **Ao atualizar** restrito a `status` **sem De nem Para** | Mudar o status para qualquer valor; depois editar outro campo | Dispara na mudança do status; não dispara na outra edição | ☐ |
+| F2 | Restrito a `status` com **Para: Enviado** | Mudar o status de Enviado para **vazio** (ou nulo) | Não dispara (o novo valor não é Enviado) | ☐ |
+| F3 | **Antes de Salvar (edição)** restrito a `status`, Para `Cancelado`, com Resposta bloqueando | Mudar um pedido para Cancelado; depois editar **outro campo** de um pedido que já está Cancelado | O primeiro é **bloqueado**; o segundo **passa** (o status não mudou) | ☐ |
+
+### G. Quem executa
+
+| # | Montagem | O que fazer | Esperado | ✔ |
+|---|---|---|---|---|
+| G1 | Repetir os testes **2 e 6** logado como **usuário comum** do app (não o desenvolvedor) | Salvar/Excluir | Mesmo bloqueio e mesma mensagem. A política do túnel só reserva ao servidor a ação de webhook de entrada; os gatilhos "Antes de..." valem para qualquer usuário que grave pela tela. **Não conferi as permissões de tabela do perfil**: se o perfil não puder gravar na tabela, o erro vem antes do fluxo | ☐ |
+
+**Ainda fora de qualquer roteiro:** gatilhos em tabelas de **detalhe** (itens do pedido), bancos MySQL/SQL Server e Java Spring (ainda sem BPM), e o "Ao atualizar" no CLI com **Oracle** (hoje não dispara; veja "Limites que valem no vídeo").
 
 ## Repetir no app exportado
 

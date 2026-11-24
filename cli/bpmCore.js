@@ -269,12 +269,23 @@ class BpmCore {
   }
 
   evaluateCondition(node, triggerTable, triggerData) {
-    const groups = node.data?.conditionGroups || []
+    // grupo sem nenhuma regra é como se não existisse (o Studio deixa grupos vazios); sem grupo útil, a condição passa
+    const groups = (node.data?.conditionGroups || []).filter(g => g && Array.isArray(g.rules) && g.rules.length > 0)
     if (groups.length === 0) return true
 
-    // Avalia o primeiro grupo (simplificado para MVP)
-    const group = groups[0]
-    const rules = group.rules || []
+    // Cada grupo se resolve sozinho (regras ligadas por E/OU do grupo); os grupos se juntam da esquerda para a direita, pelo E/OU que o
+    // Studio guarda em cada grupo a partir do segundo (groupLogic; sem ele, E). Não há precedência: ((G1 op G2) op G3).
+    let result = this.evaluateConditionGroup(groups[0], triggerData)
+    for (let i = 1; i < groups.length; i++) {
+      const next = this.evaluateConditionGroup(groups[i], triggerData)
+      result = String(groups[i].groupLogic).toUpperCase() === 'OR' ? (result || next) : (result && next)
+    }
+    this.log.info(`[BPM-CONDITION] Condição final resultou em: ${result}`)
+    return result
+  }
+
+  evaluateConditionGroup(group, triggerData) {
+    const rules = (group && group.rules) || []
 
     let isGroupTrue = group.logic === 'AND' ? true : false
 
@@ -304,6 +315,8 @@ class BpmCore {
         case '<': isRuleTrue = Number(actualValue) < Number(expectedValue); break
         case '>=': isRuleTrue = Number(actualValue) >= Number(expectedValue); break
         case '<=': isRuleTrue = Number(actualValue) <= Number(expectedValue); break
+        // "contém": o texto do campo contém o valor, sem diferenciar maiúsculas de minúsculas; campo nulo ou ausente nunca contém
+        case 'contains': isRuleTrue = actualValue !== null && actualValue !== undefined && String(actualValue).toLowerCase().includes(String(rule.value === undefined || rule.value === null ? '' : rule.value).toLowerCase()); break
       }
 
       this.log.info(`[BPM-CONDITION] Regra: Campo '${field}' (${this.verbose ? actualValue : '[omitido]'}) ${operator} Valor Esperado (${this.verbose ? expectedValue : '[omitido]'}) => Resultado: ${isRuleTrue}`)
@@ -315,7 +328,7 @@ class BpmCore {
       }
     }
 
-    this.log.info(`[BPM-CONDITION] Grupo Final resultou em: ${isGroupTrue}`)
+    this.log.info(`[BPM-CONDITION] Grupo resultou em: ${isGroupTrue}`)
     return isGroupTrue
   }
 
