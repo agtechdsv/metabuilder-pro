@@ -7,7 +7,7 @@ import { isTauri } from '@/utils/tauriUtils'
 import { ZOOM_BAR_EVENT, getZoomBar, toggleZoomBar } from '@/utils/ideZoomBar'
 
 /** Ícone da lupa no cabeçalho, depois do avatar: liga e desliga a barra flutuante de zoom. Só aparece na IDE (Tauri). */
-export function IdeZoomToggle() {
+export function IdeZoomToggle({ variant = 'header' }: { variant?: 'header' | 'ide' }) {
   const { t } = useI18n()
   const [desktop, setDesktop] = useState(false)
   const [open, setOpen] = useState(false)
@@ -31,14 +31,18 @@ export function IdeZoomToggle() {
       aria-pressed={open}
       aria-label={label}
       title={label}
+      data-testid="ide-zoom-toggle"
       className={
-        'rounded-xl border p-2.5 transition-all ' +
+        (variant === 'ide'
+          // cabeçalho da IDE Local: mesmo tamanho dos botões vizinhos (w-8 h-8)
+          ? 'flex h-8 w-8 items-center justify-center rounded-lg border transition-colors '
+          : 'rounded-xl border p-2.5 transition-all ') +
         (open
           ? 'border-blue-500/40 bg-blue-500/10 text-blue-500 dark:text-blue-400'
           : 'border-neutral-200 bg-neutral-100 text-neutral-500 hover:text-blue-500 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:text-blue-400')
       }
     >
-      <ZoomIn className="h-5 w-5" />
+      <ZoomIn className={variant === 'ide' ? 'h-4 w-4' : 'h-5 w-5'} />
     </button>
   )
 }

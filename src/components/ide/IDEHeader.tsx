@@ -11,6 +11,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { useI18n } from '@/i18n'
 import { IdeHelpMenu } from './IdeHelpMenu'
+import { IdeZoomToggle } from '@/components/tauri/IdeZoomToggle'
 import { createClient } from '@/utils/supabase/client'
 import type { SyncExtra } from '@/contexts/ide/useIDEGit'
 import { IdeThemeLanguage } from './IdeThemeLanguage'
@@ -1066,6 +1067,8 @@ export function IDEHeader({
             <PanelLeftOpen className="w-4 h-4" />
           </button>
         </div>
+
+        <IdeZoomToggle variant="ide" />
 
         <IdeHelpMenu />
 
