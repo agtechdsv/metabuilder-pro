@@ -214,6 +214,10 @@ async function introspectOracle(connectionString) {
 
 // Função 2: Iniciar Túnel Seguro (Modo Agente Escuta)
 async function startTunnel(projectId, secretToken, connectionName, connectionString, configSupabaseUrl, configSupabaseKey, configLdap, dbType = 'postgres', configData = {}, totalConnsForProject = 1) {
+  // Aceita "postgresql"/"pg" como sinônimos de "postgres": sem isso o túnel conectava, mas o motor BPM
+  // e o log de banco (que só ligam para dbType === 'postgres') ficavam desligados em silêncio.
+  if (['postgresql', 'pg'].includes(String(dbType || '').toLowerCase())) dbType = 'postgres';
+
   // Pega do ambiente (.env.local) ou do arquivo metabuilder.config.json
   const finalSupabaseUrl = SUPABASE_URL || configSupabaseUrl;
   const finalSupabaseKey = SUPABASE_KEY || configSupabaseKey;
