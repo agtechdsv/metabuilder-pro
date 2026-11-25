@@ -101,6 +101,15 @@ describe('núcleo do BPM: comportamento extra', () => {
     expect(queries).toHaveLength(1)
   })
 
+  it('datas viram dd/MM/aaaa só em e-mail e mensagens; filtros e webhooks mantêm o valor', async () => {
+    const core: any = new BpmCore({ db: { dialect: 'postgres', query: async () => [] }, models: { tableOf: async () => null } })
+    const row = { dia: new Date(2026, 10, 25), momento: new Date(2026, 10, 25, 14, 5), n: 7 }
+    const t = 'Dia {{pedidos.dia}} às {{pedidos.momento}} qtd {{pedidos.n}}'
+    expect(await core.replaceVariables(t, 'pedidos', row, null, null, true)).toBe('Dia 25/11/2026 às 25/11/2026 14:05 qtd 7')
+    // sem o modo "humano" nada muda em relação ao comportamento anterior
+    expect(await core.replaceVariables('{{pedidos.dia}}', 'pedidos', row)).toBe(String(row.dia))
+  })
+
   it('agendamento recorrente vira cron e usa o agendador injetado', () => {
     const crons: string[] = []
     const core = new BpmCore({

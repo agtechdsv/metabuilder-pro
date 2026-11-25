@@ -191,7 +191,18 @@ class BpmCore {
     return typeof fn === 'function' ? !!(await fn.call(this.ports.models, table)) : true
   }
 
-  async replaceVariables(text, triggerTable, triggerData, actionTable = null, actionData = null) {
+  /**
+   * Valor para texto lido por gente (e-mail, mensagem): data vira dd/MM/aaaa (com HH:mm se tiver hora), no lugar do texto cru do JavaScript
+   * ("Wed Nov 25 2026 00:00:00 GMT-0300"). Fora disso o valor segue como veio.
+   */
+  humanValue(v) {
+    if (!(v instanceof Date) || isNaN(v.getTime())) return v
+    const p = n => String(n).padStart(2, '0')
+    const date = `${p(v.getDate())}/${p(v.getMonth() + 1)}/${v.getFullYear()}`
+    return v.getHours() || v.getMinutes() || v.getSeconds() ? `${date} ${p(v.getHours())}:${p(v.getMinutes())}` : date
+  }
+
+  async replaceVariables(text, triggerTable, triggerData, actionTable = null, actionData = null, human = false) {
     if (typeof text !== 'string') return text
 
     // 1. Encontrar quais tabelas extras estão sendo referenciadas
@@ -250,14 +261,15 @@ class BpmCore {
     }
 
     // 3. Substituir no texto final
+    const out = v => (human ? this.humanValue(v) : v)
     return text.replace(regex, (m, path) => {
       const parts = path.split('.')
       if (parts.length === 2) {
         const table = parts[0]
         const field = parts[1]
-        if (table === triggerTable && triggerData && triggerData[field] !== undefined) return triggerData[field]
-        if (table === actionTable && actionData && actionData[field] !== undefined) return actionData[field]
-        if (extraData[table] && extraData[table][field] !== undefined) return extraData[table][field]
+        if (table === triggerTable && triggerData && triggerData[field] !== undefined) return out(triggerData[field])
+        if (table === actionTable && actionData && actionData[field] !== undefined) return out(actionData[field])
+        if (extraData[table] && extraData[table][field] !== undefined) return out(extraData[table][field])
       }
       return m // Mantém original se não achar
     })
@@ -521,8 +533,8 @@ class BpmCore {
       }
 
       for (const targetRow of targetRows) {
-        const subject = await this.replaceVariables(data.actionSubject, triggerTable, triggerData, actionTable, targetRow)
-        const body = await this.replaceVariables(data.actionBody, triggerTable, triggerData, actionTable, targetRow)
+        const subject = await this.replaceVariables(data.actionSubject, triggerTable, triggerData, actionTable, targetRow, true)
+        const body = await this.replaceVariables(data.actionBody, triggerTable, triggerData, actionTable, targetRow, true)
 
         let to = ''
         const recipientType = data.emailRecipientType || 'system'
@@ -817,7 +829,7 @@ class BpmCore {
       else if (currentNode.type === 'response') {
         const data = currentNode.data || {}
         const allowAction = data.responseAllowAction !== false
-        const msg = await this.replaceVariables(data.responseMessage, triggerTable, currentData)
+        const msg = await this.replaceVariables(data.responseMessage, triggerTable, currentData, null, null, true)
 
         if (!allowAction) {
           finalSuccess = false
