@@ -3,8 +3,128 @@ import { Check, Info, Loader2, X, Edit2, MessageSquare, Settings2 } from "lucide
 import RichTextEditor from "../RichTextEditor";
 
 export function ActionPropertiesPanel(props: any) {
-  const { selectedNode, updateNodeData, dbModels, dbFields, setCursorPos, roles, openGroupUsersModal, setEditingEmailNode, setTempEmailData, setIsPreviewEmailOpen, renderActionFilters, t, enums, cursorPos } = props;
+  const { selectedNode, updateNodeData, dbModels, dbFields, setCursorPos, roles, openGroupUsersModal, setEditingEmailNode, setTempEmailData, setIsPreviewEmailOpen, t, enums, cursorPos } = props;
   const [activeTab, setActiveTab] = useState<'geral' | 'mensagem'>('geral');
+
+  // Filtros "ONDE" (quais registros) de Atualizar, Excluir e E-mail por tabela.
+  // Ficava no BpmCanvas e se perdeu na modularização (o painel recebia undefined e quebrava a aba Tabela Dinâmica).
+  const renderActionFilters = () => {
+    if (!selectedNode || !selectedNode.data?.actionModelId) return null;
+    const actionFilters = (selectedNode.data.actionFilters as any[]) || [];
+    const setFilters = (next: any[]) => updateNodeData(selectedNode.id, { actionFilters: next });
+
+    return (
+      <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-xl p-3 shadow-sm mt-4">
+        <div className="flex items-center justify-between mb-3 pb-2 border-b border-red-100 dark:border-red-900/50">
+          <span className="text-[9px] font-bold text-red-500 uppercase tracking-widest">{t('bpm.canvas.filters_title', 'Filtros (Quais registros?)')}</span>
+          <button
+            onClick={() => setFilters([...actionFilters, { field: '', operator: '==', value: '' }])}
+            className="text-[9px] bg-red-500 text-white px-2 py-1 rounded font-bold uppercase tracking-widest hover:bg-red-600 transition-colors"
+          >
+            {t('bpm.canvas.add_filter', '+ Filtro')}
+          </button>
+        </div>
+
+        {actionFilters.length === 0 && (
+          <div className="text-[9px] text-red-400 text-center py-2 italic font-semibold">
+            {t('bpm.canvas.no_filters_warning', 'CUIDADO: Nenhum filtro definido. Isso afetará TODOS os registros.')}
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {actionFilters.map((filt: any, index: number) => (
+            <div key={index} className="relative group/filt border border-red-100 dark:border-red-900/30 rounded p-2 bg-white dark:bg-neutral-950">
+              <button
+                onClick={() => {
+                  const next = [...actionFilters];
+                  next.splice(index, 1);
+                  setFilters(next);
+                }}
+                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover/filt:opacity-100 transition-opacity shadow z-10"
+                title={t('bpm.canvas.remove_filter', 'Remover filtro')}
+              >
+                <X className="w-3 h-3" />
+              </button>
+
+              <div className="grid grid-cols-[1fr_auto] gap-2 mb-2">
+                <select
+                  value={filt.field || ''}
+                  onChange={(e: any) => {
+                    const next = [...actionFilters];
+                    next[index] = { ...next[index], field: e.target.value };
+                    setFilters(next);
+                  }}
+                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-red-500"
+                >
+                  <option value="">{t('bpm.canvas.filter_field', 'Campo...')}</option>
+                  {dbFields.filter((f: any) => f.model_id === selectedNode.data?.actionModelId).map((f: any) => (
+                    <option key={f.id} value={f.db_column_name || f.name}>{f.display_name || f.db_column_name || f.name}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={filt.operator || '=='}
+                  onChange={(e: any) => {
+                    const next = [...actionFilters];
+                    next[index] = { ...next[index], operator: e.target.value };
+                    setFilters(next);
+                  }}
+                  className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-red-500 w-[60px]"
+                >
+                  <option value="==">==</option>
+                  <option value="!=">!=</option>
+                  <option value=">">&gt;</option>
+                  <option value="<">&lt;</option>
+                </select>
+              </div>
+
+              <div className="flex gap-1">
+                <input
+                  type="text"
+                  placeholder={t('bpm.canvas.filter_value_placeholder', 'Ex: {{trigger.id}} ou valor fixo')}
+                  value={filt.value || ''}
+                  onChange={(e: any) => {
+                    const next = [...actionFilters];
+                    next[index] = { ...next[index], value: e.target.value };
+                    setFilters(next);
+                  }}
+                  className="flex-1 min-w-0 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1 text-[10px] focus:ring-1 focus:ring-red-500"
+                />
+                <select
+                  value=""
+                  onChange={(e: any) => {
+                    if (!e.target.value) return;
+                    const next = [...actionFilters];
+                    next[index] = { ...next[index], value: (next[index].value || '') + `{{${e.target.value}}}` };
+                    setFilters(next);
+                    e.target.value = '';
+                  }}
+                  className="w-8 shrink-0 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 text-transparent rounded px-1 py-1 focus:ring-1 focus:ring-red-500 cursor-pointer text-[10px] appearance-none"
+                  style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%23ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
+                  title={t('bpm.canvas.insert_variable')}
+                >
+                  <option value="" className="text-neutral-900 dark:text-neutral-100">{t('bpm.canvas.plus_var')}</option>
+                  {[...dbModels].map((m: any) => {
+                    const fields = dbFields.filter((f: any) => f.model_id === m.id);
+                    if (fields.length === 0) return null;
+                    return (
+                      <optgroup key={m.id} label={m.display_name || m.db_table_name || m.name} className="text-left text-indigo-600 dark:text-indigo-400 normal-case tracking-normal text-sm font-bold bg-neutral-50 dark:bg-neutral-900">
+                        {fields.map((f: any) => (
+                          <option key={f.id} value={`${m.db_table_name || m.name}.${f.db_column_name || f.name}`} className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">
+                            {f.display_name || f.db_column_name || f.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4">
