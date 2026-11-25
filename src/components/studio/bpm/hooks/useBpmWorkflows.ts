@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { relaySend } from '@/lib/tunnel/relayClient'
+import { relaySend, replyToFromTopic, tunnelTopicFor } from '@/lib/tunnel/relayClient'
 
 interface UseBpmWorkflowsProps {
   initialWorkflows: any[]
@@ -133,10 +133,12 @@ export function useBpmWorkflows({
   // e o CLI recusa o formato antigo (token no comando). O Realtime do banco não serve: a tabela tem RLS fechado para o CLI.
   const notifyCli = async (): Promise<boolean> => {
     if (!projectId) return false
+    // tópico de resposta desta aba (com o túnel privado ligado o CLI só responde ali; sem ele registra erro de "resposta não enviada")
+    const replyTo = replyToFromTopic(tunnelTopicFor(`tunnel:${projectId}`)) || undefined
     const res = await relaySend(projectId, {
       type: 'broadcast',
       event: 'sql_query',
-      payload: { action: 'sync_bpm', schemaName: project?.slug || 'public', queryId: crypto.randomUUID() }
+      payload: { action: 'sync_bpm', schemaName: project?.slug || 'public', queryId: crypto.randomUUID(), ...(replyTo ? { replyTo } : {}) }
     })
     if (!res.ok) console.error('Erro ao notificar o CLI:', res.error)
     return res.ok
