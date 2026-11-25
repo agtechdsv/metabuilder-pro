@@ -8,6 +8,8 @@ const sha256Hex = async (text: string) => {
 
 export function TriggerPropertiesPanel(props: any) {
   const { selectedNode, updateNodeData, dbModels, dbFields, localViews, setLocalViews, currentWorkflowId, supabase, toast, t } = props;
+  const enums: any[] = props.enums || [];
+  const triggerEnum = enums.find((en: any) => en.id === selectedNode.data?.triggerEnumId);
   // o segredo em texto só existe aqui, logo após ser gerado; no fluxo fica apenas o hash
   const [newWebhookSecret, setNewWebhookSecret] = useState<string | null>(null);
   const webhookUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/api/v1/webhook/${currentWorkflowId || 'novo-fluxo'}`;
@@ -117,26 +119,75 @@ export function TriggerPropertiesPanel(props: any) {
                               </select>
                             </div>
                             
+                            <div className="flex items-center justify-between">
+                              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{t('bpm.canvas.use_enum')}</label>
+                              <input
+                                type="checkbox"
+                                checked={!!selectedNode.data?.triggerUseEnum}
+                                onChange={(e) => updateNodeData(selectedNode.id, { triggerUseEnum: e.target.checked })}
+                                className="rounded bg-white dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-emerald-500 focus:ring-emerald-500"
+                              />
+                            </div>
+
+                            {selectedNode.data?.triggerUseEnum && (
+                              <select
+                                value={(selectedNode.data?.triggerEnumId as string) || ''}
+                                onChange={(e) => updateNodeData(selectedNode.id, { triggerEnumId: e.target.value, triggerFromValue: '', triggerToValue: '' })}
+                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500"
+                              >
+                                <option value="">{t('bpm.canvas.select_enum')}</option>
+                                {enums.map((en: any) => <option key={en.id} value={en.id}>{en.name}</option>)}
+                              </select>
+                            )}
+
                             <div className="grid grid-cols-2 gap-2">
                               <div>
                                 <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.from_optional')}</label>
-                                <input 
-                                  type="text" 
-                                  placeholder={t('bpm.canvas.any')}
-                                  value={(selectedNode.data?.triggerFromValue as string) || ''} 
-                                  onChange={(e) => updateNodeData(selectedNode.id, { triggerFromValue: e.target.value })}
-                                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500"
-                                />
+                                {selectedNode.data?.triggerUseEnum ? (
+                                  <select
+                                    value={(selectedNode.data?.triggerFromValue as string) || ''}
+                                    onChange={(e) => updateNodeData(selectedNode.id, { triggerFromValue: e.target.value })}
+                                    disabled={!triggerEnum}
+                                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500 disabled:opacity-50"
+                                  >
+                                    <option value="">{t('bpm.canvas.any')}</option>
+                                    {(triggerEnum?.values || []).map((v: any) => (
+                                      <option key={String(v.value)} value={String(v.value)}>{v.description ? `${String(v.value)} - ${String(v.description)}` : String(v.value)}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder={t('bpm.canvas.any')}
+                                    value={(selectedNode.data?.triggerFromValue as string) || ''}
+                                    onChange={(e) => updateNodeData(selectedNode.id, { triggerFromValue: e.target.value })}
+                                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500"
+                                  />
+                                )}
                               </div>
                               <div>
                                 <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.to_optional')}</label>
-                                <input 
-                                  type="text" 
-                                  placeholder={t('bpm.canvas.any')}
-                                  value={(selectedNode.data?.triggerToValue as string) || ''} 
-                                  onChange={(e) => updateNodeData(selectedNode.id, { triggerToValue: e.target.value })}
-                                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500"
-                                />
+                                {selectedNode.data?.triggerUseEnum ? (
+                                  <select
+                                    value={(selectedNode.data?.triggerToValue as string) || ''}
+                                    onChange={(e) => updateNodeData(selectedNode.id, { triggerToValue: e.target.value })}
+                                    disabled={!triggerEnum}
+                                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500 disabled:opacity-50"
+                                  >
+                                    <option value="">{t('bpm.canvas.any')}</option>
+                                    {(triggerEnum?.values || []).map((v: any) => (
+                                      <option key={String(v.value)} value={String(v.value)}>{v.description ? `${String(v.value)} - ${String(v.description)}` : String(v.value)}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder={t('bpm.canvas.any')}
+                                    value={(selectedNode.data?.triggerToValue as string) || ''}
+                                    onChange={(e) => updateNodeData(selectedNode.id, { triggerToValue: e.target.value })}
+                                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500"
+                                  />
+                                )}
                               </div>
                             </div>
                           </div>
