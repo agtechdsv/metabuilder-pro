@@ -110,6 +110,24 @@ describe('núcleo do BPM: comportamento extra', () => {
     expect(await core.replaceVariables('{{pedidos.dia}}', 'pedidos', row)).toBe(String(row.dia))
   })
 
+  it('validação síncrona não espera o registro da execução (a tela está esperando a resposta)', async () => {
+    const core = new BpmCore({
+      db: { dialect: 'postgres', query: async () => [] },
+      models: { tableOf: async (id: string) => (fixtures.models as any)[id] },
+      runs: { report: () => new Promise(() => {}) }, // nunca responde
+    })
+    core.setWorkflows([{ id: 'f', name: 'F', flow_data: { nodes: [
+      { id: 't', type: 'trigger', data: { triggerType: ['before_insert'], triggerModelId: 'm_orders' } },
+      { id: 'r', type: 'response', data: { responseAllowAction: false, responseMessage: 'bloqueado' } },
+    ], edges: [{ source: 't', target: 'r' }] } } as any])
+    const res: any = await Promise.race([
+      core.processSyncEvent('orders', 'BEFORE_INSERT', { id: 1 }),
+      new Promise(r => setTimeout(() => r('travou'), 500)),
+    ])
+    expect(res).not.toBe('travou')
+    expect(res.success).toBe(false)
+  })
+
   it('agendamento recorrente vira cron e usa o agendador injetado', () => {
     const crons: string[] = []
     const core = new BpmCore({

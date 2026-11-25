@@ -981,7 +981,9 @@ export function useRecordFormLogic(props: UseRecordFormLogicProps) {
                 console.warn(`[BPM] Timeout esperando validação síncrona do BPM (queryId: ${queryId}). Prosseguindo para não travar a tela...`);
                 resolve(payloadToSave); // Continua se der timeout
              }
-          }, 1000); // Reduzido de 8000 para 1000ms para evitar travamento da UI
+          // Espera a resposta do Agente: ela chega assim que o fluxo termina (sem fluxo, na hora). 1s era pouco: com o fluxo
+          // levando mais que isso, a tela gravava antes do bloqueio chegar. Se o Agente não responder, segue para não travar a tela.
+          }, 8000);
     });
   }
 

@@ -640,7 +640,8 @@ class BpmCore {
    * Executa fn (que percorre o fluxo) e reporta o resultado: success, error (exceção ou falha anotada em webhook/e-mail)
    * ou loop (passou de 100 passos). fn devolve { steps, loop, details? }.
    */
-  async runReported(flow, tableName, source, fn) {
+  /** `awaitReport: false` = não espera o registro da execução (validação síncrona: a tela está esperando a resposta). */
+  async runReported(flow, tableName, source, fn, { awaitReport = true } = {}) {
     const startedAt = new Date()
     let status = 'success'
     let errorMessage = null
@@ -662,7 +663,8 @@ class BpmCore {
       }
     })
     if (status === 'loop') this.log.error(`[BPM] Fluxo "${flow.name}" interrompido: ${errorMessage}`)
-    await this.reportRun(flow, status, startedAt, errorMessage, extra)
+    if (awaitReport) await this.reportRun(flow, status, startedAt, errorMessage, extra)
+    else void this.reportRun(flow, status, startedAt, errorMessage, extra) // reportRun já trata os próprios erros
   }
 
   async reportRun(flow, status, startedAt, errorMessage, details) {
@@ -899,7 +901,7 @@ class BpmCore {
             await this.runReported(flow, tableName, `validação ${actionType.toUpperCase()}`, async () => {
               result = await this.traverseGraphSync(flowData, triggerNode, tableName, currentData)
               return { steps: result.steps, loop: result.loop, details: { sync: true, blocked: !result.success, ...(result.success ? {} : { message: result.error }) } }
-            })
+            }, { awaitReport: false })
             if (!result) throw new Error('fluxo síncrono sem resultado')
             currentData = result.data
             if (result.message) message = result.message // Last message wins
