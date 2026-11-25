@@ -1,4 +1,16 @@
 {
+  "v1.0.6": {
+    "date": "2026-11-25",
+    "pt": [
+      "## 🚀 MetaBuilder PRO v1.0.6\n\n### ⚙️ Automações (BPM)\n- **Automações em conexões \"postgresql\":** projetos cuja conexão PostgreSQL usa o nome *postgresql* agora executam os fluxos normalmente (antes o motor de automações ficava desligado sem aviso).\n- **E-mail por Tabela Dinâmica:** corrigido o erro que fechava a tela ao escolher *Tabela Dinâmica* como destinatário. Os filtros de *Atualizar*, *Excluir* e *E-mail* voltaram a funcionar.\n- **Nome do fluxo:** ao salvar um rascunho novo ou renomear um fluxo, o nome é pedido numa janela do próprio MetaBuilder, no lugar do diálogo do navegador."
+    ],
+    "en": [
+      "## 🚀 MetaBuilder PRO v1.0.6\n\n### ⚙️ Automations (BPM)\n- **Automations on \"postgresql\" connections:** projects whose PostgreSQL connection is named *postgresql* now run their flows normally (before, the automation engine stayed off with no warning).\n- **Email by Dynamic Table:** fixed the error that closed the screen when choosing *Dynamic Table* as the recipient. The filters of *Update*, *Delete* and *Email* work again.\n- **Flow name:** when saving a new draft or renaming a flow, the name is asked in a MetaBuilder window instead of the browser dialog."
+    ],
+    "es": [
+      "## 🚀 MetaBuilder PRO v1.0.6\n\n### ⚙️ Automatizaciones (BPM)\n- **Automatizaciones en conexiones \"postgresql\":** los proyectos cuya conexión PostgreSQL se llama *postgresql* ahora ejecutan sus flujos con normalidad (antes el motor de automatizaciones quedaba apagado sin aviso).\n- **Correo por Tabla Dinámica:** corregido el error que cerraba la pantalla al elegir *Tabla Dinámica* como destinatario. Los filtros de *Actualizar*, *Eliminar* y *Correo* vuelven a funcionar.\n- **Nombre del flujo:** al guardar un borrador nuevo o renombrar un flujo, el nombre se pide en una ventana de MetaBuilder en lugar del diálogo del navegador."
+    ]
+  },
   "v1.0.5": {
     "date": "2026-11-24",
     "pt": [
