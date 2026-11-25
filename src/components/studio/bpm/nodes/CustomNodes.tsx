@@ -38,6 +38,10 @@ export const TriggerNode = memo(({ id, data, selected }: NodeProps) => {
     if (type === 'insert') { title = t('bpm.nodes.on_insert'); desc = t('bpm.nodes.db_trigger'); Icon = PlusCircle; }
     else if (type === 'update') { title = t('bpm.nodes.on_update'); desc = t('bpm.nodes.db_trigger'); Icon = Edit; }
     else if (type === 'delete') { title = t('bpm.nodes.on_delete'); desc = t('bpm.nodes.db_trigger'); Icon = Trash2; }
+    else if (type === 'before_insert') { title = t('bpm.nodes.before_insert', 'Antes de Salvar (Novo)'); desc = t('bpm.nodes.db_trigger'); Icon = PlusCircle; }
+    else if (type === 'before_update') { title = t('bpm.nodes.before_update', 'Antes de Salvar (Edição)'); desc = t('bpm.nodes.db_trigger'); Icon = Edit; }
+    else if (type === 'before_delete') { title = t('bpm.nodes.before_delete', 'Antes de Excluir'); desc = t('bpm.nodes.db_trigger'); Icon = Trash2; }
+    else if (type === 'on_load') { title = t('bpm.nodes.on_load', 'Ao Carregar Formulário'); desc = t('bpm.nodes.db_trigger'); Icon = Edit; }
     else if (type === 'manual') { title = t('bpm.nodes.manual_action'); desc = t('bpm.nodes.by_button'); Icon = MousePointer2; }
     else if (type === 'scheduled') { title = t('bpm.nodes.scheduled'); desc = t('bpm.nodes.cron_job'); Icon = Clock; }
     else if (type === 'webhook') { title = t('bpm.nodes.webhook_inbound', 'Webhook Inbound'); desc = t('bpm.nodes.external_api', 'Chamada API Externa'); Icon = Webhook; }

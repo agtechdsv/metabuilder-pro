@@ -3500,6 +3500,7 @@
         "save_draft_error": "Erro ao salvar o rascunho.",
         "save_draft_before_publish": "Salve o fluxo como rascunho antes de publicar.",
         "flow_published": "Fluxo publicado e ativado em Produção!",
+        "cli_not_notified": "Fluxo publicado, mas não foi possível avisar o Agente CLI. Reinicie o túnel para ele carregar o fluxo.",
         "publish_flow_error": "Erro ao publicar o fluxo.",
         "flow_renamed": "Fluxo renomeado!",
         "rename_error": "Erro ao renomear.",

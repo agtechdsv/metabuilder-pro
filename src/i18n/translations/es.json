@@ -3587,6 +3587,7 @@
         "save_draft_error": "Error al guardar el borrador.",
         "save_draft_before_publish": "Guarde el flujo como borrador antes de publicar.",
         "flow_published": "¡Flujo publicado y activado en Producción!",
+        "cli_not_notified": "Flujo publicado, pero no se pudo avisar al Agente CLI. Reinicie el túnel para que cargue el flujo.",
         "publish_flow_error": "Error al publicar el flujo.",
         "flow_renamed": "¡Flujo renombrado!",
         "rename_error": "Error al renombrar.",

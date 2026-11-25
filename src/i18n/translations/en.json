@@ -3499,6 +3499,7 @@
         "save_draft_error": "Error saving draft.",
         "save_draft_before_publish": "Save the flow as draft before publishing.",
         "flow_published": "Flow published and activated in Production!",
+        "cli_not_notified": "Flow published, but the CLI Agent could not be notified. Restart the tunnel so it loads the flow.",
         "publish_flow_error": "Error publishing flow.",
         "flow_renamed": "Flow renamed!",
         "rename_error": "Error renaming flow.",

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { relaySend } from '@/lib/tunnel/relayClient'
 
 interface UseBpmWorkflowsProps {
   initialWorkflows: any[]
@@ -128,6 +129,19 @@ export function useBpmWorkflows({
     }
   }
 
+  // Avisa o Agente CLI para recarregar os fluxos. Vai pelo servidor (que assina o comando): o navegador não assina comandos
+  // e o CLI recusa o formato antigo (token no comando). O Realtime do banco não serve: a tabela tem RLS fechado para o CLI.
+  const notifyCli = async (): Promise<boolean> => {
+    if (!projectId) return false
+    const res = await relaySend(projectId, {
+      type: 'broadcast',
+      event: 'sql_query',
+      payload: { action: 'sync_bpm', schemaName: project?.slug || 'public', queryId: crypto.randomUUID() }
+    })
+    if (!res.ok) console.error('Erro ao notificar o CLI:', res.error)
+    return res.ok
+  }
+
   const handlePublish = async () => {
     if (!reactFlowInstance || !projectId || !useCaseId) return
     
@@ -152,27 +166,9 @@ export function useBpmWorkflows({
 
       if (error) throw error
       
-      try {
-        const channel = supabase.channel(`tunnel:${projectId}`)
-        channel.subscribe(async (status: string) => {
-          if (status === 'SUBSCRIBED') {
-            await channel.send({
-              type: 'broadcast',
-              event: 'sql_query',
-              payload: {
-                action: 'sync_bpm',
-                token: project?.secret_token || '',
-                schemaName: project?.slug || 'public',
-                queryId: crypto.randomUUID()
-              }
-            })
-            setTimeout(() => { supabase.removeChannel(channel) }, 3000)
-          }
-        })
-      } catch(e) {
-        console.error('Erro ao notificar o CLI:', e)
-      }
-      
+      const notified = await notifyCli()
+      if (!notified) toast(t('bpm.canvas.toasts.cli_not_notified', 'Fluxo publicado, mas não foi possível avisar o Agente CLI. Reinicie o túnel para ele carregar o fluxo.'), 'info')
+
       toast(t('bpm.canvas.toasts.flow_published', 'Fluxo publicado e ativado em Produção!'), 'success')
       
       setWorkflows(prev => prev.map(w => w.id === currentWorkflowId ? { ...w, flow_data: flow, draft_flow_data: null, is_active: true } : w))
@@ -237,6 +233,7 @@ export function useBpmWorkflows({
       if (error) throw error
       
       toast(t('bpm.canvas.toasts.flow_deleted', 'Fluxo excluído com sucesso!'), 'success')
+      void notifyCli()
       setWorkflows(prev => prev.filter(w => w.id !== currentWorkflowId))
       setCurrentWorkflowId('new')
     } catch (err: any) {
