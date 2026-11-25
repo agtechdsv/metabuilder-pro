@@ -236,7 +236,13 @@ function BpmCanvasContent({
             >
               <option value="new">{t('bpm.canvas.create_new_flow')}</option>
               {workflows.map(w => (
-                <option key={w.id} value={w.id}>{w.name}</option>
+                <option key={w.id} value={w.id}>
+                  {w.is_active && w.flow_data
+                    ? (w.draft_flow_data
+                        ? `🟡 ${w.name} · ${t('bpm.canvas.flow_status_pending', 'Publicado · alterações não publicadas')}`
+                        : `🟢 ${w.name} · ${t('bpm.canvas.flow_status_published', 'Publicado')}`)
+                    : `⚪ ${w.name} · ${t('bpm.canvas.flow_status_draft', 'Rascunho (não publicado)')}`}
+                </option>
               ))}
             </select>
           </div>
