@@ -75,6 +75,7 @@ export function BpmNodePropertiesSidebar(props: any) {
                 dbModels={dbModels}
                 dbFields={dbFields}
                 t={t}
+                enums={enums}
               />
             )}
 

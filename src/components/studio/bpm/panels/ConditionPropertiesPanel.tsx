@@ -2,7 +2,8 @@ import React from "react";
 import { Plus, Trash2, X } from "lucide-react";
 
 export function ConditionPropertiesPanel(props: any) {
-  const { selectedNode, updateNodeData, dbModels, dbFields, t, enums } = props;
+  const { selectedNode, updateNodeData, dbModels, dbFields, t } = props;
+  const enums: any[] = props.enums || [];
   const groups = (selectedNode.data?.conditionGroups as any[]) || [];
                   
   return (
