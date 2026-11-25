@@ -25,6 +25,9 @@ export function BpmModals(props: any) {
     isDeleteModalOpen,
     setIsDeleteModalOpen,
     confirmDelete,
+    nameDialog,
+    setNameDialog,
+    confirmNameDialog,
     t,
     cursorPos,
     setCursorPos,
@@ -318,6 +321,44 @@ export function BpmModals(props: any) {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* Modal de nome do fluxo (novo rascunho ou renomear) */}
+      <Modal
+        isOpen={!!nameDialog}
+        onClose={() => setNameDialog(null)}
+        title={t('bpm.canvas.prompts.flow_name', 'Nome do fluxo:')}
+        size="sm"
+      >
+        <form
+          className="space-y-6"
+          onSubmit={(e: React.FormEvent) => { e.preventDefault(); confirmNameDialog(); }}
+        >
+          <input
+            autoFocus
+            type="text"
+            value={nameDialog?.value || ''}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNameDialog({ ...nameDialog, value: e.target.value })}
+            onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.target.select()}
+            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+          />
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setNameDialog(null)}
+              className="flex-1 px-4 py-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-xl font-bold transition-colors"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={!nameDialog?.value?.trim()}
+              className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-bold transition-colors"
+            >
+              {t('bpm.canvas.prompts.confirm_name', 'Salvar')}
+            </button>
+          </div>
+        </form>
       </Modal>
 
       {/* Modal de Exclusão */}

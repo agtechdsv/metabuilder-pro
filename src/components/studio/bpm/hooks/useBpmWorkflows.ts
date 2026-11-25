@@ -35,6 +35,8 @@ export function useBpmWorkflows({
   const [isSaving, setIsSaving] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  // Modal de nome do fluxo (substitui o prompt() do navegador): criar rascunho novo ou renomear
+  const [nameDialog, setNameDialog] = useState<{ mode: 'create' | 'rename'; value: string } | null>(null)
 
   useEffect(() => {
     if (currentWorkflowId === 'new') {
@@ -63,48 +65,61 @@ export function useBpmWorkflows({
   const handleSave = async () => {
     if (!reactFlowInstance || !projectId || !useCaseId) return
 
+    // Fluxo novo: pede o nome num modal; o salvamento continua em saveNewDraft
+    if (currentWorkflowId === 'new') {
+      setNameDialog({ mode: 'create', value: t('bpm.canvas.prompts.new_flow_default', 'Novo Fluxo') })
+      return
+    }
+
     setIsSaving(true)
     const flow = reactFlowInstance.toObject()
-    
+
     try {
-      if (currentWorkflowId === 'new') {
-        const name = prompt(t('bpm.canvas.prompts.new_flow_name', 'Qual o nome deste novo fluxo?'), t('bpm.canvas.prompts.new_flow_default', 'Novo Fluxo'))
-        if (!name) {
-          setIsSaving(false)
-          return
-        }
+      const { error } = await supabase
+        .from('bpm_workflows')
+        .update({
+          draft_flow_data: flow,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentWorkflowId)
 
-        const { data, error } = await supabase
-          .from('bpm_workflows')
-          .insert({
-            project_id: projectId,
-            name: name,
-            use_case_id: useCaseId,
-            draft_flow_data: flow,
-            is_active: false
-          })
-          .select()
-          .single()
+      if (error) throw error
+      toast(t('bpm.canvas.toasts.draft_updated', 'Rascunho atualizado com sucesso!'), 'success')
 
-        if (error) throw error
-        
-        toast(t('bpm.canvas.toasts.draft_created', 'Rascunho criado com sucesso!'), 'success')
-        setWorkflows(prev => [data, ...prev])
-        setCurrentWorkflowId(data.id)
-      } else {
-        const { error } = await supabase
-          .from('bpm_workflows')
-          .update({
-            draft_flow_data: flow,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', currentWorkflowId)
+      setWorkflows(prev => prev.map(w => w.id === currentWorkflowId ? { ...w, draft_flow_data: flow } : w))
+    } catch (err: any) {
+      console.error(err)
+      toast(t('bpm.canvas.toasts.save_draft_error', 'Erro ao salvar o rascunho.'), 'error')
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
-        if (error) throw error
-        toast(t('bpm.canvas.toasts.draft_updated', 'Rascunho atualizado com sucesso!'), 'success')
-        
-        setWorkflows(prev => prev.map(w => w.id === currentWorkflowId ? { ...w, draft_flow_data: flow } : w))
-      }
+  // Cria o rascunho de um fluxo novo com o nome escolhido no modal
+  const saveNewDraft = async (name: string) => {
+    if (!reactFlowInstance || !projectId || !useCaseId) return
+
+    setIsSaving(true)
+    const flow = reactFlowInstance.toObject()
+
+    try {
+      const { data, error } = await supabase
+        .from('bpm_workflows')
+        .insert({
+          project_id: projectId,
+          name: name,
+          use_case_id: useCaseId,
+          draft_flow_data: flow,
+          is_active: false
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      toast(t('bpm.canvas.toasts.draft_created', 'Rascunho criado com sucesso!'), 'success')
+      setWorkflows(prev => [data, ...prev])
+      setCurrentWorkflowId(data.id)
     } catch (err: any) {
       console.error(err)
       toast(t('bpm.canvas.toasts.save_draft_error', 'Erro ao salvar o rascunho.'), 'error')
@@ -173,8 +188,12 @@ export function useBpmWorkflows({
     const wf = workflows.find(w => w.id === currentWorkflowId)
     if (!wf) return
     
-    const newName = window.prompt(t('bpm.canvas.prompts.flow_name', 'Nome do fluxo:'), wf.name)
-    if (!newName || newName === wf.name) return
+    setNameDialog({ mode: 'rename', value: wf.name })
+  }
+
+  const renameTo = async (newName: string) => {
+    const wf = workflows.find(w => w.id === currentWorkflowId)
+    if (!wf || !newName || newName === wf.name) return
 
     try {
       const { error } = await supabase
@@ -190,6 +209,16 @@ export function useBpmWorkflows({
       console.error(err)
       toast(t('bpm.canvas.toasts.rename_error', 'Erro ao renomear.'), 'error')
     }
+  }
+
+  const confirmNameDialog = async () => {
+    if (!nameDialog) return
+    const name = nameDialog.value.trim()
+    if (!name) return
+    const mode = nameDialog.mode
+    setNameDialog(null)
+    if (mode === 'create') await saveNewDraft(name)
+    else await renameTo(name)
   }
 
   const handleDelete = () => {
@@ -225,6 +254,9 @@ export function useBpmWorkflows({
     isPublishing,
     isDeleteModalOpen,
     setIsDeleteModalOpen,
+    nameDialog,
+    setNameDialog,
+    confirmNameDialog,
     handleSave,
     handlePublish,
     handleRename,

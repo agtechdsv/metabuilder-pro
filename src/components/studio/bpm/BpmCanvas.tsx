@@ -156,6 +156,9 @@ function BpmCanvasContent({
     isPublishing,
     isDeleteModalOpen,
     setIsDeleteModalOpen,
+    nameDialog,
+    setNameDialog,
+    confirmNameDialog,
     handleSave,
     handlePublish,
     handleRename,
@@ -405,6 +408,9 @@ function BpmCanvasContent({
         isDeleteModalOpen={isDeleteModalOpen}
         setIsDeleteModalOpen={setIsDeleteModalOpen}
         confirmDelete={confirmDelete}
+        nameDialog={nameDialog}
+        setNameDialog={setNameDialog}
+        confirmNameDialog={confirmNameDialog}
         t={t}
         cursorPos={cursorPos}
         setCursorPos={setCursorPos}
