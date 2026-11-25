@@ -1,4 +1,16 @@
 {
+  "v1.0.7": {
+    "date": "2026-11-25",
+    "pt": [
+      "## 🚀 MetaBuilder PRO v1.0.7\n\n### ⚙️ Automações (BPM)\n- **Fluxos publicados voltam a disparar:** o agente de conexão agora recebe seus fluxos ativos direto da plataforma, de forma segura. Antes, em alguns projetos ele iniciava com 0 fluxos e nada era executado (nem e-mails de aviso).\n- **Mensagem de falha clara:** se o agente não conseguir buscar os fluxos, o erro aparece no log do túnel e os fluxos já carregados continuam valendo.\n\n### 🧭 Novidades na plataforma\n- **Histórico de versões do aplicativo:** em aplicativos acessados online (ou no navegador da IDE), o histórico mostra a versão Web, em vez de uma lista vazia."
+    ],
+    "en": [
+      "## 🚀 MetaBuilder PRO v1.0.7\n\n### ⚙️ Automations (BPM)\n- **Published flows fire again:** the connection agent now receives your active flows straight from the platform, securely. Before, in some projects it started with 0 flows and nothing ran (not even alert emails).\n- **Clear failure message:** if the agent can't fetch the flows, the error shows in the tunnel log and the flows already loaded stay in effect.\n\n### 🧭 Platform news\n- **App version history:** for apps opened online (or in the IDE browser), the history shows the Web version instead of an empty list."
+    ],
+    "es": [
+      "## 🚀 MetaBuilder PRO v1.0.7\n\n### ⚙️ Automatizaciones (BPM)\n- **Los flujos publicados vuelven a ejecutarse:** el agente de conexión ahora recibe sus flujos activos directamente de la plataforma, de forma segura. Antes, en algunos proyectos iniciaba con 0 flujos y no se ejecutaba nada (ni siquiera los correos de aviso).\n- **Mensaje de fallo claro:** si el agente no logra obtener los flujos, el error aparece en el registro del túnel y los flujos ya cargados siguen vigentes.\n\n### 🧭 Novedades en la plataforma\n- **Historial de versiones de la aplicación:** en aplicaciones abiertas en línea (o en el navegador del IDE), el historial muestra la versión Web en lugar de una lista vacía."
+    ]
+  },
   "v1.0.6": {
     "date": "2026-11-25",
     "pt": [
