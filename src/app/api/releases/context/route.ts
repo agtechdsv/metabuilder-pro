@@ -19,26 +19,29 @@ export async function GET(req: Request) {
     // 1. Fetch info about the context (Project or Workspace)
     let appName = 'Sistema'
     let appIcon = null
+    let createdAt: string | null = null
 
     if (contextType === 'project') {
       const { data: project } = await supabase
         .from('projects')
-        .select('name, icon')
+        .select('name, icon, created_at')
         .eq('id', contextId)
         .single()
       if (project) {
         appName = project.name
         appIcon = project.icon
+        createdAt = project.created_at
       }
     } else {
       const { data: workspace } = await supabase
         .from('workspaces')
-        .select('name, theme_config')
+        .select('name, theme_config, created_at')
         .eq('id', contextId)
         .single()
       if (workspace) {
         appName = workspace.name
         appIcon = workspace.theme_config?.logo_url || null
+        createdAt = workspace.created_at
       }
     }
 
@@ -52,6 +55,25 @@ export async function GET(req: Request) {
     if (error) {
       console.error('Error fetching context releases:', error)
       return NextResponse.json({ releases: [], appName, appIcon })
+    }
+
+    // Sem instalador gerado (app online / navegador da IDE): mostra ao menos a versão Web, em vez de lista vazia
+    if (!builds || builds.length === 0) {
+      return NextResponse.json({
+        appName,
+        appIcon,
+        contextType,
+        contextId,
+        releases: [{
+          id: 'web',
+          version: 'Web',
+          published_at: createdAt || new Date().toISOString(),
+          download_url: null,
+          status: 'web',
+          body: `### 🌐 Versão Web\n\nO aplicativo **${appName}** está publicado online e sempre roda a versão mais recente, sem precisar instalar nada.\n\nQuando um instalador for gerado, as versões e as notas de lançamento aparecem aqui.`,
+          size_bytes: null
+        }]
+      })
     }
 
     // Map to release notes format

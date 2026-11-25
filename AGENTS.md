@@ -46,6 +46,10 @@ Diga com franqueza o que **não** foi testado (ex.: no navegador, no CLI real, e
 - **Gerador/ejeção:** mudou algo em `src/lib/generator`? Acrescente teste em `__tests__/`. Código gerado dentro de template string evita crases e `${}` para não precisar de escapes. O app ejetado é português apenas.
 - Arquivos do repositório têm **CRLF** (`autocrlf`): o aviso "LF will be replaced by CRLF" é inofensivo, mas `Edit` de várias linhas pode falhar; releia o arquivo e tente de novo.
 
+## Release notes da IDE
+- Quando o dono pedir "release notes", siga **`docs/release-notes/README.md`** (modelo, marcadores `=== pt ===` / `=== en ===` / `=== es ===`, regras de redação) e guarde a versão publicada em `docs/release-notes/<versao>.md`. O texto colado no painel vai como está (sem Gemini); o "Release Notes Automático" fica desmarcado *(nov/2026)*.
+- Ordem para gerar release: commit + push → esperar o deploy da Vercel → gerar pelo painel do SuperAdmin.
+
 ## Ambiente Windows
 - Shells: Git Bash e PowerShell. **Não há Python.** Heredoc com muitas aspas ou `\n` quebra: para arquivos grandes use a ferramenta de escrita. `ln -s` COPIA a pasta; `du` em `node_modules` estoura o tempo.
 - Não crie scripts soltos na raiz do repositório (a raiz já tem vários: `script.js`, `temp.json`...). Rascunhos vão para a pasta de rascunho da sessão; o que for útil e durável vai para `scripts/`.

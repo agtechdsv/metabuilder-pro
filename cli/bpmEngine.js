@@ -102,28 +102,37 @@ class BpmEngine {
     console.log(chalk.green(t('bpm_running', { count: this.workflows.length }) + '\n'));
   }
 
-  async syncWorkflows() {
-    const { data } = await this.supabase
-      .from('bpm_workflows')
-      .select('id, name, flow_data')
-      .eq('project_id', this.project.id)
-      .eq('is_active', true)
-      .not('flow_data', 'is', null);
+  /**
+   * Fluxos ativos e modelos vêm do SERVIDOR (assinado com o secret_token): as tabelas têm RLS fechado
+   * para a chave anon do CLI, que recebia 0 linhas sem erro. Ao falhar, mantém o que já tinha.
+   */
+  async fetchFromServer() {
+    const res = await axios.post(`${this.apiUrl}/api/automations/workflows`, {
+      project_id: this.project.id,
+      token: this.project.secret_token,
+    }, { timeout: 15000 });
+    return res.data || {};
+  }
 
-    console.log(chalk.gray(t('bpm_schedules_cleared')));
-    this.core.setWorkflows(data || []);
+  async syncWorkflows() {
+    try {
+      const data = await this.fetchFromServer();
+      console.log(chalk.gray(t('bpm_schedules_cleared')));
+      this.core.setWorkflows(data.workflows || []);
+      if (Array.isArray(data.models)) this.models = data.models;
+    } catch (err) {
+      console.error(chalk.red('[BPM] Erro ao buscar os fluxos no servidor: ' + (err.response?.data?.error || err.message)));
+    }
   }
 
   async syncModels() {
-    const { data, error } = await this.supabase
-      .from('models')
-      .select('id, db_table_name, display_name')
-      .eq('project_id', this.project.id);
-
-    if (error) {
-      console.error(chalk.red('[BPM-DEBUG] Erro ao sincronizar models:'), error);
+    try {
+      const data = await this.fetchFromServer();
+      this.models = data.models || [];
+      if (!this.workflows.length && Array.isArray(data.workflows)) this.core.setWorkflows(data.workflows);
+    } catch (err) {
+      console.error(chalk.red('[BPM-DEBUG] Erro ao sincronizar models: ' + (err.response?.data?.error || err.message)));
     }
-    this.models = data || [];
     console.log(chalk.gray(t('bpm_models_loaded', { count: this.models.length, projectId: this.project.id })));
   }
 
