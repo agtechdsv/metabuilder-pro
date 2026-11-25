@@ -1,10 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const authorize = vi.fn()
+const authorizeMember = vi.fn()
 const tunnelSend = vi.fn()
 const getToken = vi.fn()
 
-vi.mock('@/lib/tunnel/authorize', () => ({ authorizeProjectActor: (...a: any[]) => authorize(...a) }))
+vi.mock('@/lib/tunnel/authorize', () => ({
+  authorizeProjectActor: (...a: any[]) => authorize(...a),
+  authorizeProjectMember: (...a: any[]) => authorizeMember(...a),
+}))
 vi.mock('@/lib/tunnel/server', () => ({
   tunnelSend: (...a: any[]) => tunnelSend(...a),
   getProjectSecretToken: (...a: any[]) => getToken(...a),
@@ -28,6 +32,7 @@ const cmd = (over: any = {}) => ({ projectId: PID, event: 'sql_query', payload: 
 
 beforeEach(() => {
   authorize.mockReset(); tunnelSend.mockReset(); getToken.mockReset()
+  authorizeMember.mockReset(); authorizeMember.mockResolvedValue(null)
   getToken.mockResolvedValue('token-real')
   tunnelSend.mockResolvedValue(undefined)
   accessFor.mockReset()
@@ -67,6 +72,19 @@ describe('POST /api/tunnel/send', () => {
     expect((await call(cmd({ action: 'raw_sql' }))).status).toBe(403)
     expect((await call(cmd({ action: 'sync_bpm' }))).status).toBe(403)
     expect(tunnelSend).toHaveBeenCalledTimes(1)
+  })
+
+  it('quem é membro E também usuário final do app: ação de desenvolvedor vale como membro; consulta comum segue como usuário final', async () => {
+    authorize.mockResolvedValue({ kind: 'end_user', session: { pid: PID, sub: '5' } })
+    authorizeMember.mockResolvedValue({ kind: 'member', userId: 'u1' })
+    expect((await call(cmd({ action: 'sync_bpm' }))).status).toBe(202)
+    expect(tunnelSend.mock.calls[0][2].access).toBeUndefined()
+    // consulta comum não consulta a conferência de membro: continua tratada como usuário final
+    authorizeMember.mockClear()
+    expect((await call(cmd())).status).toBe(202)
+    expect(authorizeMember).not.toHaveBeenCalled()
+    // ação que nem o membro pode pelo relay segue recusada
+    expect((await call(cmd({ action: 'validate_login' }))).status).toBe(403)
   })
 
   describe('acesso por tabela do usuário final (permissões e regras por linha)', () => {

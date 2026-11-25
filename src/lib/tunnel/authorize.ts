@@ -52,6 +52,16 @@ const liveness = createLivenessChecker({
 })
 export const clearLivenessCache = () => liveness.clear()
 
+/**
+ * Só a conferência de membro (login do MetaBuilder que enxerga o projeto). Serve para a tela do desenvolvedor que mora dentro
+ * do app publicado (ex.: Automações): quem é membro e também entrou no app como usuário final foi tratado como usuário final
+ * e, por isso, tinha as ações de desenvolvedor recusadas.
+ */
+export async function authorizeProjectMember(projectId: string): Promise<RelayActor | null> {
+  const memberId = await memberIdOf(projectId)
+  return memberId ? { kind: 'member', userId: memberId } : null
+}
+
 export async function authorizeProjectActor(req: NextRequest, projectId: string): Promise<RelayActor | null> {
   const session = verifyEndUserSession(req.cookies.get(endUserCookieName(projectId))?.value, projectId)
   // A sessão só é conferida contra o banco do cliente quando ELA vai ser usada (um desenvolvedor com um login antigo de

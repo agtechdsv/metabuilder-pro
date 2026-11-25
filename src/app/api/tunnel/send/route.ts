@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authorizeProjectActor } from '@/lib/tunnel/authorize'
+import { authorizeProjectActor, authorizeProjectMember } from '@/lib/tunnel/authorize'
 import { MAX_RELAY_BYTES, RateLimiter, actionAllowed, buildCommand, parseRelayRequest } from '@/lib/tunnel/relayPolicy'
 import { getProjectSecretToken, tunnelSend } from '@/lib/tunnel/server'
 import { evaluateEndUserAccess, guardMode, loadAccessContext } from '@/lib/tunnel/tableAccess'
@@ -30,8 +30,15 @@ export async function POST(request: NextRequest) {
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 })
   const { req } = parsed
 
-  const actor = await authorizeProjectActor(request, req.projectId)
+  let actor = await authorizeProjectActor(request, req.projectId)
   if (!actor) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+
+  // Ação de desenvolvedor vinda de uma tela dentro do app publicado: se a pessoa também é MEMBRO do projeto (login do MetaBuilder),
+  // vale como membro. Quem não é membro continua recusado; membro já podia fazer a mesma ação pelo Studio.
+  if (actor.kind === 'end_user' && !actionAllowed('end_user', req.payload.action).ok) {
+    const member = await authorizeProjectMember(req.projectId)
+    if (member) actor = member
+  }
 
   const allowed = actionAllowed(actor.kind, req.payload.action)
   if (!allowed.ok) return NextResponse.json({ error: allowed.error }, { status: 403 })
