@@ -43,8 +43,9 @@ Marque `[x]` ao concluir cada teste (e anote a data). Os casos de borda têm a c
 | [x] | 5 | Ao excluir · Pedidos | 100% testado e aprovado | 26/11/2026 |
 | [x] | 6 | Antes de Excluir · Pedidos | 100% testado e aprovado | 26/11/2026 |
 | [x] | 7 | Ao Carregar Formulário · Pedidos | 100% testado e aprovado | 26/11/2026 |
-| [ ] | 8 | Agendado · Clientes | | |
-| [ ] | 9 | Webhook de entrada · Tarefas | | |
+| [x] | 8 | Agendado · Clientes | "Apenas uma Vez" disparou e o e-mail chegou. Recorrente diário às 07:00 em acompanhamento | 26/11/2026 |
+| [x] | 9 | Webhook de entrada · Tarefas | Resposta 200 (`{"success":true}`) e a tarefa apareceu no Kanban | 26/11/2026 |
+| [ ] | 10 | Consultar dados + Agendado (relatório por e-mail) | | |
 
 **Também conferido nesta rodada** (além dos 9 gatilhos):
 - [x] **Data legível** nos e-mails: `25/11/2026` (e `26/11/2026 00:12`, quando o campo tem hora).
@@ -139,7 +140,7 @@ Marque `[x]` ao concluir cada teste (e anote a data). Os casos de borda têm a c
 **Atenção:** o fluxo roda também ao **abrir um pedido para editar** e sobrescreveria o status. Grave só a criação, ou use uma Resposta com mensagem de aviso no lugar da alteração. Este gatilho **não vai para o app exportado** (o selo do Studio avisa).
 
 ## 8. Agendado · Clientes (item 4)
-**Status:** [ ] a fazer
+**Status:** [x] validado em 26/11/2026: "Apenas uma Vez" disparou e o e-mail chegou. O mesmo fluxo foi trocado para **Recorrente, todos os dias às 07:00** e está em acompanhamento (confirmar a chegada nos próximos dias).
 **Objetivo:** receber um resumo por e-mail num horário marcado.
 1. Gatilho: **Agendado**. Para o vídeo use o tipo **Apenas uma Vez** e preencha **Data e hora da execução** **2 minutos à frente**. Nesse tipo só a data e a hora específicas valem: **dia da semana e horário aparecem só no Recorrente** (se preencher os dois em "uma vez" sem a data, nada é agendado). O horário vale pelo relógio da máquina onde o CLI roda.
 2. Ação **Enviar e-mail**, em **e-mails específicos** o seu endereço, assunto "Resumo diário do MetaBuilder".
@@ -152,7 +153,7 @@ Marque `[x]` ao concluir cada teste (e anote a data). Os casos de borda têm a c
 - O tipo **Apenas uma Vez** roda uma vez só e se encerra ao disparar. Se a data já passou ou está vazia, o CLI avisa (`agendamento "Apenas uma vez" ... ignorado`). Para repetir, use **Recorrente** (dias da semana e horário).
 
 ## 9. Webhook de entrada · Tarefas (item 7)
-**Status:** [ ] a fazer
+**Status:** [x] validado em 26/11/2026: o `curl` devolveu 200 e a tarefa "Tarefa vinda do webhook" apareceu no Kanban. Os casos de recusa (sem segredo, método errado, fluxo desativado) não foram anotados aqui.
 **Objetivo:** um sistema externo cria uma tarefa que aparece no Kanban.
 1. Gatilho: **Webhook de entrada**, método **POST**. Clique em **Gerar segredo**, copie na hora (ele só aparece uma vez) e salve o fluxo.
 2. Ação **Inserir registro** na tabela **Tarefas**: `titulo` = `{{webhook.titulo}}` (use os nomes reais das suas colunas).
@@ -170,6 +171,29 @@ Casos de recusa (mostre pelo menos o primeiro no vídeo):
 - **Fluxo desativado ou ID inexistente:** erro, nada é criado.
 - O segredo também vale como `Authorization: Bearer <segredo>`.
 
+## 10. Consultar dados + Agendado · relatório por e-mail (novo, release 1.0.10)
+**Status:** [ ] a fazer
+
+**Objetivo:** mandar por e-mail, em horário marcado, dados da aplicação (lista, contagem ou soma), em tabela no corpo e/ou planilha anexa.
+
+**Montagem comum:** gatilho **Agendado** (para o ensaio, "Apenas uma Vez" com a data e hora 2 minutos à frente) → ação **Consultar dados** → ação **Enviar e-mail** (e-mails específicos, o seu endereço). Na ação de e-mail, use no corpo `{{consulta.tabela}}` e no assunto `{{consulta.total}}`; para a planilha, marque **Anexar o resultado de uma consulta** (Excel ou CSV).
+
+| # | Consulta | Como montar | Esperado | ✔ |
+|---|---|---|---|---|
+| 10a | Clientes cadastrados nas últimas 48 horas | Tabela **Clientes**, modo **Listar registros**, colunas à escolha; filtro `criado_em` `>=` **Data relativa** → **Agora menos… 48 horas** | Tabela no corpo só com clientes novos; assunto com a quantidade | ☐ |
+| 10b | Pedidos da semana anterior | Tabela **Pedidos**, listar; dois filtros: `data_pedido` `>=` **Início da semana passada** e `data_pedido` `<` **Início desta semana (segunda)** | Só os pedidos de segunda a domingo da semana passada | ☐ |
+| 10c | Quantidade de pedidos por funcionário nos últimos 15 dias | Tabela **Pedidos**, **Agrupar e calcular**: agrupar por `funcionario_id` (o nome vem de **Funcionários**, campo `nome`), **Contar registros**; filtro `data_pedido` `>=` **Agora menos… 15 dias** | Uma linha por funcionário com o nome e a quantidade, da maior para a menor | ☐ |
+| 10d | Não enviar e-mail vazio | Repita 10a numa data sem clientes novos e marque **Não continuar o fluxo se não houver nenhum registro** | Nenhum e-mail sai; o log mostra `Consulta "consulta" sem resultado: o fluxo não continua` | ☐ |
+| 10e | Planilha anexa | Em 10b, marque o anexo (Excel) na ação de e-mail | O e-mail traz `consulta-AAAA-MM-DD.xlsx`; números como número, datas como data | ☐ |
+| 10f | Muitos registros | Consulta com mais de 200 linhas e o anexo marcado | A tabela do corpo mostra 200 linhas e avisa `Mostrando 200 de N linhas`; a planilha tem todas (até o limite da consulta) | ☐ |
+
+**Limites desta primeira fase (para explicar no vídeo):**
+- **Só tabelas**, não casos de uso: campos calculados (como o **Total Pedido**, que vem dos itens) **não** são colunas de tabela. Por isso "pedidos com valor ≥ 100.000" fica para a próxima fase.
+- **Só leitura**, sem SQL livre; teto de **5.000 linhas** por consulta e **60 segundos**. No e-mail, as 200 primeiras linhas aparecem na tabela e o resto só na planilha.
+- O anexo vai pelo servidor com limite de **2,5 MB** no total (poucas colunas e linhas, no máximo 2 anexos).
+- O fluxo roda **como sistema**: quem recebe o e-mail vê tudo o que a consulta devolve, sem as regras de acesso por linha de um usuário. Escolha com cuidado os destinatários e as colunas (dados pessoais).
+- Datas relativas e a semana (começa na **segunda-feira**) seguem o relógio da máquina onde o CLI roda.
+- O **app exportado** executa a consulta, mas **não envia anexo** (só o corpo do e-mail).
 ---
 
 ## Casos de borda (além do caminho feliz)
