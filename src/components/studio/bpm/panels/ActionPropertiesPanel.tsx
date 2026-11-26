@@ -187,6 +187,8 @@ export function ActionPropertiesPanel(props: any) {
                         dbModels={dbModels}
                         dbFields={dbFields}
                         localViews={props.localViews || []}
+                        enums={enums}
+                        relations={props.relations || []}
                         t={t}
                       />
                     )}
@@ -518,12 +520,23 @@ export function ActionPropertiesPanel(props: any) {
                           <div className="grid grid-cols-2 gap-2">
                             <div>
                               <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.query_name', 'Nome do resultado')}</label>
-                              <input
-                                type="text"
-                                value={(selectedNode.data?.emailAttachDataset as string) || ''}
-                                onChange={(e) => updateNodeData(selectedNode.id, { emailAttachDataset: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'consulta' })}
-                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 font-mono"
-                              />
+                              {(() => {
+                                const names: string[] = props.queryNames || [];
+                                const current = (selectedNode.data?.emailAttachDataset as string) || '';
+                                const options = current && !names.includes(current) ? [current, ...names] : names;
+                                return (
+                                  <>
+                                    <select
+                                      value={current}
+                                      onChange={(e) => updateNodeData(selectedNode.id, { emailAttachDataset: e.target.value || 'consulta' })}
+                                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 font-mono"
+                                    >
+                                      {options.map((n) => <option key={n} value={n}>{n}</option>)}
+                                    </select>
+                                    {names.length === 0 && <p className="text-[9px] text-red-500 mt-1">{t('bpm.canvas.query_no_results', 'Nenhuma ação Consultar Dados neste fluxo (crie uma antes do e-mail).')}</p>}
+                                  </>
+                                );
+                              })()}
                             </div>
                             <div>
                               <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.email_attach_format', 'Formato')}</label>

@@ -332,6 +332,39 @@ describe('núcleo do BPM: comportamento extra', () => {
       expect(queries[0].params).toEqual(['Aprovado', '100000'])
     })
 
+    it('campo de tabela relacionada: LEFT JOIN pela chave estrangeira, com filtro e ordem pelo campo relacionado; o resultado volta na chave da coluna', async () => {
+      const spec = { fk: "client_id", modelId: "m_clients", field: "name", pk: "codigo" }
+      const { core, queries } = make(() => [{ id: 1, rel1: 'Ana' }], [trigger, queryNode({
+        queryJoins: { rel_client_id__name: spec },
+        queryColumns: [{ field: 'id', label: 'Pedido', type: 'integer' }, { field: 'rel_client_id__name', label: 'Cliente', type: 'text' }],
+        queryFilters: [{ field: 'status', operator: '==', valueType: 'fixed', value: 'Aprovado' }, { field: 'rel_client_id__name', operator: 'contains', valueType: 'fixed', value: 'An' }],
+        queryOrderBy: 'rel_client_id__name',
+      })], [{ source: 't', target: 'q' }])
+      await core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(queries[0].sql).toBe('SELECT "q"."id", "q"."rel1" FROM (SELECT "t".*, "j1"."name" AS "rel1" FROM "orders" "t" LEFT JOIN "clients" "j1" ON "j1"."codigo" = "t"."client_id" WHERE "t"."status" = $1) "q" WHERE CAST("q"."rel1" AS text) ILIKE $2 ORDER BY "q"."rel1" ASC LIMIT 50')
+      expect(queries[0].params).toEqual(['Aprovado', '%An%'])
+    })
+
+    it('segurança da tabela relacionada: tabela fora do projeto e coluna suspeita não chegam ao banco', async () => {
+      const a = make(() => [], [trigger, queryNode({ queryJoins: { rel_x: { fk: 'client_id', modelId: 'm_inexistente', field: 'name' } }, queryColumns: [{ field: 'rel_x', label: 'X' }] })], [{ source: 't', target: 'q' }])
+      await a.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(a.queries).toHaveLength(0)
+      expect(a.runs[0].status).toBe('error')
+      const b = make(() => [], [trigger, queryNode({ queryJoins: { rel_x: { fk: 'client_id', modelId: 'm_clients', field: 'name"; DROP' } }, queryColumns: [{ field: 'rel_x', label: 'X' }] })], [{ source: 't', target: 'q' }])
+      await b.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(b.queries).toHaveLength(0)
+    })
+
+    it('agendamento "A cada": minutos, horas e dias viram cron; valores inválidos viram vazio', () => {
+      const { intervalCron } = require('../../../../cli/bpmCore.js')
+      expect(intervalCron({ every: 15, unit: 'minutes' })).toBe('*/15 * * * *')
+      expect(intervalCron({ every: 2, unit: 'hours' })).toBe('0 */2 * * *')
+      expect(intervalCron({ every: 3, unit: 'days', time: '08:30' })).toBe('30 8 */3 * *')
+      expect(intervalCron({ every: 24, unit: 'hours' })).toBe('')
+      expect(intervalCron({ every: 0, unit: 'hours' })).toBe('')
+      expect(intervalCron({ every: 5, unit: 'anos' })).toBe('')
+    })
+
     it('campo calculado como valor a somar por grupo (ex.: faturamento por status)', async () => {
       const { core, queries } = make(() => [{ grupo: 'Aprovado', valor: '250000.5' }], [trigger, queryNode({ queryVirtuals: { virt_tot: virtTotal }, queryColumns: [], queryGroupBy: 'status', queryAggregate: 'sum', queryAggregateField: 'virt_tot', queryValueType: 'numeric', queryLimit: undefined })], [{ source: 't', target: 'q' }])
       await core.processEvent('orders', 'INSERT', { id: 1 })

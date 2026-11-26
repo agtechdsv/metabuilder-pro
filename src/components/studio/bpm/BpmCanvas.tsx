@@ -111,6 +111,7 @@ function BpmCanvasContent({
     setDbFields,
     enums,
     setEnums,
+    relations,
     roles,
     setRoles
   } = useBpmMetadata({
@@ -391,6 +392,8 @@ function BpmCanvasContent({
           setIsPreviewEmailOpen={setIsPreviewEmailOpen}
           t={t}
           enums={enums}
+          relations={relations}
+          queryNames={Array.from(new Set((nodes as any[]).filter((n) => n.type === 'action' && n.data?.actionType === 'query').map((n) => String(n.data?.queryName ?? 'consulta'))))}
         />
       </div>
 

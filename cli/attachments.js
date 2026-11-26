@@ -138,7 +138,14 @@ function buildAttachment({ format, filename, dataset }) {
     for (let ri = 1; ri < aoa.length; ri++) {
       const cell = ws[XLSX.utils.encode_cell({ r: ri, c: ci })]
       if (!cell) continue
-      if (cell.t === 'd') cell.z = 'dd/mm/yyyy hh:mm'
+      if (cell.t === 'd' && cell.v instanceof Date) {
+        // número de série do Excel (hora local): o Google Planilhas não mostra célula de data do tipo "d"
+        const d = cell.v
+        const serial = (Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()) - Date.UTC(1899, 11, 30)) / 86400000
+        cell.t = 'n'
+        cell.v = serial
+        cell.z = d.getHours() || d.getMinutes() || d.getSeconds() ? 'dd/mm/yyyy hh:mm' : 'dd/mm/yyyy'
+      } else if (cell.t === 'd') cell.z = 'dd/mm/yyyy hh:mm'
       else if (cell.t === 'n') cell.z = NUMERIC_TYPE.test(t) ? '#,##0.00' : '#,##0'
     }
   })

@@ -20,7 +20,15 @@ export function useBpmMetadata({
   const [dbFields, setDbFields] = useState<any[]>(() => initialModels.flatMap(m => m.fields || []))
   
   const [enums, setEnums] = useState<any[]>([])
+  const [relations, setRelations] = useState<any[]>([])
   const [roles, setRoles] = useState<any[]>([])
+
+  // Santo Graal: os relacionamentos reais do projeto (tabela relations)
+  useEffect(() => {
+    if (!projectId) return
+    supabase.from('relations').select('*').eq('project_id', projectId).then(({ data }: any) => { if (data) setRelations(data) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId])
 
   useEffect(() => {
     if (!projectId) return
@@ -128,6 +136,7 @@ export function useBpmMetadata({
     setDbFields,
     enums,
     setEnums,
+    relations,
     roles,
     setRoles
   }

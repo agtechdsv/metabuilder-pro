@@ -77,3 +77,16 @@ describe('anexo de planilha das automações', () => {
     expect(Buffer.from(att.content, 'base64').subarray(0, 5).toString()).toBe('%PDF-')
   })
 })
+
+describe('xlsx: datas como número de série (Google Planilhas não lê célula de data tipo "d")', () => {
+  it('a data vira número com formato de data e volta igual ao ler a planilha', async () => {
+    const XLSX = require('xlsx')
+    const { buildAttachment } = require('../../../../cli/attachments.js')
+    const r = await buildAttachment({ format: 'xlsx', filename: 'x.xlsx', dataset: { columns: [{ key: 'd', label: 'Data', type: 'date' }], rows: [{ d: new Date(2026, 10, 20) }, { d: new Date(2026, 10, 20, 14, 30) }] } })
+    const wb = XLSX.read(Buffer.from(r.content, 'base64'), { cellDates: false, cellNF: true })
+    const ws = wb.Sheets[wb.SheetNames[0]]
+    expect(ws.A2.t).toBe('n')
+    expect(ws.A2.v).toBe(46346)
+    expect(ws.A3.v).toBeCloseTo(46346 + 14.5 / 24, 5)
+  })
+})

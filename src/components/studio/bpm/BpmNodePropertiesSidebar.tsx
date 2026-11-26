@@ -96,6 +96,8 @@ export function BpmNodePropertiesSidebar(props: any) {
                 renderActionFilters={renderActionFilters}
                 t={t}
                 enums={enums}
+                queryNames={props.queryNames || []}
+                relations={props.relations || []}
               />
             )}
 

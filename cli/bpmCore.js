@@ -88,6 +88,25 @@ function relativeDate(cfg, now = new Date()) {
   }
 }
 
+/**
+ * Cron de um agendamento "A cada N minutos/horas/dias". Minutos e horas seguem o relógio (a cada 2 horas: 0h, 2h, 4h...);
+ * dias rodam no horário informado. '' se a configuração for inválida.
+ */
+function intervalCron(sched) {
+  const n = Math.floor(Number(sched && sched.every))
+  if (!Number.isFinite(n) || n < 1) return ''
+  switch (sched.unit) {
+    case 'minutes': return n <= 59 ? `*/${n} * * * *` : ''
+    case 'hours': return n <= 23 ? `0 */${n} * * *` : ''
+    case 'days': {
+      if (n > 30) return ''
+      const [h, m] = String(sched.time || '00:00').split(':')
+      return `${Number(m) || 0} ${Number(h) || 0} */${n} * *`
+    }
+    default: return ''
+  }
+}
+
 /** Data para gente: dd/MM/aaaa (com HH:mm se tiver hora). */
 const humanDate = (v) => {
   const p = (n) => String(n).padStart(2, '0')
@@ -223,6 +242,9 @@ class BpmCore {
               const time = sched.time || '00:00'
               const [hour, min] = time.split(':')
               cronStr = `${min || '0'} ${hour || '0'} * * ${days}`
+            } else if (sched.type === 'interval') {
+              cronStr = intervalCron(sched)
+              if (!cronStr) this.log.warn(`[BPM] Fluxo "${flow.name}": o agendamento "A cada" está inválido (informe um número e a unidade): ignorado.`)
             } else if (sched.type === 'once') {
               // dateTime: "2026-06-04T18:30" (só este campo vale para "Apenas uma vez"; dia da semana e horário são do recorrente)
               const dt = new Date(sched.dateTime)
@@ -615,13 +637,23 @@ class BpmCore {
     const orderField = !grouping ? strictIdent(d.queryOrderBy) : null
     const cols = !grouping ? (d.queryColumns || []).filter((c) => strictIdent(c && c.field)) : []
 
+    // campos de tabelas relacionadas (ex.: nome do cliente do pedido): LEFT JOIN pela chave estrangeira; vêm como colunas extras
+    const joins = d.queryJoins && typeof d.queryJoins === 'object' ? d.queryJoins : {}
+    const isJoined = (f) => typeof f === 'string' && /^rel_[A-Za-z0-9_]+$/.test(f) && !!joins[f]
+    const usedJoins = new Set()
+    const joinAlias = new Map()
+    const noteJoin = (f) => { if (isJoined(f) && !usedJoins.has(f)) { usedJoins.add(f); joinAlias.set(f, 'rel' + usedJoins.size) } }
+    for (const c of cols) noteJoin(c.field)
+    for (const f of d.queryFilters || []) noteJoin(strictIdent(f && f.field))
+    noteJoin(orderField)
+
     const used = new Set()
     for (const c of cols) if (isVirtual(c.field)) used.add(c.field)
     for (const f of d.queryFilters || []) if (isVirtual(strictIdent(f && f.field))) used.add(f.field)
     if (aggField && isVirtual(aggField)) used.add(aggField)
     if (orderField && isVirtual(orderField)) used.add(orderField)
-    const wrapped = used.size > 0
-    const outer = (f) => `"q"."${f}"` // coluna da camada externa (quando há campo calculado)
+    const wrapped = used.size > 0 || usedJoins.size > 0
+    const outer = (f) => `"q"."${joinAlias.get(f) || f}"` // coluna da camada externa (quando há campo calculado ou relacionado)
     const plain = (f) => (wrapped ? `"t"."${f}"` : `"${f}"`) // coluna da tabela
     const colRef = (f) => (wrapped ? outer(f) : `"${f}"`) // coluna já no nível do SELECT
 
@@ -638,7 +670,7 @@ class BpmCore {
       } else {
         value = await this.replaceVariables(f.value == null ? '' : String(f.value), triggerTable, triggerData)
       }
-      const virt = isVirtual(field)
+      const virt = isVirtual(field) || isJoined(field)
       const ref = virt ? outer(field) : plain(field)
       let cond
       if (f.operator === 'contains') {
@@ -660,7 +692,20 @@ class BpmCore {
     if (wrapped) {
       const extra = []
       for (const key of used) extra.push(`${await this.virtualFieldSql(virtuals[key], 't')} AS "${key}"`)
-      const innerSql = `SELECT "t".*, ${extra.join(', ')} FROM "${table}" "t"${innerWhere.length ? ` WHERE ${innerWhere.join(' AND ')}` : ''}`
+      const joinSql = []
+      let n = 0
+      for (const key of usedJoins) {
+        const spec = joins[key] || {}
+        const fk = strictIdent(spec.fk)
+        const col = strictIdent(spec.field)
+        const pk = strictIdent(spec.pk || 'id')
+        const target = spec.modelId ? await this.getModelTable(spec.modelId) : null
+        if (!fk || !col || !pk || !target || !strictIdent(target) || !(await this.isKnownTable(target))) throw new Error('Consultar dados: campo de tabela relacionada inválido.')
+        n++
+        joinSql.push(` LEFT JOIN "${target}" "j${n}" ON "j${n}"."${pk}" = "t"."${fk}"`)
+        extra.push(`"j${n}"."${col}" AS "${joinAlias.get(key)}"`)
+      }
+      const innerSql = `SELECT "t".*, ${extra.join(', ')} FROM "${table}" "t"${joinSql.join('')}${innerWhere.length ? ` WHERE ${innerWhere.join(' AND ')}` : ''}`
       from = `(${innerSql}) "q"`
     } else {
       from = `"${table}"`
@@ -689,6 +734,8 @@ class BpmCore {
     this.log.sql(`[BPM] Consultando dados: ${sql} | Parametros: ${this.show(params)}`)
     const raw = await withTimeout(this.executeQuery(sql, params), QUERY_TIMEOUT_MS, `Consultar dados: tempo limite de ${QUERY_TIMEOUT_MS / 1000} s atingido.`)
     const rows = raw.map((r) => (oracle ? Object.fromEntries(Object.entries(r).map(([k, v]) => [k.toLowerCase(), v])) : r))
+    // campos relacionados voltam com o apelido curto da junção: devolve a chave que a coluna do resultado usa
+    for (const [key, alias] of joinAlias) for (const r of rows) r[key] = r[alias]
 
     // mostra o nome (em vez do id) quando o grupo é uma chave estrangeira
     if (grouping && d.queryGroupLabelModelId && strictIdent(d.queryGroupLabelField)) {
@@ -1332,4 +1379,4 @@ class BpmCore {
   }
 }
 
-module.exports = { BpmCore, MAX_STEPS, WEBHOOK_TIMEOUT_MS, relativeDate, buildHtmlTable, formatCell }
+module.exports = { BpmCore, MAX_STEPS, WEBHOOK_TIMEOUT_MS, relativeDate, buildHtmlTable, formatCell, intervalCron }

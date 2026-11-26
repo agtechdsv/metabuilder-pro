@@ -394,9 +394,51 @@ export function TriggerPropertiesPanel(props: any) {
                                 >
                                   {t('bpm.canvas.once')}
                                 </button>
+                                <button
+                                  onClick={() => updateSchedule(sched.id, { type: 'interval', every: sched.every || 1, unit: sched.unit || 'hours' })}
+                                  className={`flex-1 text-[10px] font-bold py-1.5 rounded transition-colors ${sched.type === 'interval' ? 'bg-white dark:bg-neutral-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}
+                                >
+                                  {t('bpm.canvas.interval', 'A cada')}
+                                </button>
                               </div>
 
-                              {sched.type !== 'once' && (
+                              {sched.type === 'interval' && (
+                                <div>
+                                  <label className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest block mb-1">{t('bpm.canvas.interval_every', 'Repetir a cada')}</label>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      value={sched.every ?? 1}
+                                      onChange={(e) => updateSchedule(sched.id, { every: Math.max(1, Math.floor(Number(e.target.value)) || 1) })}
+                                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500 font-mono"
+                                    />
+                                    <select
+                                      value={sched.unit || 'hours'}
+                                      onChange={(e) => updateSchedule(sched.id, { unit: e.target.value })}
+                                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500"
+                                    >
+                                      <option value="minutes">{t('bpm.canvas.interval_unit_minutes', 'minutos')}</option>
+                                      <option value="hours">{t('bpm.canvas.interval_unit_hours', 'horas')}</option>
+                                      <option value="days">{t('bpm.canvas.interval_unit_days', 'dias')}</option>
+                                    </select>
+                                  </div>
+                                  {sched.unit === 'days' && (
+                                    <div className="mt-2">
+                                      <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.interval_time', 'Horário (para dias)')}</label>
+                                      <input
+                                        type="time"
+                                        value={sched.time || ''}
+                                        onChange={(e) => updateSchedule(sched.id, { time: e.target.value })}
+                                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500 font-mono"
+                                      />
+                                    </div>
+                                  )}
+                                  <p className="text-[9px] text-neutral-400 mt-2 italic">{t('bpm.canvas.interval_hint', 'Minutos e horas contam pelo relógio.')}</p>
+                                </div>
+                              )}
+
+                              {(sched.type || 'recurring') === 'recurring' && (
                                 <>
                               <div className="mb-3">
                                 <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-2">{t('bpm.canvas.days_of_week')}</label>
