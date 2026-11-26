@@ -97,7 +97,7 @@ describe('núcleo do BPM: comportamento extra', () => {
       { id: 't', type: 'trigger', data: { triggerType: ['INSERT'], triggerModelId: 'm_orders' } },
       { id: 'a', type: 'action', data: { actionType: 'insert', actionModelId: 'm_log', actionFields: [{ field: 'msg', value: 'x' }] } },
     ], edges: [{ source: 't', target: 'a' }] } } as any])
-    await expect(core.processEvent('orders', 'INSERT', { id: 1 })).resolves.toBeUndefined()
+    await expect(core.processEvent('orders', 'INSERT', { id: 1 })).resolves.toEqual([])
     expect(queries).toHaveLength(1)
   })
 
@@ -126,6 +126,63 @@ describe('núcleo do BPM: comportamento extra', () => {
     ])
     expect(res).not.toBe('travou')
     expect(res.success).toBe(false)
+  })
+
+  describe('aba Mensagem da ação (aviso na tela de quem gravou)', () => {
+    const flow = (data: any = {}) => ({ id: 'f', name: 'F', flow_data: { nodes: [
+      { id: 't', type: 'trigger', data: { triggerType: ['INSERT'], triggerModelId: 'm_orders' } },
+      { id: 'a', type: 'action', data: { actionType: 'insert', actionModelId: 'm_log', actionFields: [{ field: 'msg', value: 'x' }], ...data } },
+    ], edges: [{ source: 't', target: 'a' }] } } as any)
+    const make = (query: any = async () => []) => new BpmCore({ db: { dialect: 'postgres', query }, models: { tableOf: async (id: string) => (fixtures.models as any)[id] } })
+
+    it('monta o texto (assunto + corpo, variáveis e HTML limpo) e o devolve de processEvent', async () => {
+      const core = make()
+      core.setWorkflows([flow({ successMessageSubject: 'Pedido {{orders.id}} gravado', successMessageBody: '<p>Olá&nbsp;<b>mundo</b></p><p>Tudo certo.</p>' })])
+      const msgs: any = await core.processEvent('orders', 'INSERT', { id: 7 })
+      expect(msgs).toHaveLength(1)
+      expect(msgs[0].text).toBe('Pedido 7 gravado' + String.fromCharCode(10) + 'Olá mundo' + String.fromCharCode(10) + 'Tudo certo.')
+    })
+
+    it('campo único successMessage: texto com variáveis e tipo do aviso', async () => {
+      const core = make()
+      core.setWorkflows([flow({ successMessage: 'Pedido {{orders.id}} enviado.', successMessageType: 'warning' })])
+      expect(await core.processEvent('orders', 'INSERT', { id: 7 })).toEqual([{ text: 'Pedido 7 enviado.', type: 'warning' }])
+    })
+
+    it('tipo desconhecido vira sucesso; o campo único vale mais que assunto e corpo antigos', async () => {
+      const core = make()
+      core.setWorkflows([flow({ successMessage: 'Novo texto', successMessageType: 'qualquer', successMessageSubject: 'antigo', successMessageBody: 'antigo' })])
+      expect(await core.processEvent('orders', 'INSERT', { id: 7 })).toEqual([{ text: 'Novo texto', type: 'success' }])
+    })
+
+    it('sem assunto e sem corpo não há mensagem', async () => {
+      const core = make()
+      core.setWorkflows([flow()])
+      expect(await core.processEvent('orders', 'INSERT', { id: 7 })).toEqual([])
+    })
+
+    it('ação que falha (erro do banco) não gera mensagem de sucesso', async () => {
+      const core = make(async () => { throw new Error('banco fora') })
+      core.setWorkflows([flow({ successMessageSubject: 'ok' })])
+      expect(await core.processEvent('orders', 'INSERT', { id: 7 })).toEqual([])
+    })
+
+    it('e-mail que não sai (sem destinatário) não gera mensagem de sucesso', async () => {
+      const core = make()
+      core.setWorkflows([flow({ actionType: 'email', actionModelId: undefined, actionFields: undefined, emailRecipientType: 'custom', customEmailField: '', actionSubject: 's', actionBody: 'b', successMessageSubject: 'E-mail enviado' })])
+      expect(await core.processEvent('orders', 'INSERT', { id: 7 })).toEqual([])
+    })
+
+    it('na validação síncrona a mensagem vai junto no resultado', async () => {
+      const core = make()
+      core.setWorkflows([{ id: 'f', name: 'F', flow_data: { nodes: [
+        { id: 't', type: 'trigger', data: { triggerType: ['before_insert'], triggerModelId: 'm_orders' } },
+        { id: 'a', type: 'action', data: { actionType: 'insert', actionModelId: 'm_log', actionFields: [{ field: 'msg', value: 'x' }], successMessageSubject: 'Registrado' } },
+      ], edges: [{ source: 't', target: 'a' }] } } as any])
+      const res: any = await core.processSyncEvent('orders', 'BEFORE_INSERT', { id: 1 })
+      expect(res.success).toBe(true)
+      expect(res.message).toBe('Registrado')
+    })
   })
 
   it('agendamento recorrente vira cron e usa o agendador injetado', () => {

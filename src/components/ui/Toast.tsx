@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react'
 
-type ToastType = 'success' | 'error' | 'info'
+type ToastType = 'success' | 'error' | 'info' | 'warning'
 
 interface ToastAction {
   label: string
@@ -51,6 +51,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 pointer-events-auto min-w-[320px] max-w-[420px] p-4 rounded-2xl shadow-2xl border flex items-start gap-4 backdrop-blur-xl
                 ${t.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-450' : 
                   t.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400' : 
+                  t.type === 'warning' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400' : 
                   'bg-indigo-500/10 border-indigo-500/20 text-indigo-600 dark:text-indigo-450'}
               `}
             >
@@ -58,14 +59,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 p-2 rounded-xl
                 ${t.type === 'success' ? 'bg-emerald-500 text-white' : 
                   t.type === 'error' ? 'bg-red-500 text-white' : 
+                  t.type === 'warning' ? 'bg-amber-500 text-white' : 
                   'bg-indigo-500 text-white'}
               `}>
                 {t.type === 'success' && <CheckCircle2 className="w-4 h-4" />}
-                {t.type === 'error' && <AlertCircle className="w-4 h-4" />}
+                {(t.type === 'error' || t.type === 'warning') && <AlertCircle className="w-4 h-4" />}
                 {t.type === 'info' && <Info className="w-4 h-4" />}
               </div>
               <div className="flex-1 pt-0.5">
-                <p className="text-sm font-bold leading-tight">{t.message}</p>
+                <p className="text-sm font-bold leading-tight whitespace-pre-line">{t.message}</p>
                 {t.action && (
                   <button
                     onClick={(e) => {

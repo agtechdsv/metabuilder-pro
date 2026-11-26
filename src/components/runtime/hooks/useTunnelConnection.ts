@@ -1,6 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { wrapChannelWithChunking } from '@/lib/chunkedChannel'
+import { useToast } from '@/components/ui/Toast'
+
+// ids das mensagens de fluxo já mostradas (a mesma resposta pode chegar por mais de um canal da aba)
+const shownBpmMessages = new Set<string>()
 
 interface UseTunnelConnectionProps {
   project: any
@@ -32,6 +36,9 @@ export function useTunnelConnection({
   isEjectedApp: isEjectedAppProp
 }: UseTunnelConnectionProps) {
   const supabase = createClient()
+  const { toast } = useToast()
+  const toastRef = useRef(toast)
+  toastRef.current = toast
   const [tunnelChannel, setTunnelChannel] = useState<any>(null)
   const [isTunnelReady, setIsTunnelReady] = useState(false)
 
@@ -56,6 +63,18 @@ export function useTunnelConnection({
         setTunnelChannel(channel)
         setIsTunnelReady(true)
       }
+    })
+
+    // Aba "Mensagem" das ações do fluxo: o Agente responde só à aba de quem gravou
+    channel.on('broadcast', { event: 'bpm_user_message' }, (payload: any) => {
+      const id = String(payload.payload?.id || '')
+      if (id) {
+        if (shownBpmMessages.has(id)) return
+        shownBpmMessages.add(id)
+        if (shownBpmMessages.size > 200) shownBpmMessages.delete(shownBpmMessages.values().next().value as string)
+      }
+      const list = Array.isArray(payload.payload?.messages) ? payload.payload.messages : []
+      for (const m of list) if (m?.text) toastRef.current(String(m.text), m.type === 'info' || m.type === 'warning' ? m.type : 'success')
     })
 
     channel.on('broadcast', { event: 'bpm_workflow_completed' }, (payload: any) => {

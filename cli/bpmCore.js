@@ -35,6 +35,15 @@ const toList = (raw) => {
   return list.map(t => String(t).toUpperCase())
 }
 
+/** Corpo de mensagem (HTML do editor) → texto simples para o aviso na tela. */
+const htmlToText = (html) => String(html == null ? '' : html)
+  .replace(/<\s*br\s*\/?>/gi, '\n')
+  .replace(/<\/\s*(p|div|li|h[1-6])\s*>/gi, '\n')
+  .replace(/<[^>]*>/g, '')
+  .replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;/g, "'")
+  .replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n')
+  .trim()
+
 class BpmCore {
   constructor(ports) {
     if (!ports || !ports.db || typeof ports.db.query !== 'function') throw new Error('BpmCore: a porta "db" é obrigatória.')
@@ -587,6 +596,23 @@ class BpmCore {
     }
   }
 
+  /**
+   * Aba "Mensagem" da ação: depois que a ação roda sem problema, monta o texto (assunto + corpo, com as variáveis {{tabela.campo}})
+   * e o guarda para ir à tela de quem fez a gravação. Sem assunto e sem corpo, não há mensagem.
+   */
+  async queueSuccessMessage(node, triggerTable, triggerData) {
+    const d = (node && node.data) || {}
+    // campo único (successMessage); fluxos antigos têm assunto + corpo: viram as duas linhas do mesmo aviso
+    const raw = d.successMessage != null ? [d.successMessage] : [d.successMessageSubject, d.successMessageBody]
+    const parts = []
+    for (const piece of raw) parts.push(htmlToText(await this.replaceVariables(piece || '', triggerTable, triggerData, null, null, true)))
+    const text = parts.filter(Boolean).join('\n')
+    if (!text) return
+    const type = ['success', 'info', 'warning'].includes(d.successMessageType) ? d.successMessageType : 'success'
+    const store = this.runCtx.getStore()
+    if (store && store.messages) store.messages.push({ text, type })
+  }
+
   async traverseGraph(flowData, startNode, triggerTable, triggerData) {
     const queue = [startNode]
     let maxSteps = MAX_STEPS
@@ -605,7 +631,10 @@ class BpmCore {
         }
       }
       else if (currentNode.type === 'action') {
+        const store = this.runCtx.getStore()
+        const issuesBefore = store ? store.issues.length : 0
         await this.runNodeAction(currentNode, triggerTable, triggerData)
+        if (!store || store.issues.length === issuesBefore) await this.queueSuccessMessage(currentNode, triggerTable, triggerData)
         const edges = flowData.edges.filter(e => e.source === currentNode.id)
 
         for (const edge of edges) {
@@ -630,7 +659,7 @@ class BpmCore {
    * Executa um fluxo e reporta o resultado (porta runs): histórico, aviso por e-mail em caso de erro/laço e retenção de logs.
    */
   async runFlow(flow, triggerNode, tableName, rowData, source) {
-    await this.runReported(flow, tableName, source, async () => {
+    return await this.runReported(flow, tableName, source, async () => {
       const result = await this.traverseGraph(flow.flow_data, triggerNode, tableName, rowData)
       return { steps: result?.steps || 0, loop: !!result?.loop }
     })
@@ -646,7 +675,8 @@ class BpmCore {
     let status = 'success'
     let errorMessage = null
     let extra = { table: tableName, source }
-    await this.runCtx.run({ issues: [] }, async () => {
+    let messages = []
+    await this.runCtx.run({ issues: [], messages: [] }, async () => {
       try {
         const result = await fn()
         extra = { ...extra, steps: result?.steps || 0, ...(result?.details || {}) }
@@ -656,6 +686,7 @@ class BpmCore {
         errorMessage = (e && e.message) ? e.message : String(e)
         this.log.error(`[BPM] Falha na execução do fluxo ${flow.name}: ${errorMessage}`)
       }
+      messages = this.runCtx.getStore().messages || []
       const issues = this.runCtx.getStore().issues
       if (issues.length > 0) {
         extra.issues = issues
@@ -665,6 +696,8 @@ class BpmCore {
     if (status === 'loop') this.log.error(`[BPM] Fluxo "${flow.name}" interrompido: ${errorMessage}`)
     if (awaitReport) await this.reportRun(flow, status, startedAt, errorMessage, extra)
     else void this.reportRun(flow, status, startedAt, errorMessage, extra) // reportRun já trata os próprios erros
+    // mensagens de sucesso das ações (aba "Mensagem"): só quando o fluxo terminou bem
+    return status === 'success' ? messages : []
   }
 
   async reportRun(flow, status, startedAt, errorMessage, details) {
@@ -692,9 +725,10 @@ class BpmCore {
   async processEvent(tableName, actionType, rowData, oldRow = null) {
     this.log.debug(`[BPM-DEBUG] processEvent chamado: tableName=${tableName}, actionType=${actionType}`)
 
+    const messages = []
     if (!this.workflows || this.workflows.length === 0) {
       this.log.debug('[BPM-DEBUG] Nenhum fluxo ativo encontrado.')
-      return
+      return messages
     }
 
     for (const flow of this.workflows) {
@@ -719,10 +753,11 @@ class BpmCore {
             continue
           }
           this.log.info(`[BPM] Disparando fluxo "${flow.name}" para a tabela ${tableName}...`)
-          await this.runFlow(flow, triggerNode, tableName, rowData, `evento ${actionType.toUpperCase()}`)
+          messages.push(...((await this.runFlow(flow, triggerNode, tableName, rowData, `evento ${actionType.toUpperCase()}`)) || []))
         }
       }
     }
+    return messages
   }
 
   /**
@@ -745,10 +780,12 @@ class BpmCore {
 
   async processCustomAction(workflowIds, tableName, rowData) {
     this.log.debug(`[BPM-DEBUG] processCustomAction chamado para fluxos: ${workflowIds.join(', ')}`)
+    const customMessages = []
 
+    const messages = []
     if (!this.workflows || this.workflows.length === 0) {
       this.log.debug('[BPM-DEBUG] Nenhum fluxo ativo encontrado.')
-      return
+      return messages
     }
 
     const targetedWorkflows = this.workflows.filter(w => workflowIds.includes(w.id))
@@ -780,8 +817,9 @@ class BpmCore {
         } catch (e) {}
       }
 
-      await this.runFlow(flow, triggerNode, tableName, fullRowData, 'ação de interface')
+      customMessages.push(...((await this.runFlow(flow, triggerNode, tableName, fullRowData, 'ação de interface')) || []))
     }
+    return customMessages
   }
 
   async runNodeActionSync(node, triggerTable, triggerData) {
@@ -849,10 +887,13 @@ class BpmCore {
         }
       }
       else if (currentNode.type === 'action') {
+        const store = this.runCtx.getStore()
+        const issuesBefore = store ? store.issues.length : 0
         const actionResult = await this.runNodeActionSync(currentNode, triggerTable, currentData)
         if (actionResult && actionResult.mutatedData) {
           currentData = actionResult.mutatedData
         }
+        if (!store || store.issues.length === issuesBefore) await this.queueSuccessMessage(currentNode, triggerTable, currentData)
 
         const edges = flowData.edges.filter(e => e.source === currentNode.id)
         for (const edge of edges) {
@@ -897,14 +938,16 @@ class BpmCore {
           this.log.info(`[BPM] Disparando fluxo SÍNCRONO "${flow.name}" para a tabela ${tableName}...`)
           try {
             let result
+            let doneMessages = []
             // reporta a execução; bloquear a ação é um resultado normal do fluxo (vai nos detalhes), não uma falha
-            await this.runReported(flow, tableName, `validação ${actionType.toUpperCase()}`, async () => {
+            doneMessages = await this.runReported(flow, tableName, `validação ${actionType.toUpperCase()}`, async () => {
               result = await this.traverseGraphSync(flowData, triggerNode, tableName, currentData)
               return { steps: result.steps, loop: result.loop, details: { sync: true, blocked: !result.success, ...(result.success ? {} : { message: result.error }) } }
             }, { awaitReport: false })
             if (!result) throw new Error('fluxo síncrono sem resultado')
             currentData = result.data
             if (result.message) message = result.message // Last message wins
+            if (result.success && doneMessages && doneMessages.length) message = [message, ...doneMessages.map(m => m.text)].filter(Boolean).join('\n')
             if (!result.success) {
               this.log.error('[BPM] Fluxo SÍNCRONO bloqueou a ação!')
               return { success: false, data: currentData, error: result.error || 'Ação bloqueada pelo fluxo.', message }

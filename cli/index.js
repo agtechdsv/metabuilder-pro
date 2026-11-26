@@ -1239,7 +1239,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           }
 
           if (bpmEngine && result.rows && result.rows.length > 0) {
-            bpmEngine.processEvent(safeTable, 'INSERT', result.rows[0]).then(async () => {
+            bpmEngine.processEvent(safeTable, 'INSERT', result.rows[0]).then(async (bpmMessages) => {
               let finalData = result.rows[0];
               try {
                 if (dbType === 'postgres' && result.rows[0].id) {
@@ -1250,6 +1250,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
                 console.error('[BPM] Falha ao re-buscar dados inseridos:', e.message);
               }
               router.broadcast('bpm_workflow_completed', { table: safeTable, action: 'INSERT', data: finalData });
+              if (replyTo && bpmMessages && bpmMessages.length) router.reply(replyTo, 'bpm_user_message', { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, messages: bpmMessages });
             }).catch(err => {
               console.error(chalk.red(`[BPM] Erro ao processar INSERT:`), err);
             });
@@ -1342,7 +1343,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
               }
               result = updateResult;
               if (bpmEngine && result.rows && result.rows.length > 0) {
-                bpmEngine.processEvent(safeTable, 'UPDATE', result.rows[0], bpmOldRow).then(async () => {
+                bpmEngine.processEvent(safeTable, 'UPDATE', result.rows[0], bpmOldRow).then(async (bpmMessages) => {
                   let finalData = result.rows[0];
                   try {
                     if (dbType === 'postgres') {
@@ -1354,6 +1355,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
                   }
 
                   router.broadcast('bpm_workflow_completed', { table: safeTable, action: 'UPDATE', data: finalData });
+                  if (replyTo && bpmMessages && bpmMessages.length) router.reply(replyTo, 'bpm_user_message', { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, messages: bpmMessages });
                 }).catch(err => {
                   console.error(chalk.red(`[BPM] Erro ao processar UPDATE:`), err);
                 });
@@ -1454,7 +1456,9 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           cliDbLogger.logDelete(safeTable, sql, null);
 
           if (bpmEngine) {
-            bpmEngine.processEvent(safeTable, 'DELETE', deletedRowData).catch(err => {
+            bpmEngine.processEvent(safeTable, 'DELETE', deletedRowData).then((bpmMessages) => {
+              if (replyTo && bpmMessages && bpmMessages.length) router.reply(replyTo, 'bpm_user_message', { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, messages: bpmMessages });
+            }).catch(err => {
               console.error(chalk.red(`[BPM] Erro ao processar DELETE:`), err);
             });
           }
@@ -1487,9 +1491,10 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
         } else if (action === 'trigger_bpm') {
           const { workflows, rowData, tableName } = payload.payload;
           const safeTable = (tableName || table || '').replace(/[^a-zA-Z0-9_]/g, '');
+          let customBpmMessages = [];
 
           if (workflows && workflows.length > 0 && bpmEngine) {
-             await bpmEngine.processCustomAction(workflows, safeTable, rowData);
+             customBpmMessages = await bpmEngine.processCustomAction(workflows, safeTable, rowData);
           }
           
           let finalData = rowData;
@@ -1507,6 +1512,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           }
           
           router.broadcast('bpm_workflow_completed', { table: safeTable, action: 'CUSTOM', data: finalData });
+          { const bpmMessages = customBpmMessages; if (replyTo && bpmMessages && bpmMessages.length) router.reply(replyTo, 'bpm_user_message', { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, messages: bpmMessages }); }
           
           result = { rows: [] };
           console.log(chalk.green(`[ OK ] BPM TRIGGER ACTION executada para fluxos customizados.`));
