@@ -1,4 +1,16 @@
 {
+  "v1.0.15": {
+    "date": "2026-11-26",
+    "pt": [
+      "## 🚀 MetaBuilder PRO v1.0.15\n\n### 📊 Relatórios agendados (BPM)\n- **Todas as colunas no corpo do e-mail:** a tabela do corpo agora mostra todas as colunas (até 12), em vez de só as 6 primeiras. Marque \"No e-mail\" nas colunas que quer ver no corpo; a planilha anexa leva tudo.\n- **E-mail que o Gmail não corta:** as linhas da tabela do corpo são limitadas pelo tamanho, e um aviso diz quantas linhas aparecem. A planilha anexa continua com todas as linhas."
+    ],
+    "en": [
+      "## 🚀 MetaBuilder PRO v1.0.15\n\n### 📊 Scheduled reports (BPM)\n- **All columns in the email body:** the table in the body now shows all the columns (up to 12), instead of only the first 6. Tick \"In the email\" on the columns you want to see in the body; the attached spreadsheet carries everything.\n- **Emails Gmail does not cut:** the rows of the table in the body are limited by size, and a notice says how many rows appear. The attached spreadsheet still has all the rows."
+    ],
+    "es": [
+      "## 🚀 MetaBuilder PRO v1.0.15\n\n### 📊 Informes programados (BPM)\n- **Todas las columnas en el cuerpo del correo:** la tabla del cuerpo ahora muestra todas las columnas (hasta 12), en lugar de solo las 6 primeras. Marque \"En el correo\" en las columnas que quiera ver en el cuerpo; la hoja de cálculo adjunta lleva todo.\n- **Correo que Gmail no corta:** las filas de la tabla del cuerpo se limitan por tamaño, y un aviso dice cuántas filas aparecen. La hoja de cálculo adjunta sigue con todas las filas."
+    ]
+  },
   "v1.0.0": {
     "date": "2026-07-21",
     "pt": [
