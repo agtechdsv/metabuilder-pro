@@ -7,7 +7,7 @@ Este roteiro cobre **o que cada gatilho faz na plataforma** (com o CLI). O rotei
 ## O que mudou em relação à versão anterior
 
 - **Teste 3 (Ao atualizar com "Restringir a um campo", De/Para) foi consertado no motor.** Antes, a restrição só existia na tela: o motor ignorava e disparava em toda edição. Agora o motor lê o registro **como era antes da edição** e só dispara se o campo mudou (e, se informados, se o valor anterior confere com o **De** e o novo com o **Para**). **Esta correção só existe a partir do CLI desta versão**: com a IDE/CLI da release anterior, o teste 3 ainda falha do jeito antigo.
-- **Teste 8:** o agendamento "uma vez" repete no mesmo dia do ano seguinte (limitação do motor, dentro do roteiro).
+- **Teste 8:** o agendamento "Apenas uma vez" agora roda **uma vez só** (antes repetia no mesmo dia do ano seguinte) e, sem data e hora específicas ou com data passada, **avisa no log** em vez de ignorar em silêncio. Vale a partir da release 1.0.10.
 - **Teste 5:** removida a referência à correção de outra conversa.
 - **Teste 9:** completo, com o comando, os casos de recusa e o resultado esperado.
 - **Condição:** o operador **"contém"** e os **vários grupos** (com o E/OU entre eles) agora funcionam no motor; antes o "contém" dava sempre falso e só o 1º grupo valia.
@@ -40,9 +40,9 @@ Marque `[x]` ao concluir cada teste (e anote a data). Os casos de borda têm a c
 | [x] | 2 | Antes de Salvar (novo) · Pedidos | Pedido Cancelado barrado com a mensagem, nada gravado | 25/11/2026 |
 | [x] | 3 | Ao atualizar · Pedidos (De/Para) | Dispara só na mudança para Enviado, com **De** vazio e preenchido; e-mail e mensagem na tela chegaram | 25/11/2026 |
 | [x] | 4 | Antes de Salvar (edição) · Pedidos | Edição de pedido Entregue barrada com a mensagem "Pedido entregue não pode ser editado" | 26/11/2026 |
-| [ ] | 5 | Ao excluir · Pedidos | | |
-| [ ] | 6 | Antes de Excluir · Pedidos | | |
-| [ ] | 7 | Ao Carregar Formulário · Pedidos | | |
+| [x] | 5 | Ao excluir · Pedidos | 100% testado e aprovado | 26/11/2026 |
+| [x] | 6 | Antes de Excluir · Pedidos | 100% testado e aprovado | 26/11/2026 |
+| [x] | 7 | Ao Carregar Formulário · Pedidos | 100% testado e aprovado | 26/11/2026 |
 | [ ] | 8 | Agendado · Clientes | | |
 | [ ] | 9 | Webhook de entrada · Tarefas | | |
 
@@ -108,7 +108,7 @@ Marque `[x]` ao concluir cada teste (e anote a data). Os casos de borda têm a c
 **Dica:** a mensagem do nó de **Resposta** aceita variáveis (botão **+ Variável**), como `Pedido {{pedidos.id}} entregue não pode ser editado`.
 
 ## 5. Ao excluir · Pedidos (item 3)
-**Status:** [ ] a fazer
+**Status:** [x] 100% testado e aprovado em 26/11/2026.
 **Objetivo:** avisar o gestor quando um pedido for apagado.
 1. Gatilho: **Ao excluir**, tabela **Pedidos**.
 2. Ação **Enviar e-mail**, aba Grupos/Usuários, em **e-mails específicos** o seu endereço. Assunto "Pedido #{{pedidos.id}} excluído".
@@ -119,7 +119,7 @@ Marque `[x]` ao concluir cada teste (e anote a data). Os casos de borda têm a c
 **Atenção:** no PostgreSQL o fluxo recebe a linha inteira que foi apagada. No Oracle recebe só o `id`, então use apenas `{{pedidos.id}}` ali.
 
 ## 6. Antes de Excluir · Pedidos (item 3)
-**Status:** [ ] a fazer
+**Status:** [x] 100% testado e aprovado em 26/11/2026.
 **Objetivo:** pedido enviado não pode ser excluído.
 1. Gatilho: **Antes de Excluir**, tabela **Pedidos**.
 2. **Condição:** `status` `==` `Enviado`, ramo verdadeiro com **Resposta** bloqueando: "Pedido enviado não pode ser excluído".
@@ -128,7 +128,7 @@ Marque `[x]` ao concluir cada teste (e anote a data). Os casos de borda têm a c
 **Resultado:** o primeiro é barrado e continua na grid. O segundo é apagado normalmente. O CLI lê o registro antes de apagar, e o bloqueio vale em qualquer tela que exclua pedidos.
 
 ## 7. Ao Carregar Formulário · Pedidos (item 3)
-**Status:** [ ] a fazer
+**Status:** [x] 100% testado e aprovado em 26/11/2026.
 **Objetivo:** todo pedido novo já abre com status "Pendente".
 1. Gatilho: **Ao Carregar Formulário**, tabela **Pedidos**.
 2. Ação **Atualizar Dados do Formulário**: campo `status` com valor `Pendente`.
@@ -141,7 +141,7 @@ Marque `[x]` ao concluir cada teste (e anote a data). Os casos de borda têm a c
 ## 8. Agendado · Clientes (item 4)
 **Status:** [ ] a fazer
 **Objetivo:** receber um resumo por e-mail num horário marcado.
-1. Gatilho: **Agendado**. Para o vídeo use o tipo **uma vez** e uma data e hora **2 minutos à frente**. O horário vale pelo relógio da máquina onde o CLI roda.
+1. Gatilho: **Agendado**. Para o vídeo use o tipo **Apenas uma Vez** e preencha **Data e hora da execução** **2 minutos à frente**. Nesse tipo só a data e a hora específicas valem: **dia da semana e horário aparecem só no Recorrente** (se preencher os dois em "uma vez" sem a data, nada é agendado). O horário vale pelo relógio da máquina onde o CLI roda.
 2. Ação **Enviar e-mail**, em **e-mails específicos** o seu endereço, assunto "Resumo diário do MetaBuilder".
 3. Salve e ative. Espere o horário com a janela do CLI aberta.
 
@@ -149,7 +149,7 @@ Marque `[x]` ao concluir cada teste (e anote a data). Os casos de borda têm a c
 
 **Atenção:**
 - O fluxo agendado roda **sem dados de registro**. Não use `{{pedidos.campo}}` nem destinatário por tabela dinâmica.
-- O tipo **uma vez** não é uma vez só: o motor agenda "dia e hora de todo ano", então repete no **mesmo dia do ano seguinte**. Depois de gravar, desative o fluxo ou apague-o. Para o uso real, troque por **recorrente** (dias da semana e horário).
+- O tipo **Apenas uma Vez** roda uma vez só e se encerra ao disparar. Se a data já passou ou está vazia, o CLI avisa (`agendamento "Apenas uma vez" ... ignorado`). Para repetir, use **Recorrente** (dias da semana e horário).
 
 ## 9. Webhook de entrada · Tarefas (item 7)
 **Status:** [ ] a fazer
