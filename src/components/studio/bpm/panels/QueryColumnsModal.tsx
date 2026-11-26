@@ -27,6 +27,9 @@ interface Props {
   onChange: (columns: any[]) => void;
 }
 
+/** Sem escolha, o corpo do e-mail mostra só as primeiras colunas (o motor usa o mesmo número: QUERY_BODY_COLS). */
+const BODY_COLS_DEFAULT = 6;
+
 const ROW = "flex items-center gap-2 text-xs text-neutral-700 dark:text-neutral-300 cursor-pointer rounded px-1.5 py-1 hover:bg-neutral-50 dark:hover:bg-neutral-800/60";
 const SECTION = "text-[9px] font-black text-neutral-400 uppercase tracking-widest mt-3 mb-1";
 
@@ -40,7 +43,17 @@ export function QueryColumnsModal({ isOpen, onClose, t, baseModelId, ctx, virtua
   const fields = useMemo(() => fieldsOfModel(ctx, currentModelId).filter((f) => !isSensitiveField(f.field)), [ctx, currentModelId]);
   const normalFields = fields.filter((f) => !isControlField(f.field));
   const controlFields = fields.filter((f) => isControlField(f.field));
-  const hops = useMemo(() => nextHops(ctx, baseModelId, path), [ctx, baseModelId, path]);
+  const allHops = useMemo(() => nextHops(ctx, baseModelId, path), [ctx, baseModelId, path]);
+  // criado_por / atualizado_por apontam para usuários: ficam junto dos campos de controle, não entre as tabelas relacionadas
+  const hops = allHops.filter((h) => !isControlField(h.fk));
+  const controlHops = allHops.filter((h) => isControlField(h.fk));
+  const hopRow = (h: PathHop) => (
+    <button key={h.fk} type="button" onClick={() => setPath([...path, h])} className={`${ROW} w-full text-left`}>
+      <span className="flex-1 truncate font-bold">{h.fkLabel}</span>
+      <span className="text-[10px] text-neutral-400 truncate">{h.modelLabel}</span>
+      <ChevronRight className="w-4 h-4 text-indigo-500 shrink-0" />
+    </button>
+  );
   const hits = useMemo(() => searchFields(ctx, baseModelId, search), [ctx, baseModelId, search]);
   const searching = search.trim().length >= 2;
 
@@ -69,6 +82,9 @@ export function QueryColumnsModal({ isOpen, onClose, t, baseModelId, ctx, virtua
     [next[index], next[target]] = [next[target], next[index]];
     onChange(next);
   };
+  // "No e-mail": a coluna sempre vai na planilha anexa; este marcador diz se entra também na tabela do corpo do e-mail
+  const setInBody = (index: number, on: boolean) => onChange(columns.map((c, i) => (i === index ? { ...c, body: on } : c)));
+  const noBodyChoice = !columns.some((c) => c.body === true || c.body === false);
   const rename = (index: number, label: string) => onChange(columns.map((c, i) => (i === index ? { ...c, label } : c)));
 
   const pathText = (c: any) => {
@@ -148,12 +164,13 @@ export function QueryColumnsModal({ isOpen, onClose, t, baseModelId, ctx, virtua
                   </>
                 )}
 
-                {controlFields.length > 0 && (
+                {(controlFields.length > 0 || controlHops.length > 0) && (
                   <>
                     <button type="button" onClick={() => setShowControl(!showControl)} className={`${SECTION} flex items-center gap-1 hover:text-indigo-600`}>
                       <ChevronRight className={`w-3 h-3 transition-transform ${showControl ? "rotate-90" : ""}`} /> {t("bpm.canvas.query_modal_control", "Campos de controle")}
                     </button>
                     {showControl && controlFields.map((f) => fieldRow(path, f))}
+                    {showControl && controlHops.map((h) => hopRow(h))}
                   </>
                 )}
 
@@ -163,13 +180,7 @@ export function QueryColumnsModal({ isOpen, onClose, t, baseModelId, ctx, virtua
                     {path.length >= MAX_JOIN_DEPTH ? t("bpm.canvas.query_modal_depth_max", "Limite de 4 níveis de relacionamento.") : t("bpm.canvas.query_modal_no_relations", "Esta tabela não tem outras tabelas relacionadas.")}
                   </p>
                 ) : (
-                  hops.map((h) => (
-                    <button key={h.fk} type="button" onClick={() => setPath([...path, h])} className={`${ROW} w-full text-left`}>
-                      <span className="flex-1 truncate font-bold">{h.fkLabel}</span>
-                      <span className="text-[10px] text-neutral-400 truncate">{h.modelLabel}</span>
-                      <ChevronRight className="w-4 h-4 text-indigo-500 shrink-0" />
-                    </button>
-                  ))
+                  hops.map((h) => hopRow(h))
                 )}
               </>
             )}
@@ -200,7 +211,13 @@ export function QueryColumnsModal({ isOpen, onClose, t, baseModelId, ctx, virtua
                       <button type="button" disabled={i === columns.length - 1} onClick={() => move(i, 1)} title={t("bpm.canvas.query_move_down", "Descer")} className="px-1.5 text-neutral-500 hover:text-indigo-600 disabled:opacity-30">↓</button>
                       <button type="button" onClick={() => onChange(columns.filter((_, j) => j !== i))} title={t("bpm.canvas.remove_schedule", "Remover")} className="px-1 text-neutral-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
                     </div>
-                    <p className="text-[10px] text-neutral-400 pl-5 truncate">{pathText(c)}</p>
+                    <div className="flex items-center justify-between gap-2 pl-5">
+                      <p className="text-[10px] text-neutral-400 truncate">{pathText(c)}</p>
+                      <label className="flex items-center gap-1 text-[10px] text-neutral-500 cursor-pointer shrink-0" title={t("bpm.canvas.query_modal_in_body_title", "Mostrar esta coluna na tabela do corpo do e-mail (a planilha anexa leva todas)")}>
+                        <input type="checkbox" checked={c.body !== false && (!noBodyChoice || i < BODY_COLS_DEFAULT)} onChange={(e) => setInBody(i, e.target.checked)} className="rounded border-neutral-300 text-indigo-500 focus:ring-indigo-500" />
+                        {t("bpm.canvas.query_modal_in_body", "No e-mail")}
+                      </label>
+                    </div>
                   </li>
                 ))}
               </ol>
@@ -209,7 +226,10 @@ export function QueryColumnsModal({ isOpen, onClose, t, baseModelId, ctx, virtua
         </div>
 
         <div className="flex items-center justify-between">
-          <p className="text-[10px] text-neutral-400">{t("bpm.canvas.query_modal_hint", "Os campos de outras tabelas seguem os relacionamentos do projeto (até 4 níveis, sempre trazendo um valor por registro).")}</p>
+          <div className="space-y-1">
+            <p className="text-[10px] text-neutral-400">{t("bpm.canvas.query_modal_hint", "Os campos de outras tabelas seguem os relacionamentos do projeto (até 4 níveis, sempre trazendo um valor por registro).")}</p>
+            {noBodyChoice && columns.length > BODY_COLS_DEFAULT && <p className="text-[10px] text-amber-600 dark:text-amber-400">{t("bpm.canvas.query_modal_body_auto", "O corpo do e-mail mostra as 6 primeiras colunas; marque \"No e-mail\" nas que quiser ver nele. A planilha anexa leva todas.")}</p>}
+          </div>
           <button type="button" onClick={onClose} className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider rounded-xl">{t("bpm.canvas.query_modal_done", "Concluir")}</button>
         </div>
       </div>

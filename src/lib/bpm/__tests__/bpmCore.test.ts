@@ -346,6 +346,32 @@ describe('núcleo do BPM: comportamento extra', () => {
       expect(queries[0].params).toEqual(['Aprovado', '%An%'])
     })
 
+    it('tabela do corpo do e-mail: até 6 colunas sem escolha, escolha por coluna quando existe, e rolagem horizontal', () => {
+      const mk = (n: number, flags: Record<number, boolean> = {}) => ({
+        columns: Array.from({ length: n }, (_, i) => ({ key: 'c' + i, label: 'Col' + i, type: 'text', ...(i in flags ? { body: flags[i] } : {}) })),
+        rows: [Object.fromEntries(Array.from({ length: n }, (_, i) => ['c' + i, 'v' + i]))],
+      })
+      const heads = (html: string) => (html.match(/<th /g) || []).length
+      const six = buildHtmlTable(mk(6))
+      expect(heads(six)).toBe(6)
+      expect(six).not.toContain('Mostrando')
+      const ten = buildHtmlTable(mk(10)) // sem escolha: as 6 primeiras, com aviso
+      expect(heads(ten)).toBe(6)
+      expect(ten).toContain('Mostrando 6 de 10 colunas.')
+      expect(ten).toContain('Col5')
+      expect(ten).not.toContain('Col6')
+      // com escolha: valem as marcadas (as sem marca contam como mostradas)
+      const chosen = buildHtmlTable(mk(10, { 0: false, 1: false, 2: false, 3: false, 4: false, 5: false, 6: true }))
+      expect(heads(chosen)).toBe(4)
+      expect(chosen).toContain('Col9')
+      expect(chosen).not.toContain('Col0')
+      expect(chosen).toContain('Mostrando 4 de 10 colunas.')
+      // a caixa com rolagem e a largura mínima da tabela larga
+      expect(ten).toContain('overflow-x:auto')
+      expect(ten).toContain('min-width:660px')
+      expect(buildHtmlTable(mk(3))).not.toContain('min-width')
+    })
+
     it('relacionamentos encadeados: cada salto entra pela chave da tabela seguinte, caminhos iguais dividem a junção', async () => {
       const toClient = { fk: 'client_id', modelId: 'm_clients', pk: 'codigo' }
       const toLog = { fk: 'log_id', modelId: 'm_log', pk: 'id' }
