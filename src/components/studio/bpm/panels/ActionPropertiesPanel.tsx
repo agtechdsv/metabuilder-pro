@@ -2,6 +2,16 @@ import React, { useState } from "react";
 import { Check, Info, Loader2, X, Edit2, MessageSquare, Settings2 } from "lucide-react";
 import RichTextEditor from "../RichTextEditor";
 
+// Fluxos antigos guardavam a mensagem como assunto + corpo em HTML (editor de texto rico). O campo novo é texto simples:
+// ao mostrá-los, tira as marcas (<br>, <p>, &nbsp;...) para não aparecer "&nbsp;" na caixa.
+const htmlToPlainText = (html: unknown): string => String(html ?? '')
+  .replace(/<\s*br\s*\/?>/gi, '\n')
+  .replace(/<\/\s*(p|div|li|h[1-6])\s*>/gi, '\n')
+  .replace(/<[^>]*>/g, '')
+  .replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;/g, "'")
+  .replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n')
+  .trim();
+
 export function ActionPropertiesPanel(props: any) {
   const { selectedNode, updateNodeData, dbModels, dbFields, setCursorPos, roles, openGroupUsersModal, setEditingEmailNode, setTempEmailData, setIsPreviewEmailOpen, t, enums, cursorPos } = props;
   const [activeTab, setActiveTab] = useState<'geral' | 'mensagem'>('geral');
@@ -625,7 +635,7 @@ export function ActionPropertiesPanel(props: any) {
             <textarea
               rows={3}
               placeholder={t('bpm.canvas.message_text_placeholder', 'Ex: Pedido {{pedidos.id}} enviado com sucesso.')}
-              value={(selectedNode.data?.successMessage as string) ?? [selectedNode.data?.successMessageSubject, selectedNode.data?.successMessageBody].filter(Boolean).join(' ')}
+              value={(selectedNode.data?.successMessage as string) ?? [selectedNode.data?.successMessageSubject, selectedNode.data?.successMessageBody].map(htmlToPlainText).filter(Boolean).join('\n')}
               onChange={(e) => updateNodeData(selectedNode.id, { successMessage: e.target.value })}
               className="resize-none w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
             />
