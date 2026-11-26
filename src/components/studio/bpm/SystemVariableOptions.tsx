@@ -14,7 +14,7 @@ export const SYSTEM_VARIABLES = {
   usuario: ['nome', 'email', 'id'],
 } as const;
 
-export function SystemVariableOptions({ t }: { t: (key: string, fallback?: string) => string }) {
+export function SystemVariableOptions({ t, queryNames }: { t: (key: string, fallback?: string) => string; queryNames?: string[] }) {
   return (
     <>
       <optgroup label={t('bpm.canvas.var_group_system', 'Sistema')} className={GROUP_CLASS}>
@@ -27,10 +27,12 @@ export function SystemVariableOptions({ t }: { t: (key: string, fallback?: strin
         <option value="usuario.email" className={OPTION_CLASS}>{t('bpm.canvas.var_user_email', 'E-mail')}</option>
         <option value="usuario.id" className={OPTION_CLASS}>{t('bpm.canvas.var_user_id', 'ID')}</option>
       </optgroup>
-      <optgroup label={t('bpm.canvas.var_group_query', 'Resultado da consulta')} className={GROUP_CLASS}>
-        <option value="consulta.tabela" className={OPTION_CLASS}>{t('bpm.canvas.var_query_table', 'Tabela com o resultado')}</option>
-        <option value="consulta.total" className={OPTION_CLASS}>{t('bpm.canvas.var_query_total', 'Quantidade de linhas')}</option>
-      </optgroup>
+      {(queryNames || []).map((name) => (
+        <optgroup key={name} label={`${t('bpm.canvas.var_group_query', 'Resultado da consulta')}: ${name}`} className={GROUP_CLASS}>
+          <option value={`${name}.tabela`} className={OPTION_CLASS}>{t('bpm.canvas.var_query_table', 'Tabela com o resultado')}</option>
+          <option value={`${name}.total`} className={OPTION_CLASS}>{t('bpm.canvas.var_query_total', 'Quantidade de linhas')}</option>
+        </optgroup>
+      ))}
     </>
   );
 }

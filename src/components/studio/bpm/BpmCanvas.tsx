@@ -393,7 +393,7 @@ function BpmCanvasContent({
           t={t}
           enums={enums}
           relations={relations}
-          queryNames={Array.from(new Set((nodes as any[]).filter((n) => n.type === 'action' && n.data?.actionType === 'query').map((n) => String(n.data?.queryName ?? 'consulta'))))}
+          queryNames={Array.from(new Set((nodes as any[]).filter((n) => n.type === 'action' && n.data?.actionType === 'query').map((n) => (/^[a-z][a-z0-9_]{0,30}$/.test(String(n.data?.queryName ?? '').trim().toLowerCase()) ? String(n.data?.queryName).trim().toLowerCase() : 'consulta'))))}
         />
       </div>
 

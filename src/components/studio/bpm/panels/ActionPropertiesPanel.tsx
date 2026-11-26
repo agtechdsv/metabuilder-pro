@@ -116,7 +116,7 @@ export function ActionPropertiesPanel(props: any) {
                   title={t('bpm.canvas.insert_variable')}
                 >
                   <option value="" className="text-neutral-900 dark:text-neutral-100">{t('bpm.canvas.plus_var')}</option>
-                  <SystemVariableOptions t={t} />
+                  <SystemVariableOptions t={t} queryNames={props.queryNames} />
                   {[...dbModels].map((m: any) => {
                     const fields = dbFields.filter((f: any) => f.model_id === m.id);
                     if (fields.length === 0) return null;
@@ -350,7 +350,7 @@ export function ActionPropertiesPanel(props: any) {
                                         title={t('bpm.canvas.insert_variable')}
                                       >
                                         <option value="" className="text-neutral-900 dark:text-neutral-100">{t('bpm.canvas.plus_var')}</option>
-                                        <SystemVariableOptions t={t} />
+                                        <SystemVariableOptions t={t} queryNames={props.queryNames} />
                                         {[...dbModels].map((m: any) => {
                                           const fields = dbFields.filter((f: any) => f.model_id === m.id);
                                           if (fields.length === 0) return null;
@@ -617,7 +617,7 @@ export function ActionPropertiesPanel(props: any) {
                                 className="bg-transparent border-none text-[9px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-24 text-right p-0"
                               >
                                 <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">{t('bpm.canvas.plus_variable')}</option>
-                                <SystemVariableOptions t={t} />
+                                <SystemVariableOptions t={t} queryNames={props.queryNames} />
                                 {[...dbModels]
                                   .sort((a, b) => {
                                     const nameA = a.display_name || a.db_table_name || a.name;
@@ -685,7 +685,7 @@ export function ActionPropertiesPanel(props: any) {
                 className="bg-transparent border-none text-[9px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-28 text-right p-0"
               >
                 <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">{t('bpm.canvas.plus_variable') || '+ Variável'}</option>
-                <SystemVariableOptions t={t} />
+                <SystemVariableOptions t={t} queryNames={props.queryNames} />
                 {[...dbModels].sort((a, b) => (a.display_name || a.db_table_name || a.name).localeCompare(b.display_name || b.db_table_name || b.name)).map((m: any) => {
                   const tableName = m.display_name || m.db_table_name || m.name;
                   const fields = dbFields.filter((f: any) => f.model_id === m.id);
