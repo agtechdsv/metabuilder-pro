@@ -128,6 +128,23 @@ describe('núcleo do BPM: comportamento extra', () => {
     expect(res.success).toBe(false)
   })
 
+  it('mensagem do nó de Resposta aceita variáveis {{tabela.campo}} (bloqueio e aviso)', async () => {
+    const mk = (allow: boolean) => {
+      const core = new BpmCore({ db: { dialect: 'postgres', query: async () => [] }, models: { tableOf: async (id: string) => (fixtures.models as any)[id] } })
+      core.setWorkflows([{ id: 'f', name: 'F', flow_data: { nodes: [
+        { id: 't', type: 'trigger', data: { triggerType: ['before_update'], triggerModelId: 'm_orders' } },
+        { id: 'r', type: 'response', data: { responseAllowAction: allow, responseMessage: 'Pedido {{orders.id}} não pode ser editado' } },
+      ], edges: [{ source: 't', target: 'r' }] } } as any])
+      return core
+    }
+    const blocked: any = await mk(false).processSyncEvent('orders', 'BEFORE_UPDATE', { id: 42 })
+    expect(blocked.success).toBe(false)
+    expect(blocked.error).toBe('Pedido 42 não pode ser editado')
+    const allowed: any = await mk(true).processSyncEvent('orders', 'BEFORE_UPDATE', { id: 42 })
+    expect(allowed.success).toBe(true)
+    expect(allowed.message).toBe('Pedido 42 não pode ser editado')
+  })
+
   describe('aba Mensagem da ação (aviso na tela de quem gravou)', () => {
     const flow = (data: any = {}) => ({ id: 'f', name: 'F', flow_data: { nodes: [
       { id: 't', type: 'trigger', data: { triggerType: ['INSERT'], triggerModelId: 'm_orders' } },

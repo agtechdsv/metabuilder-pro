@@ -3,6 +3,8 @@ import { ShieldAlert, CheckCircle2 } from "lucide-react";
 
 export function ResponsePropertiesPanel(props: any) {
   const { selectedNode, updateNodeData, t } = props;
+  const dbModels: any[] = props.dbModels || [];
+  const dbFields: any[] = props.dbFields || [];
   
   const allowAction = selectedNode.data?.responseAllowAction !== false; // default is true
   const message = selectedNode.data?.responseMessage || '';
@@ -36,11 +38,40 @@ export function ResponsePropertiesPanel(props: any) {
       </div>
 
       <div>
-        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">
-          {t('bpm.canvas.response_message', 'Mensagem de Retorno (Toast/Alerta)')}
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block">
+            {t('bpm.canvas.response_message', 'Mensagem de Retorno (Toast/Alerta)')}
+          </label>
+          <select
+            value=""
+            onChange={(e) => {
+              const val = e.target.value;
+              if (!val) return;
+              const newText = message ? `${message} {{${val}}}` : `{{${val}}}`;
+              updateNodeData(selectedNode.id, { responseMessage: newText });
+              e.target.value = '';
+            }}
+            className="bg-transparent border-none text-[9px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-28 text-right p-0"
+          >
+            <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">{t('bpm.canvas.plus_variable', '+ Variável')}</option>
+            {[...dbModels].sort((a, b) => (a.display_name || a.db_table_name || a.name).localeCompare(b.display_name || b.db_table_name || b.name)).map((m: any) => {
+              const tableName = m.display_name || m.db_table_name || m.name;
+              const fields = dbFields.filter((f: any) => f.model_id === m.id);
+              if (fields.length === 0) return null;
+              return (
+                <optgroup key={m.id} label={tableName} className="text-left text-indigo-600 dark:text-indigo-400 normal-case tracking-normal text-sm font-bold bg-neutral-50 dark:bg-neutral-900">
+                  {[...fields].sort((a, b) => (a.display_name || a.db_column_name || a.name).localeCompare(b.display_name || b.db_column_name || b.name)).map((f: any) => (
+                    <option key={f.id} value={`${m.db_table_name || m.name}.${f.db_column_name || f.name}`} className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">
+                      {f.display_name || f.db_column_name || f.name}
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
+          </select>
+        </div>
         <p className="text-[9px] text-neutral-400 mb-2 leading-relaxed">
-          {t('bpm.canvas.response_message_desc', 'Mensagem que será exibida para o usuário. Útil para explicar o motivo do bloqueio ou dar feedback de sucesso.')}
+          {t('bpm.canvas.response_message_desc', 'Mensagem que será exibida para o usuário. Útil para explicar o motivo do bloqueio ou dar feedback de sucesso.')} {t('bpm.canvas.response_message_vars', 'Aceita variáveis, como {{pedidos.id}}.')}
         </p>
         <textarea
           value={message}

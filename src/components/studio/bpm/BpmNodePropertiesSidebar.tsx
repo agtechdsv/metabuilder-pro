@@ -102,6 +102,8 @@ export function BpmNodePropertiesSidebar(props: any) {
               <ResponsePropertiesPanel
                 selectedNode={selectedNode}
                 updateNodeData={updateNodeData}
+                dbModels={dbModels}
+                dbFields={dbFields}
                 t={t}
               />
             )}

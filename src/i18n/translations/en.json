@@ -3493,6 +3493,7 @@
       "no_block": "No, Block",
       "response_message": "Return Message (Toast/Alert)",
       "response_message_desc": "Message that will be displayed to the user. Useful to explain the reason for blocking or to give success feedback.",
+      "response_message_vars": "Accepts variables, such as {{pedidos.id}}.",
       "response_message_placeholder": "Ex: The provided document is invalid.",
       "action_no_name": "Unnamed Action",
       "action_global": "Global Action",

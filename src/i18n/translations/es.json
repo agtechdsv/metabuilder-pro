@@ -3580,6 +3580,7 @@
       "no_block": "No, Bloquear",
       "response_message": "Mensaje de Retorno (Toast/Alerta)",
       "response_message_desc": "Mensaje que se mostrará al usuario. Útil para explicar el motivo del bloqueo o dar confirmación de éxito.",
+      "response_message_vars": "Acepta variables, como {{pedidos.id}}.",
       "response_message_placeholder": "Ej: El documento proporcionado no es válido.",
       "webhook_inbound": "Webhook Inbound",
       "action_no_name": "Acción Sin Nombre",

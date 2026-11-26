@@ -3493,6 +3493,7 @@
       "no_block": "Não, Bloquear",
       "response_message": "Mensagem de Retorno (Toast/Alerta)",
       "response_message_desc": "Mensagem que será exibida para o usuário. Útil para explicar o motivo do bloqueio ou dar feedback de sucesso.",
+      "response_message_vars": "Aceita variáveis, como {{pedidos.id}}.",
       "response_message_placeholder": "Ex: O CPF informado é inválido.",
       "webhook_inbound": "Webhook Inbound",
       "action_no_name": "Ação Sem Nome",
