@@ -51,6 +51,7 @@ const QUERY_DEFAULT_ROWS = 200
 const QUERY_MAX_ROWS = 5000
 const QUERY_BODY_ROWS = 200 // linhas da tabela no corpo do e-mail; o restante só vai na planilha anexa
 const QUERY_TIMEOUT_MS = 60000
+const QUERY_MAX_JOIN_DEPTH = 4 // níveis de relacionamento encadeados (pedido > cliente > cidade...)
 const QUERY_OPS = new Set(['=', '==', '!=', '<>', '>', '<', '>=', '<='])
 const AGG_FNS = { count: 'COUNT', sum: 'SUM', avg: 'AVG', min: 'MIN', max: 'MAX' }
 
@@ -696,18 +697,34 @@ class BpmCore {
     if (wrapped) {
       const extra = []
       for (const key of used) extra.push(`${await this.virtualFieldSql(virtuals[key], 't')} AS "${key}"`)
+      // cada campo relacionado é um caminho de saltos "chave estrangeira -> chave da tabela seguinte" (até QUERY_MAX_JOIN_DEPTH): sempre
+      // "muitos para um" (a tabela seguinte entra pela chave dela), então nunca multiplica as linhas. Caminhos que começam igual
+      // dividem as mesmas junções. O formato antigo (um salto: { fk, modelId, field, pk }) continua valendo.
       const joinSql = []
-      let n = 0
+      const prefixAlias = new Map()
       for (const key of usedJoins) {
         const spec = joins[key] || {}
-        const fk = strictIdent(spec.fk)
+        const hops = Array.isArray(spec.path) && spec.path.length > 0 ? spec.path : [{ fk: spec.fk, modelId: spec.modelId, pk: spec.pk }]
         const col = strictIdent(spec.field)
-        const pk = strictIdent(spec.pk || 'id')
-        const target = spec.modelId ? await this.getModelTable(spec.modelId) : null
-        if (!fk || !col || !pk || !target || !strictIdent(target) || !(await this.isKnownTable(target))) throw new Error('Consultar dados: campo de tabela relacionada inválido.')
-        n++
-        joinSql.push(` LEFT JOIN "${target}" "j${n}" ON "j${n}"."${pk}" = "t"."${fk}"`)
-        extra.push(`"j${n}"."${col}" AS "${joinAlias.get(key)}"`)
+        if (!col) throw new Error('Consultar dados: campo de tabela relacionada inválido.')
+        if (hops.length > QUERY_MAX_JOIN_DEPTH) throw new Error(`Consultar dados: relacionamentos encadeados demais (máximo de ${QUERY_MAX_JOIN_DEPTH} níveis).`)
+        let prevAlias = 't'
+        let prefix = ''
+        for (const hop of hops) {
+          const fk = strictIdent(hop && hop.fk)
+          const pk = strictIdent((hop && hop.pk) || 'id')
+          const target = hop && hop.modelId ? await this.getModelTable(hop.modelId) : null
+          if (!fk || !pk || !target || !strictIdent(target) || !(await this.isKnownTable(target))) throw new Error('Consultar dados: campo de tabela relacionada inválido.')
+          prefix += `/${fk}>${target}`
+          let alias = prefixAlias.get(prefix)
+          if (!alias) {
+            alias = 'j' + (prefixAlias.size + 1)
+            prefixAlias.set(prefix, alias)
+            joinSql.push(` LEFT JOIN "${target}" "${alias}" ON "${alias}"."${pk}" = "${prevAlias}"."${fk}"`)
+          }
+          prevAlias = alias
+        }
+        extra.push(`"${prevAlias}"."${col}" AS "${joinAlias.get(key)}"`)
       }
       const innerSql = `SELECT "t".*, ${extra.join(', ')} FROM "${table}" "t"${joinSql.join('')}${innerWhere.length ? ` WHERE ${innerWhere.join(' AND ')}` : ''}`
       from = `(${innerSql}) "q"`

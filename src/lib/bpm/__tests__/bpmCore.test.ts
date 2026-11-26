@@ -346,6 +346,39 @@ describe('núcleo do BPM: comportamento extra', () => {
       expect(queries[0].params).toEqual(['Aprovado', '%An%'])
     })
 
+    it('relacionamentos encadeados: cada salto entra pela chave da tabela seguinte, caminhos iguais dividem a junção', async () => {
+      const toClient = { fk: 'client_id', modelId: 'm_clients', pk: 'codigo' }
+      const toLog = { fk: 'log_id', modelId: 'm_log', pk: 'id' }
+      const { core, queries } = make(() => [{ id: 1, rel1: 'Ana', rel2: 'Rio', rel3: 'ok' }], [trigger, queryNode({
+        queryJoins: {
+          rel_client_id__name: { path: [toClient], field: 'name' },
+          rel_client_id__log_id__city: { path: [toClient, toLog], field: 'city' },
+          rel_client_id__log_id__note: { path: [toClient, toLog], field: 'note' },
+        },
+        queryColumns: [{ field: 'id', label: 'Pedido', type: 'integer' }, { field: 'rel_client_id__name', label: 'Cliente', type: 'text' }, { field: 'rel_client_id__log_id__city', label: 'Cidade', type: 'text' }, { field: 'rel_client_id__log_id__note', label: 'Nota', type: 'text' }],
+      })], [{ source: 't', target: 'q' }])
+      await core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(queries[0].sql).toBe('SELECT "q"."id", "q"."rel1", "q"."rel2", "q"."rel3" FROM (SELECT "t".*, "j1"."name" AS "rel1", "j2"."city" AS "rel2", "j2"."note" AS "rel3" FROM "orders" "t" LEFT JOIN "clients" "j1" ON "j1"."codigo" = "t"."client_id" LEFT JOIN "audit_log" "j2" ON "j2"."id" = "j1"."log_id") "q" LIMIT 50')
+    })
+
+    it('relacionamentos encadeados: o limite é de 4 níveis e cada salto é validado', async () => {
+      const hop = { fk: 'client_id', modelId: 'm_clients', pk: 'codigo' }
+      const four = make(() => [], [trigger, queryNode({ queryJoins: { rel_a: { path: [hop, hop, hop, hop], field: 'name' } }, queryColumns: [{ field: 'rel_a', label: 'A' }] })], [{ source: 't', target: 'q' }])
+      await four.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(four.queries).toHaveLength(1)
+      expect(four.queries[0].sql.match(/LEFT JOIN/g)).toHaveLength(4) // quatro níveis: uma junção por salto
+      const five = make(() => [], [trigger, queryNode({ queryJoins: { rel_a: { path: [hop, hop, hop, hop, hop], field: 'name' } }, queryColumns: [{ field: 'rel_a', label: 'A' }] })], [{ source: 't', target: 'q' }])
+      await five.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(five.queries).toHaveLength(0)
+      expect(five.runs[0].status).toBe('error')
+      const bad = make(() => [], [trigger, queryNode({ queryJoins: { rel_a: { path: [hop, { fk: 'x"; DROP', modelId: 'm_clients', pk: 'id' }], field: 'name' } }, queryColumns: [{ field: 'rel_a', label: 'A' }] })], [{ source: 't', target: 'q' }])
+      await bad.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(bad.queries).toHaveLength(0)
+      const foreign = make(() => [], [trigger, queryNode({ queryJoins: { rel_a: { path: [hop, { fk: 'a', modelId: 'm_inexistente', pk: 'id' }], field: 'name' } }, queryColumns: [{ field: 'rel_a', label: 'A' }] })], [{ source: 't', target: 'q' }])
+      await foreign.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(foreign.queries).toHaveLength(0)
+    })
+
     it('segurança da tabela relacionada: tabela fora do projeto e coluna suspeita não chegam ao banco', async () => {
       const a = make(() => [], [trigger, queryNode({ queryJoins: { rel_x: { fk: 'client_id', modelId: 'm_inexistente', field: 'name' } }, queryColumns: [{ field: 'rel_x', label: 'X' }] })], [{ source: 't', target: 'q' }])
       await a.core.processEvent('orders', 'INSERT', { id: 1 })

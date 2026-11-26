@@ -1,6 +1,8 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { virtualFieldsForTable } from "@/lib/bpm/virtualFields";
+import { describePath } from "@/lib/bpm/relationPaths";
+import { QueryColumnsModal } from "./QueryColumnsModal";
 
 /**
  * Configuração da ação "Consultar dados" (relatórios agendados): tabela, colunas (ou agrupar e calcular), filtros com data
@@ -32,6 +34,7 @@ export function QueryActionConfig(props: any) {
   const localViews: any[] = props.localViews || [];
   const d: any = selectedNode.data || {};
   const set = (patch: any) => updateNodeData(selectedNode.id, patch);
+  const [columnsOpen, setColumnsOpen] = useState(false);
 
   const labelOf = (f: any) => f?.widget_options?.label?.text || f?.display_name || f?.db_column_name || f?.name;
   const fieldsOf = (modelId: string) =>
@@ -77,14 +80,21 @@ export function QueryActionConfig(props: any) {
         join: { fk: fkName, modelId: target.id, field: rf.field, pk: pk.db_column_name || pk.name },
       }));
   });
-  const fields: any[] = [...plainFields, ...relatedFields, ...virtualFields];
   const columns: any[] = d.queryColumns || [];
   const filters: any[] = d.queryFilters || [];
   const enums: any[] = props.enums || [];
+  // coluna relacionada: a junção vem gravada nela (caminho de até 4 níveis) ou, nas antigas, do campo relacionado de um salto
+  const relatedJoinOf: Record<string, any> = Object.fromEntries(relatedFields.map((r) => [r.field, r.join]));
+  const columnJoin = (c: any) => c?.join || relatedJoinOf[c?.field];
+  const baseKeys = new Set<string>([...plainFields, ...relatedFields, ...virtualFields].map((f: any) => f.field));
+  // colunas encadeadas já escolhidas também servem de filtro e de ordem
+  const chainFields = columns.filter((c) => c.join && !baseKeys.has(c.field)).map((c) => ({ field: c.field, label: c.label, plainLabel: c.label, type: c.type }));
+  const fields: any[] = [...plainFields, ...relatedFields, ...chainFields, ...virtualFields];
 
   // o nó guarda só as junções usadas (colunas, filtros e ordem)
-  const usedKeys = new Set<string>([...columns.map((c) => c.field), ...filters.map((f) => f.field), d.queryOrderBy].filter(Boolean));
-  const joinsMap: Record<string, any> = Object.fromEntries(relatedFields.filter((r) => usedKeys.has(r.field)).map((r) => [r.field, r.join]));
+  const joinsMap: Record<string, any> = {};
+  for (const c of columns) { const j = columnJoin(c); if (j) joinsMap[c.field] = j; }
+  for (const key of [...filters.map((fl) => fl.field), d.queryOrderBy]) { if (key && relatedJoinOf[key] && !joinsMap[key]) joinsMap[key] = relatedJoinOf[key]; }
   const joinsSignature = JSON.stringify(joinsMap);
   useEffect(() => {
     if (JSON.stringify(d.queryJoins || {}) !== joinsSignature) set({ queryJoins: joinsMap });
@@ -96,22 +106,6 @@ export function QueryActionConfig(props: any) {
   const labelFields = d.queryGroupLabelModelId ? fieldsOf(d.queryGroupLabelModelId) : [];
 
   const setFilter = (index: number, patch: any) => set({ queryFilters: filters.map((f, i) => (i === index ? { ...f, ...patch } : f)) });
-
-  const asColumn = (f: any) => ({ field: f.field, label: f.plainLabel || f.label, type: f.type });
-  // marcar todas mantém as já escolhidas na ordem em que estão e acrescenta as demais
-  const selectAllColumns = () => set({ queryColumns: [...columns, ...fields.filter((f) => !columns.some((c) => c.field === f.field)).map(asColumn)] });
-  const moveColumn = (index: number, delta: number) => {
-    const target = index + delta;
-    if (target < 0 || target >= columns.length) return;
-    const next = [...columns];
-    [next[index], next[target]] = [next[target], next[index]];
-    set({ queryColumns: next });
-  };
-
-  const toggleColumn = (f: { field: string; label: string; type: string; plainLabel?: string }) => {
-    const has = columns.some((c) => c.field === f.field);
-    set({ queryColumns: has ? columns.filter((c) => c.field !== f.field) : [...columns, { field: f.field, label: f.plainLabel || f.label, type: f.type }] });
-  };
 
   // ao escolher o campo de agrupamento, sugere a tabela e o campo que mostram o nome (ex.: funcionario_id → funcionarios.nome)
   const pickGroupField = (field: string) => {
@@ -170,51 +164,42 @@ export function QueryActionConfig(props: any) {
             <div className={CARD}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest">{t('bpm.canvas.query_columns', 'Colunas do resultado')}</span>
-                <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest">
-                  <button type="button" onClick={selectAllColumns} className="text-indigo-600 dark:text-indigo-400 hover:underline">{t('bpm.canvas.query_select_all', 'Marcar todas')}</button>
-                  <button type="button" onClick={() => set({ queryColumns: [] })} className="text-neutral-400 hover:text-red-500 hover:underline">{t('bpm.canvas.query_clear_all', 'Limpar')}</button>
-                </div>
+                <button
+                  type="button"
+                  data-testid="query-choose-columns"
+                  onClick={() => setColumnsOpen(true)}
+                  className="text-[9px] bg-indigo-500 text-white px-2 py-1 rounded font-bold uppercase tracking-widest hover:bg-indigo-600 transition-colors"
+                >
+                  {t('bpm.canvas.query_choose_columns', 'Escolher colunas…')}
+                </button>
               </div>
-              <div className="max-h-44 overflow-y-auto space-y-1 pr-1">
-                {fields.map((f) => (
-                  <label key={f.field} className="flex items-center gap-2 text-xs text-neutral-700 dark:text-neutral-300 cursor-pointer">
-                    <input type="checkbox" checked={columns.some((c) => c.field === f.field)} onChange={() => toggleColumn(f)} className="rounded border-neutral-300 text-indigo-500 focus:ring-indigo-500" />
-                    <span>{f.label}</span>
-                    <span className="text-[9px] text-neutral-400 font-mono">{f.field}</span>
-                  </label>
-                ))}
-              </div>
-              {columns.length > 1 && (
-                <div className="mt-3 pt-2 border-t border-neutral-100 dark:border-neutral-800">
-                  <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.query_order_cols', 'Ordem das colunas (setas para mover)')}</span>
-                  <ol className="space-y-1">
-                    {columns.map((c, i) => (
-                      <li key={c.field} className="flex items-center gap-1 text-xs text-neutral-700 dark:text-neutral-300">
-                        <span className="w-4 text-[9px] text-neutral-400 font-mono">{i + 1}</span>
-                        <span className="flex-1 truncate">{c.label || c.field}</span>
-                        {relatedFields.some((r) => r.join.fk === c.field) && (
-                          <select
-                            value=""
-                            onChange={(e) => {
-                              const rf = relatedFields.find((r) => r.field === e.target.value);
-                              if (rf) set({ queryColumns: columns.map((x) => (x.field === c.field ? asColumn(rf) : x)) });
-                            }}
-                            className="max-w-[9rem] text-[10px] bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-1 py-0.5 text-indigo-600 dark:text-indigo-400"
-                          >
-                            <option value="">{t('bpm.canvas.query_swap_related', 'Mostrar outro campo da tabela relacionada…')}</option>
-                            {relatedFields.filter((r) => r.join.fk === c.field && !columns.some((x) => x.field === r.field)).map((r) => <option key={r.field} value={r.field}>{r.label}</option>)}
-                          </select>
-                        )}
-                        <button type="button" disabled={i === 0} onClick={() => moveColumn(i, -1)} title={t('bpm.canvas.query_move_up', 'Subir')} className="px-1.5 text-neutral-500 hover:text-indigo-600 disabled:opacity-30">↑</button>
-                        <button type="button" disabled={i === columns.length - 1} onClick={() => moveColumn(i, 1)} title={t('bpm.canvas.query_move_down', 'Descer')} className="px-1.5 text-neutral-500 hover:text-indigo-600 disabled:opacity-30">↓</button>
+              {columns.length === 0 ? (
+                <p className="text-[9px] text-red-500">{t('bpm.canvas.query_columns_required', 'Escolha ao menos uma coluna.')}</p>
+              ) : (
+                <ol className="space-y-1">
+                  {columns.map((c, i) => {
+                    const join = columnJoin(c);
+                    return (
+                      <li key={c.field} className="flex items-baseline gap-2 text-xs text-neutral-700 dark:text-neutral-300">
+                        <span className="w-4 text-[9px] text-neutral-400 font-mono shrink-0">{i + 1}</span>
+                        <span className="font-bold truncate">{c.label || c.field}</span>
+                        {join && <span className="text-[9px] text-neutral-400 truncate">{describePath({ relations, dbFields, dbModels }, modelId, join)}</span>}
                       </li>
-                    ))}
-                  </ol>
-                </div>
+                    );
+                  })}
+                </ol>
               )}
-              {relatedFields.length > 0 && <p className="text-[9px] text-neutral-400 mt-2">{t('bpm.canvas.query_related_hint', '› = campo de uma tabela relacionada (ex.: nome do cliente do pedido).')}</p>}
-              {virtualFields.length > 0 && <p className="text-[9px] text-neutral-400 mt-2">{t('bpm.canvas.query_virtual_hint', 'ƒ = campo calculado do caso de uso (ex.: Total Pedido).')}</p>}
-              {columns.length === 0 && <p className="text-[9px] text-red-500 mt-2">{t('bpm.canvas.query_columns_required', 'Escolha ao menos uma coluna.')}</p>}
+              <QueryColumnsModal
+                isOpen={columnsOpen}
+                onClose={() => setColumnsOpen(false)}
+                t={t}
+                baseModelId={modelId}
+                ctx={{ relations, dbFields, dbModels }}
+                virtualFields={virtualFields}
+                columns={columns}
+                columnJoin={columnJoin}
+                onChange={(next) => set({ queryColumns: next })}
+              />
             </div>
           )}
 
