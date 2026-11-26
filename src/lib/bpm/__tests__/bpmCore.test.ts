@@ -346,20 +346,19 @@ describe('núcleo do BPM: comportamento extra', () => {
       expect(queries[0].params).toEqual(['Aprovado', '%An%'])
     })
 
-    it('tabela do corpo do e-mail: até 6 colunas sem escolha, escolha por coluna quando existe, e rolagem horizontal', () => {
+    it('tabela do corpo do e-mail: todas as colunas até 12, escolha por coluna quando existe, e rolagem horizontal', () => {
       const mk = (n: number, flags: Record<number, boolean> = {}) => ({
         columns: Array.from({ length: n }, (_, i) => ({ key: 'c' + i, label: 'Col' + i, type: 'text', ...(i in flags ? { body: flags[i] } : {}) })),
         rows: [Object.fromEntries(Array.from({ length: n }, (_, i) => ['c' + i, 'v' + i]))],
       })
       const heads = (html: string) => (html.match(/<th /g) || []).length
-      const six = buildHtmlTable(mk(6))
-      expect(heads(six)).toBe(6)
-      expect(six).not.toContain('Mostrando')
-      const ten = buildHtmlTable(mk(10)) // sem escolha: as 6 primeiras, com aviso
-      expect(heads(ten)).toBe(6)
-      expect(ten).toContain('Mostrando 6 de 10 colunas.')
-      expect(ten).toContain('Col5')
-      expect(ten).not.toContain('Col6')
+      const ten = buildHtmlTable(mk(10)) // sem escolha: todas
+      expect(heads(ten)).toBe(10)
+      expect(ten).not.toContain('Mostrando')
+      const many = buildHtmlTable(mk(15)) // teto de 12, com aviso
+      expect(heads(many)).toBe(12)
+      expect(many).toContain('Mostrando 12 de 15 colunas.')
+      expect(many).not.toContain('Col12')
       // com escolha: valem as marcadas (as sem marca contam como mostradas)
       const chosen = buildHtmlTable(mk(10, { 0: false, 1: false, 2: false, 3: false, 4: false, 5: false, 6: true }))
       expect(heads(chosen)).toBe(4)
@@ -368,8 +367,26 @@ describe('núcleo do BPM: comportamento extra', () => {
       expect(chosen).toContain('Mostrando 4 de 10 colunas.')
       // a caixa com rolagem e a largura mínima da tabela larga
       expect(ten).toContain('overflow-x:auto')
-      expect(ten).toContain('min-width:660px')
+      expect(ten).toContain('min-width:1100px')
       expect(buildHtmlTable(mk(3))).not.toContain('min-width')
+    })
+
+    it('tabela do corpo do e-mail: as linhas param pelo tamanho (o Gmail corta perto de 100 KB) e a planilha leva todas', () => {
+      const cols = Array.from({ length: 8 }, (_, i) => ({ key: 'c' + i, label: 'Col' + i, type: 'text' }))
+      const rows = Array.from({ length: 800 }, (_, r) => Object.fromEntries(cols.map((c, i) => [c.key, 'valor-' + r + '-' + i])))
+      const html: string = buildHtmlTable({ columns: cols, rows })
+      expect(html.length).toBeLessThan(100_000)
+      const shown = (html.match(/<tr>/g) || []).length - 1 // sem o cabeçalho
+      expect(shown).toBeGreaterThan(100)
+      expect(shown).toBeLessThan(800)
+      expect(html).toContain(`Mostrando ${shown} de 800 linhas.`)
+      // uma tabela pequena entra inteira; sempre entra ao menos uma linha
+      expect(buildHtmlTable({ columns: cols, rows: rows.slice(0, 5) })).not.toContain('linhas.')
+      const huge = buildHtmlTable({ columns: [{ key: 'a', label: 'A', type: 'text' }], rows: [{ a: 'x'.repeat(200_000) }, { a: 'y' }] })
+      expect((huge.match(/<tr>/g) || []).length).toBe(2) // cabeçalho + a 1ª linha, mesmo grande
+      // células enxutas: o espaçamento vai no cellpadding, não em cada célula
+      expect(html).toContain('cellpadding="6"')
+      expect(html).not.toContain('padding:6px')
     })
 
     it('relacionamentos encadeados: cada salto entra pela chave da tabela seguinte, caminhos iguais dividem a junção', async () => {

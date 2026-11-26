@@ -27,8 +27,8 @@ interface Props {
   onChange: (columns: any[]) => void;
 }
 
-/** Sem escolha, o corpo do e-mail mostra só as primeiras colunas (o motor usa o mesmo número: QUERY_BODY_COLS). */
-const BODY_COLS_DEFAULT = 6;
+/** Sem escolha, o corpo do e-mail mostra as colunas até este teto (teto do motor: QUERY_BODY_COLS). */
+const BODY_COLS_DEFAULT = 12;
 
 const ROW = "flex items-center gap-2 text-xs text-neutral-700 dark:text-neutral-300 cursor-pointer rounded px-1.5 py-1 hover:bg-neutral-50 dark:hover:bg-neutral-800/60";
 const SECTION = "text-[9px] font-black text-neutral-400 uppercase tracking-widest mt-3 mb-1";

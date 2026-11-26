@@ -3500,7 +3500,7 @@
       "query_modal_done": "Done",
       "query_modal_in_body": "In the email",
       "query_modal_in_body_title": "Show this column in the table in the email body (the attached spreadsheet carries all of them)",
-      "query_modal_body_auto": "The email body shows the first 6 columns; tick \"In the email\" on the ones you want to see in it. The attached spreadsheet carries all of them.",
+      "query_modal_body_auto": "The email body shows at most 12 columns (the first ones, if you do not choose); tick \"In the email\" on the ones you want to see in it. The attached spreadsheet carries all of them.",
       "query_modal_hint": "Fields from other tables follow the project's relationships (up to 4 levels, always bringing one value per record).",
       "interval": "Every",
       "interval_every": "Repeat every",

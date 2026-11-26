@@ -49,8 +49,9 @@ const htmlToText = (html) => String(html == null ? '' : html)
 // ===== Consultar dados (relatórios agendados) =====
 const QUERY_DEFAULT_ROWS = 200
 const QUERY_MAX_ROWS = 5000
-const QUERY_BODY_COLS = 6 // colunas no corpo do e-mail quando o fluxo não escolhe quais
-const QUERY_BODY_ROWS = 200 // linhas da tabela no corpo do e-mail; o restante só vai na planilha anexa
+const QUERY_BODY_COLS = 12 // teto de colunas na tabela do corpo do e-mail (o Studio deixa escolher quais; a planilha anexa leva todas)
+const QUERY_BODY_BYTES = 90000 // tamanho máximo das linhas da tabela no corpo: o Gmail corta a mensagem perto de 100 KB
+const QUERY_BODY_ROWS = 1000 // teto de linhas da tabela no corpo do e-mail (o limite de verdade é o tamanho: QUERY_BODY_BYTES); o restante só vai na planilha anexa
 const QUERY_TIMEOUT_MS = 60000
 const QUERY_MAX_JOIN_DEPTH = 4 // níveis de relacionamento encadeados (pedido > cliente > cidade...)
 const QUERY_OPS = new Set(['=', '==', '!=', '<>', '>', '<', '>=', '<='])
@@ -149,27 +150,34 @@ function formatCell(value, type) {
  * Mostra no máximo `maxRows` linhas e avisa quantas ficaram de fora.
  */
 /**
- * Tabela do corpo do e-mail. A planilha anexa leva todas as colunas; o corpo é um resumo: com escolha feita (alguma coluna com
- * `body` true ou false) mostra as marcadas; sem escolha e com mais de QUERY_BODY_COLS colunas, mostra só as primeiras.
- * Fica dentro de uma caixa com rolagem horizontal (nos clientes de e-mail que a aceitam) para a tabela larga não ser cortada.
+ * Tabela do corpo do e-mail. A planilha anexa leva todas as colunas e linhas; o corpo é um resumo que respeita dois limites:
+ *  - colunas: com escolha feita (alguma coluna com `body` true ou false) mostra as marcadas; sem escolha, todas; em ambos até QUERY_BODY_COLS;
+ *  - tamanho: as linhas entram até QUERY_BODY_BYTES (ou maxRows), para o Gmail não cortar a mensagem ("[Mensagem cortada]").
+ * As células levam só o estilo essencial (o espaçamento vai no cellpadding) para caber mais linhas. A tabela fica numa caixa com
+ * rolagem horizontal (nos clientes de e-mail que a aceitam) para a tabela larga não ser cortada.
  */
 function buildHtmlTable(dataset, maxRows = QUERY_BODY_ROWS) {
   const allCols = dataset.columns || []
   const explicit = allCols.some((c) => c && (c.body === true || c.body === false))
-  const cols = explicit ? allCols.filter((c) => c.body !== false) : allCols.slice(0, QUERY_BODY_COLS)
+  const cols = (explicit ? allCols.filter((c) => c.body !== false) : allCols).slice(0, QUERY_BODY_COLS)
   const rows = dataset.rows || []
   if (rows.length === 0) return '<p>Nenhum registro encontrado.</p>'
-  const th = 'style="text-align:left;padding:6px 8px;background:#f1f5f9;border:1px solid #e2e8f0;font-size:12px"'
+  const cell = 'border:1px solid #e2e8f0;font-size:12px'
+  const th = `style="text-align:left;background:#f1f5f9;${cell}"`
   const head = '<tr>' + cols.map((c) => `<th ${th}>${escapeHtml(c.label || c.key)}</th>`).join('') + '</tr>'
-  const shown = rows.slice(0, maxRows)
-  const body = shown.map((r) => '<tr>' + cols.map((c) => {
-    const numeric = NUMERIC_TYPE.test(String(c.type || '')) || INTEGER_TYPE.test(String(c.type || ''))
-    return `<td style="padding:6px 8px;border:1px solid #e2e8f0;font-size:12px;${numeric ? 'text-align:right;' : ''}">${escapeHtml(formatCell(r[c.key], c.type))}</td>`
-  }).join('') + '</tr>').join('')
-  const more = rows.length > shown.length ? `<p style="font-size:12px;color:#64748b">Mostrando ${shown.length} de ${rows.length} linhas.</p>` : ''
+  const numeric = cols.map((c) => NUMERIC_TYPE.test(String(c.type || '')) || INTEGER_TYPE.test(String(c.type || '')))
+  const bodyRows = []
+  let used = 0
+  for (const r of rows.slice(0, maxRows)) {
+    const tr = '<tr>' + cols.map((c, i) => `<td style="${cell}${numeric[i] ? ';text-align:right' : ''}">${escapeHtml(formatCell(r[c.key], c.type))}</td>`).join('') + '</tr>'
+    if (bodyRows.length > 0 && used + tr.length > QUERY_BODY_BYTES) break
+    used += tr.length
+    bodyRows.push(tr)
+  }
+  const more = rows.length > bodyRows.length ? `<p style="font-size:12px;color:#64748b">Mostrando ${bodyRows.length} de ${rows.length} linhas.</p>` : ''
   const fewer = cols.length < allCols.length ? `<p style="font-size:12px;color:#64748b">Mostrando ${cols.length} de ${allCols.length} colunas.</p>` : ''
   const minWidth = cols.length > 4 ? `min-width:${cols.length * 110}px;` : ''
-  return `<div style="overflow-x:auto;max-width:100%"><table style="border-collapse:collapse;width:100%;${minWidth}">${head}${body}</table></div>${more}${fewer}`
+  return `<div style="overflow-x:auto;max-width:100%"><table cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;${minWidth}">${head}${bodyRows.join('')}</table></div>${more}${fewer}`
 }
 
 /** Espera `promise` no máximo `ms`; passado disso rejeita (a consulta não segura o Agente para sempre). */
