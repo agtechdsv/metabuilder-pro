@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronRight, Search, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import {
@@ -86,8 +87,10 @@ export function QueryColumnsModal({ isOpen, onClose, t, baseModelId, ctx, virtua
     </label>
   );
 
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t("bpm.canvas.query_modal_title", "Colunas do resultado")} size="5xl">
+  // o drawer de propriedades tem transformação (animação): um modal "fixed" dentro dele fica preso a ele; no body ocupa a tela toda
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <Modal isOpen={isOpen} onClose={onClose} title={t("bpm.canvas.query_modal_title", "Colunas do resultado")} size="5xl" zIndex={10000}>
       <div className="space-y-4" data-testid="query-columns-modal">
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
@@ -210,6 +213,7 @@ export function QueryColumnsModal({ isOpen, onClose, t, baseModelId, ctx, virtua
           <button type="button" onClick={onClose} className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider rounded-xl">{t("bpm.canvas.query_modal_done", "Concluir")}</button>
         </div>
       </div>
-    </Modal>
+    </Modal>,
+    document.body
   );
 }
