@@ -3484,6 +3484,7 @@
       "query_pick_value": "Selecione o Valor...",
       "query_no_results": "Nenhuma ação Consultar Dados neste fluxo (crie uma antes do e-mail).",
       "query_related_hint": "› = campo de uma tabela relacionada (ex.: nome do cliente do pedido).",
+      "query_swap_related": "Mostrar outro campo da tabela relacionada…",
       "interval": "A cada",
       "interval_every": "Repetir a cada",
       "interval_unit_minutes": "minutos",

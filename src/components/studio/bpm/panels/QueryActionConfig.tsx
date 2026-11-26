@@ -192,6 +192,19 @@ export function QueryActionConfig(props: any) {
                       <li key={c.field} className="flex items-center gap-1 text-xs text-neutral-700 dark:text-neutral-300">
                         <span className="w-4 text-[9px] text-neutral-400 font-mono">{i + 1}</span>
                         <span className="flex-1 truncate">{c.label || c.field}</span>
+                        {relatedFields.some((r) => r.join.fk === c.field) && (
+                          <select
+                            value=""
+                            onChange={(e) => {
+                              const rf = relatedFields.find((r) => r.field === e.target.value);
+                              if (rf) set({ queryColumns: columns.map((x) => (x.field === c.field ? asColumn(rf) : x)) });
+                            }}
+                            className="max-w-[9rem] text-[10px] bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-1 py-0.5 text-indigo-600 dark:text-indigo-400"
+                          >
+                            <option value="">{t('bpm.canvas.query_swap_related', 'Mostrar outro campo da tabela relacionada…')}</option>
+                            {relatedFields.filter((r) => r.join.fk === c.field && !columns.some((x) => x.field === r.field)).map((r) => <option key={r.field} value={r.field}>{r.label}</option>)}
+                          </select>
+                        )}
                         <button type="button" disabled={i === 0} onClick={() => moveColumn(i, -1)} title={t('bpm.canvas.query_move_up', 'Subir')} className="px-1.5 text-neutral-500 hover:text-indigo-600 disabled:opacity-30">↑</button>
                         <button type="button" disabled={i === columns.length - 1} onClick={() => moveColumn(i, 1)} title={t('bpm.canvas.query_move_down', 'Descer')} className="px-1.5 text-neutral-500 hover:text-indigo-600 disabled:opacity-30">↓</button>
                       </li>

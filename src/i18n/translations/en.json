@@ -3484,6 +3484,7 @@
       "query_pick_value": "Select the Value...",
       "query_no_results": "No Query Data action in this flow (create one before the email).",
       "query_related_hint": "› = field from a related table (e.g. the order's customer name).",
+      "query_swap_related": "Show another field of the related table…",
       "interval": "Every",
       "interval_every": "Repeat every",
       "interval_unit_minutes": "minutes",
