@@ -157,11 +157,12 @@ describe('núcleo do BPM: comportamento extra', () => {
       expect(tech).toMatch(/^\d{4}-\d{2}-\d{2}\|\d{2}:\d{2}:\d{2}\|\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
     })
 
-    it('{{usuario.*}}: vale durante o evento do usuário; sem usuário (agendado, webhook) fica literal', async () => {
+    it('{{usuario.*}}: vale durante o evento do usuário; sem usuário (agendado, webhook) fica literal nos filtros e vazia em texto de e-mail', async () => {
       const core = mk()
       const t = 'por {{usuario.nome}} <{{usuario.email}}> id {{usuario.id}}'
       expect(await core.actorCtx.run(actor, () => core.replaceVariables(t, 'x', {}))).toBe('por Maria Souza <maria@x.com> id u7')
       expect(await core.replaceVariables(t, 'x', {})).toBe(t)
+      expect(await core.replaceVariables(t, 'x', {}, null, null, true)).toBe('por  <> id ')
       // desconhecidos continuam literais
       expect(await core.actorCtx.run(actor, () => core.replaceVariables('{{usuario.cpf}} {{sistema.mes}}', 'x', {}))).toBe('{{usuario.cpf}} {{sistema.mes}}')
     })
@@ -181,7 +182,7 @@ describe('núcleo do BPM: comportamento extra', () => {
       expect(mails[0].subject).toBe('Feito por Maria Souza')
       expect(mails[0].body).toMatch(/^Em \d{2}\/\d{2}\/\d{4} por maria@x.com$/)
       await core.processEvent('orders', 'INSERT', { id: 2 }, null, { nome: 'sem id' } as any)
-      expect(mails[1].subject).toBe('Feito por {{usuario.nome}}')
+      expect(mails[1].subject).toBe('Feito por ')
     })
   })
 

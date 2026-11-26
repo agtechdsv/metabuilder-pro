@@ -356,7 +356,7 @@ class BpmCore {
   /**
    * Variáveis do sistema (não vêm de tabela): {{sistema.data}}, {{sistema.hora}}, {{sistema.data_hora}} e do usuário que agiu:
    * {{usuario.id}}, {{usuario.nome}}, {{usuario.email}}. Em texto lido por gente (e-mail, mensagem) a data sai dd/MM/aaaa;
-   * nos demais usos (filtro, valor gravado) sai ISO (aaaa-MM-dd), que o banco entende. Desconhecida ou sem usuário: undefined (fica literal).
+   * nos demais usos (filtro, valor gravado) sai ISO (aaaa-MM-dd), que o banco entende. Desconhecida ou sem usuário: vazia em texto de e-mail/mensagem e undefined (fica literal) nos demais usos.
    */
   specialVariable(table, field, human) {
     // resultado de uma ação "Consultar dados" desta execução: {{nome.tabela}} (HTML) e {{nome.total}} (quantidade de linhas)
@@ -381,10 +381,14 @@ class BpmCore {
     }
     if (table === 'usuario') {
       const actor = this.actorCtx.getStore()
-      if (!actor) return undefined
-      if (field === 'id') return actor.id
-      if ((field === 'nome' || field === 'name') && actor.name) return actor.name
-      if (field === 'email' && actor.email) return actor.email
+      if (actor) {
+        if (field === 'id' && actor.id) return actor.id
+        if ((field === 'nome' || field === 'name') && actor.name) return actor.name
+        if (field === 'email' && actor.email) return actor.email
+      }
+      // em texto lido por gente (e-mail, mensagem), sem usuário que agiu (agendado, webhook) a variável conhecida sai vazia;
+      // nos demais usos (filtro, valor gravado) continua literal, para não virar um valor vazio sem querer
+      if (human && (field === 'id' || field === 'nome' || field === 'name' || field === 'email')) return ''
     }
     return undefined
   }
