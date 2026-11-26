@@ -35,6 +35,7 @@ import { Save, Play, Wand2, X, ArrowLeft, Loader2, Plus, Trash2, Check, Edit2, B
 import { useRouter } from 'next/navigation';
 import { BpmNodePropertiesSidebar } from './BpmNodePropertiesSidebar';
 import { BpmModals } from './modals/BpmModals';
+import { queryNamesOf } from './SystemVariableOptions';
 import { Modal } from '@/components/ui/Modal';
 import ButtonEdge from './edges/ButtonEdge';
 import { createClient } from '@/utils/supabase/client';
@@ -393,11 +394,12 @@ function BpmCanvasContent({
           t={t}
           enums={enums}
           relations={relations}
-          queryNames={Array.from(new Set((nodes as any[]).filter((n) => n.type === 'action' && n.data?.actionType === 'query').map((n) => (/^[a-z][a-z0-9_]{0,30}$/.test(String(n.data?.queryName ?? '').trim().toLowerCase()) ? String(n.data?.queryName).trim().toLowerCase() : 'consulta'))))}
+          queryNames={queryNamesOf(nodes as any[])}
         />
       </div>
 
       <BpmModals
+        queryNames={queryNamesOf(nodes as any[])}
         selectedGroupForModal={selectedGroupForModal}
         setSelectedGroupForModal={setSelectedGroupForModal}
         isLoadingGroupUsers={isLoadingGroupUsers}

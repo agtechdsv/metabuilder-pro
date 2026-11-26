@@ -14,6 +14,17 @@ export const SYSTEM_VARIABLES = {
   usuario: ['nome', 'email', 'id'],
 } as const;
 
+/** Nomes dos resultados das ações Consultar Dados do fluxo, normalizados como o motor faz (inválido ou vazio vira consulta). */
+export function queryNamesOf(nodes: any[]): string[] {
+  const names = (nodes || [])
+    .filter((n) => n.type === 'action' && n.data?.actionType === 'query')
+    .map((n) => {
+      const v = String(n.data?.queryName ?? '').trim().toLowerCase();
+      return /^[a-z][a-z0-9_]{0,30}$/.test(v) ? v : 'consulta';
+    });
+  return Array.from(new Set(names));
+}
+
 export function SystemVariableOptions({ t, queryNames }: { t: (key: string, fallback?: string) => string; queryNames?: string[] }) {
   return (
     <>

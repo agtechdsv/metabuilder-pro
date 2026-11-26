@@ -103,6 +103,7 @@ export function BpmNodePropertiesSidebar(props: any) {
 
             {selectedNode.type === 'response' && (
               <ResponsePropertiesPanel
+                queryNames={props.queryNames || []}
                 selectedNode={selectedNode}
                 updateNodeData={updateNodeData}
                 dbModels={dbModels}
