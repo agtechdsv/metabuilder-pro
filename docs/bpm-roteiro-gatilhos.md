@@ -171,7 +171,7 @@ Casos de recusa (mostre pelo menos o primeiro no vídeo):
 - **Fluxo desativado ou ID inexistente:** erro, nada é criado.
 - O segredo também vale como `Authorization: Bearer <segredo>`.
 
-## 10. Consultar dados + Agendado · relatório por e-mail (novo, release 1.0.10)
+## 10. Consultar dados + Agendado · relatório por e-mail (novo, release 1.0.10, fases 1 e 2)
 **Status:** [ ] a fazer
 
 **Objetivo:** mandar por e-mail, em horário marcado, dados da aplicação (lista, contagem ou soma), em tabela no corpo e/ou planilha anexa.
@@ -186,11 +186,16 @@ Casos de recusa (mostre pelo menos o primeiro no vídeo):
 | 10d | Não enviar e-mail vazio | Repita 10a numa data sem clientes novos e marque **Não continuar o fluxo se não houver nenhum registro** | Nenhum e-mail sai; o log mostra `Consulta "consulta" sem resultado: o fluxo não continua` | ☐ |
 | 10e | Planilha anexa | Em 10b, marque o anexo (Excel) na ação de e-mail | O e-mail traz `consulta-AAAA-MM-DD.xlsx`; números como número, datas como data | ☐ |
 | 10f | Muitos registros | Consulta com mais de 200 linhas e o anexo marcado | A tabela do corpo mostra 200 linhas e avisa `Mostrando 200 de N linhas`; a planilha tem todas (até o limite da consulta) | ☐ |
+| 10g | Pedidos com valor ≥ 100.000 (campo calculado) | Tabela **Pedidos**, **Listar registros**; marque a coluna **ƒ Total Pedido** (campo calculado do caso de uso); filtro `ƒ Total Pedido` `>=` `100000`; ordene por `ƒ Total Pedido` decrescente | Só os pedidos cujo total (soma de quantidade × preço dos itens) chega a 100.000, com o total em pt-BR | ☐ |
+| 10h | Faturamento por status | **Agrupar e calcular**: agrupar por `status`, **Somar** o campo `ƒ Total Pedido` | Uma linha por status com a soma dos totais dos pedidos | ☐ |
+| 10i | Anexo em PDF | Em 10b ou 10g, escolha o formato **PDF (.pdf)** no anexo do e-mail | O e-mail traz `consulta-AAAA-MM-DD.pdf`: título, data de geração, tabela com cabeçalho repetido nas páginas e "Página x de y" | ☐ |
+| 10j | Condição sobre o resultado | Depois da consulta, um nó de **Condição**: tabela **Resultado da consulta**, nome `consulta`, operador `>` e valor `0`; o e-mail no ramo **verdadeiro** | Com linhas, o e-mail sai; sem linhas, não sai (execução sucesso). Serve para alertas, como "avisar se houver pedido ≥ 100.000" | ☐ |
 
 **Limites desta primeira fase (para explicar no vídeo):**
-- **Só tabelas**, não casos de uso: campos calculados (como o **Total Pedido**, que vem dos itens) **não** são colunas de tabela. Por isso "pedidos com valor ≥ 100.000" fica para a próxima fase.
+- **Campos calculados (ƒ)** vêm dos **casos de uso** da tabela (ex.: **Total Pedido** = soma de quantidade × preço dos itens). Funcionam fórmulas com **+ − × ÷**, parênteses, números e **uma** agregação (SOMA, MÉDIA, MÁXIMO, MÍNIMO, CONTAR) sobre a tabela filha ligada por uma relação do caso de uso. **SE, ARREDONDAR, ABS** e fórmulas com duas tabelas filhas **não** aparecem na lista. Não dá para **agrupar por** um campo calculado (use-o como valor a somar).
+- A fórmula é **copiada para o nó** ao abrir o nó no Studio. Se alterar a fórmula no caso de uso, abra o nó da consulta, confira e salve/publique de novo.
 - **Só leitura**, sem SQL livre; teto de **5.000 linhas** por consulta e **60 segundos**. No e-mail, as 200 primeiras linhas aparecem na tabela e o resto só na planilha.
-- O anexo vai pelo servidor com limite de **2,5 MB** no total (poucas colunas e linhas, no máximo 2 anexos).
+- O anexo (Excel, CSV ou **PDF**) vai pelo servidor com limite de **2,5 MB** no total (poucas colunas e linhas, no máximo 2 anexos). No PDF, texto fora do alfabeto Latin-1 (como emojis) vira `?`.
 - O fluxo roda **como sistema**: quem recebe o e-mail vê tudo o que a consulta devolve, sem as regras de acesso por linha de um usuário. Escolha com cuidado os destinatários e as colunas (dados pessoais).
 - Datas relativas e a semana (começa na **segunda-feira**) seguem o relógio da máquina onde o CLI roda.
 - O **app exportado** executa a consulta, mas **não envia anexo** (só o corpo do e-mail).
