@@ -39,7 +39,7 @@ Marque `[x]` ao concluir cada teste (e anote a data). Os casos de borda têm a c
 | [x] | 1 | Ao inserir · Pedidos | E-mail de confirmação chegou, com a data formatada (`25/11/2026`) | 25/11/2026 |
 | [x] | 2 | Antes de Salvar (novo) · Pedidos | Pedido Cancelado barrado com a mensagem, nada gravado | 25/11/2026 |
 | [x] | 3 | Ao atualizar · Pedidos (De/Para) | Dispara só na mudança para Enviado, com **De** vazio e preenchido; e-mail e mensagem na tela chegaram | 25/11/2026 |
-| [ ] | 4 | Antes de Salvar (edição) · Pedidos | | |
+| [x] | 4 | Antes de Salvar (edição) · Pedidos | Edição de pedido Entregue barrada com a mensagem "Pedido entregue não pode ser editado" | 26/11/2026 |
 | [ ] | 5 | Ao excluir · Pedidos | | |
 | [ ] | 6 | Antes de Excluir · Pedidos | | |
 | [ ] | 7 | Ao Carregar Formulário · Pedidos | | |
@@ -97,13 +97,15 @@ Marque `[x]` ao concluir cada teste (e anote a data). Os casos de borda têm a c
 - Também vale para **Antes de Salvar (edição)**: o painel mostra a restrição nos dois gatilhos de edição.
 
 ## 4. Antes de Salvar (edição) · Pedidos (item 3)
-**Status:** [ ] a fazer
+**Status:** [x] validado em 26/11/2026: a edição do pedido Entregue é barrada com a mensagem.
 **Objetivo:** pedido entregue não pode mais ser alterado.
 1. Gatilho: **Antes de Salvar (Edição)**, tabela **Pedidos**.
 2. **Condição:** `status` `==` `Entregue`, ramo verdadeiro com **Resposta** bloqueando: "Pedido entregue não pode ser editado".
 3. Abra um pedido Entregue, altere qualquer campo e salve.
 
 **Resultado:** a edição é barrada. A condição avalia os dados do formulário, então mudar o status para outro valor passa. Isso é útil para explicar o comportamento no vídeo.
+
+**Dica:** a mensagem do nó de **Resposta** aceita variáveis (botão **+ Variável**), como `Pedido {{pedidos.id}} entregue não pode ser editado`.
 
 ## 5. Ao excluir · Pedidos (item 3)
 **Status:** [ ] a fazer
