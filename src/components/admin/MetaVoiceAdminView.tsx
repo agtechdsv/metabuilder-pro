@@ -24,6 +24,8 @@ import {
 import { useToast } from '@/components/ui/Toast'
 import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n/I18nContext'
+import { localeOf } from '@/lib/billing/localeFormat'
 import {
   Suggestion,
   getSuggestions,
@@ -36,16 +38,19 @@ import {
   deleteSuggestionAdmin
 } from '@/app/actions/admin'
 
-const STATUS_MAP: Record<string, { label: string, color: string, icon: any }> = {
-  under_review: { label: 'Em Análise', color: 'bg-amber-500/10 text-amber-500', icon: Clock },
-  planned: { label: 'Planejado', color: 'bg-blue-500/10 text-blue-500', icon: Layers },
-  in_progress: { label: 'Em Desenvolvimento', color: 'bg-purple-500/10 text-purple-500', icon: Activity },
-  completed: { label: 'Concluído', color: 'bg-emerald-500/10 text-emerald-500', icon: CheckCircle2 },
-  declined: { label: 'Descartada', color: 'bg-rose-500/10 text-rose-500', icon: Ban },
-  duplicate: { label: 'Duplicata', color: 'bg-neutral-500/10 text-neutral-500', icon: Layers },
+const STATUS_MAP: Record<string, { color: string, icon: any }> = {
+  under_review: { color: 'bg-amber-500/10 text-amber-500', icon: Clock },
+  planned: { color: 'bg-blue-500/10 text-blue-500', icon: Layers },
+  in_progress: { color: 'bg-purple-500/10 text-purple-500', icon: Activity },
+  completed: { color: 'bg-emerald-500/10 text-emerald-500', icon: CheckCircle2 },
+  declined: { color: 'bg-rose-500/10 text-rose-500', icon: Ban },
+  duplicate: { color: 'bg-neutral-500/10 text-neutral-500', icon: Layers },
 }
 
 export function MetaVoiceAdminView() {
+  const { t, language } = useI18n()
+  const locale = localeOf(language)
+  const statusText = (key: string) => t('admin_metavoice.st_' + key)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -123,7 +128,7 @@ export function MetaVoiceAdminView() {
       await toggleSuggestionHide(selectedSuggestion.id, isHidden)
     }
 
-    toast('Sugestão atualizada com sucesso!', 'success')
+    toast(t('admin_metavoice.t_updated'), 'success')
     setShowModal(false)
     fetchSuggestions()
     setIsSaving(false)
@@ -136,10 +141,10 @@ export function MetaVoiceAdminView() {
     const res = await toggleUserMetaVoiceBlock(selectedSuggestion.author.id, nextBlock)
     if (res.success) {
       setIsBlocked(nextBlock)
-      toast(nextBlock ? 'Usuário bloqueado no MetaVoice!' : 'Usuário desbloqueado!', 'success')
+      toast(nextBlock ? t('admin_metavoice.t_blocked') : t('admin_metavoice.t_unblocked'), 'success')
       fetchSuggestions()
     } else {
-      toast(res.error || 'Erro ao alternar bloqueio', 'error')
+      toast(res.error || t('admin_metavoice.t_block_error'), 'error')
     }
     setIsProcessingBlock(false)
   }
@@ -148,18 +153,18 @@ export function MetaVoiceAdminView() {
     if (!selectedSuggestion) return
     setConfirmModal({
       isOpen: true,
-      title: 'Excluir Sugestão',
-      message: 'Tem certeza de que deseja EXCLUIR permanentemente esta sugestão? Esta ação não pode ser desfeita.',
+      title: t('admin_metavoice.delete_title'),
+      message: t('admin_metavoice.delete_msg'),
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }))
         setIsProcessingDelete(true)
         const res = await deleteSuggestionAdmin(selectedSuggestion.id)
         if (res.success) {
-          toast('Sugestão excluída com sucesso!', 'success')
+          toast(t('admin_metavoice.t_deleted'), 'success')
           setShowModal(false)
           fetchSuggestions()
         } else {
-          toast(res.error || 'Erro ao excluir sugestão', 'error')
+          toast(res.error || t('admin_metavoice.t_delete_error'), 'error')
         }
         setIsProcessingDelete(false)
       }
@@ -180,10 +185,10 @@ export function MetaVoiceAdminView() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-black text-neutral-900 dark:text-white flex items-center gap-2">
-            <Lightbulb className="w-5 h-5 text-indigo-500" /> Moderação MetaVoice
+            <Lightbulb className="w-5 h-5 text-indigo-500" /> {t('admin_metavoice.title')}
           </h2>
           <p className="text-sm text-neutral-500 mt-1">
-            Gerencie as sugestões dos usuários, defina o roadmap e interaja com a comunidade.
+            {t('admin_metavoice.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -192,7 +197,7 @@ export function MetaVoiceAdminView() {
             onClick={fetchSuggestions}
             disabled={loading}
             className="p-2.5 text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800/80 transition-all flex items-center justify-center disabled:opacity-50 group active:scale-95 duration-200 shadow-sm"
-            title="Atualizar dados"
+            title={t('admin_metavoice.refresh')}
           >
             <RefreshCw className={cn("w-4 h-4 transition-transform duration-500 ease-out", loading ? "animate-spin" : "group-hover:rotate-180")} />
           </button>
@@ -200,7 +205,7 @@ export function MetaVoiceAdminView() {
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input 
               type="text" 
-              placeholder="Buscar..." 
+              placeholder={t('admin_metavoice.search_ph')} 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="pl-9 pr-4 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500"
@@ -211,8 +216,8 @@ export function MetaVoiceAdminView() {
             onChange={e => setStatusFilter(e.target.value)}
             className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2 text-sm font-bold focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="all">Todos os Status</option>
-            {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            <option value="all">{t('admin_metavoice.all_status')}</option>
+            {Object.keys(STATUS_MAP).map(k => <option key={k} value={k}>{statusText(k)}</option>)}
           </select>
         </div>
       </div>
@@ -225,17 +230,17 @@ export function MetaVoiceAdminView() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-20 text-center text-neutral-500 text-sm">
-            Nenhuma sugestão encontrada.
+            {t('admin_metavoice.empty')}
           </div>
         ) : (
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-neutral-50 dark:bg-neutral-900/50 border-b border-neutral-200 dark:border-neutral-800 text-xs uppercase tracking-wider text-neutral-500">
               <tr>
-                <th className="px-6 py-4 font-black">Título</th>
-                <th className="px-6 py-4 font-black text-center">Status</th>
-                <th className="px-6 py-4 font-black text-center">Votos</th>
-                <th className="px-6 py-4 font-black text-center">Resposta Adm</th>
-                <th className="px-6 py-4 font-black text-right">Ação</th>
+                <th className="px-6 py-4 font-black">{t('admin_metavoice.col_title')}</th>
+                <th className="px-6 py-4 font-black text-center">{t('admin_metavoice.col_status')}</th>
+                <th className="px-6 py-4 font-black text-center">{t('admin_metavoice.col_votes')}</th>
+                <th className="px-6 py-4 font-black text-center">{t('admin_metavoice.col_reply')}</th>
+                <th className="px-6 py-4 font-black text-right">{t('admin_metavoice.col_action')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -250,14 +255,14 @@ export function MetaVoiceAdminView() {
                           {s.title}
                         </div>
                         {s.is_hidden && (
-                          <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-neutral-100 dark:bg-neutral-800 text-neutral-500 border border-neutral-200 dark:border-neutral-700">Oculta</span>
+                          <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-neutral-100 dark:bg-neutral-800 text-neutral-500 border border-neutral-200 dark:border-neutral-700">{t('admin_metavoice.hidden')}</span>
                         )}
                       </div>
-                      <div className="text-xs text-neutral-500">{new Date(s.created_at).toLocaleDateString()}</div>
+                      <div className="text-xs text-neutral-500">{new Date(s.created_at).toLocaleDateString(locale)}</div>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase", st.color)}>
-                        <StatusIcon className="w-3 h-3" /> {st.label}
+                        <StatusIcon className="w-3 h-3" /> {statusText(STATUS_MAP[s.status] ? s.status : 'under_review')}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -267,7 +272,7 @@ export function MetaVoiceAdminView() {
                         </span>
                         {s.avgStars !== undefined && s.avgStars > 0 && (
                           <span className="flex items-center gap-1 text-xs font-bold text-amber-500">
-                            <Star className="w-3.5 h-3.5" /> Média: {s.avgStars.toFixed(1)}
+                            <Star className="w-3.5 h-3.5" /> {t('admin_metavoice.avg').replace('{n}', s.avgStars.toFixed(1))}
                           </span>
                         )}
                       </div>
@@ -284,7 +289,7 @@ export function MetaVoiceAdminView() {
                         onClick={() => handleOpenDetails(s)}
                         className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-lg text-xs font-bold transition-colors"
                       >
-                        Avaliar
+                        {t('admin_metavoice.review')}
                       </button>
                     </td>
                   </tr>
@@ -296,7 +301,7 @@ export function MetaVoiceAdminView() {
       </div>
 
       {/* Modal Edit/Moderate */}
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Moderar Sugestão" size="2xl">
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={t('admin_metavoice.modal_title')} size="2xl">
         {selectedSuggestion && (
           <form onSubmit={handleSave} className="space-y-6">
             <div className="p-4 bg-neutral-50 dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800">
@@ -306,25 +311,25 @@ export function MetaVoiceAdminView() {
                   <div className="flex items-center gap-2 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shrink-0">
                     <img
                       src={selectedSuggestion.author.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${selectedSuggestion.author.id}`}
-                      alt={selectedSuggestion.author.full_name || 'Autor'}
+                      alt={selectedSuggestion.author.full_name || t('admin_metavoice.author_fallback')}
                       className="w-5 h-5 rounded-full object-cover"
                     />
                     <div className="text-left">
                       <div className="text-xs font-black text-neutral-900 dark:text-white leading-none">
-                        {selectedSuggestion.author.full_name || 'Membro'}
+                        {selectedSuggestion.author.full_name || t('admin_metavoice.member')}
                         {selectedSuggestion.is_anonymous && (
-                          <span className="text-[8px] font-black text-rose-500 bg-rose-500/10 px-1 py-0.5 rounded ml-1 uppercase">Anônimo</span>
+                          <span className="text-[8px] font-black text-rose-500 bg-rose-500/10 px-1 py-0.5 rounded ml-1 uppercase">{t('admin_metavoice.anonymous')}</span>
                         )}
                       </div>
-                      <div className="text-[9px] text-neutral-400 leading-none mt-0.5">Autor</div>
+                      <div className="text-[9px] text-neutral-400 leading-none mt-0.5">{t('admin_metavoice.author')}</div>
                     </div>
                   </div>
                 )}
               </div>
               <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4 whitespace-pre-wrap">{selectedSuggestion.description}</p>
               <div className="flex items-center gap-4 text-xs font-bold text-neutral-500 uppercase">
-                <span>Categoria: {selectedSuggestion.category}</span>
-                <span>Data: {new Date(selectedSuggestion.created_at).toLocaleString()}</span>
+                <span>{t('admin_metavoice.category').replace('{v}', selectedSuggestion.category)}</span>
+                <span>{t('admin_metavoice.date').replace('{v}', new Date(selectedSuggestion.created_at).toLocaleString(locale))}</span>
               </div>
             </div>
 
@@ -333,23 +338,23 @@ export function MetaVoiceAdminView() {
               {/* Left Column */}
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-black uppercase text-neutral-500 mb-1.5">Status da Sugestão</label>
+                  <label className="block text-xs font-black uppercase text-neutral-500 mb-1.5">{t('admin_metavoice.status_label')}</label>
                   <select 
                     value={editStatus}
                     onChange={e => setEditStatus(e.target.value)}
                     className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-indigo-500"
                   >
-                    {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                    {Object.keys(STATUS_MAP).map(k => <option key={k} value={k}>{statusText(k)}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-black uppercase text-neutral-500 mb-1.5 flex items-center gap-1">
-                    <ShieldAlert className="w-3.5 h-3.5 text-rose-500" /> Nota Privada (Apenas Admins)
+                    <ShieldAlert className="w-3.5 h-3.5 text-rose-500" /> {t('admin_metavoice.private_note')}
                   </label>
                   <textarea 
                     value={privateNote}
                     onChange={e => setPrivateNote(e.target.value)}
-                    placeholder="Ex: Usuário x solicitou também via ticket #123..."
+                    placeholder={t('admin_metavoice.private_ph')}
                     className="w-full bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-rose-500 h-32 resize-none"
                   />
                 </div>
@@ -358,12 +363,12 @@ export function MetaVoiceAdminView() {
               {/* Right Column */}
               <div>
                 <label className="block text-xs font-black uppercase text-neutral-500 mb-1.5 text-emerald-600 dark:text-emerald-400">
-                  Resposta Oficial (Pública)
+                  {t('admin_metavoice.public_reply')}
                 </label>
                 <textarea 
                   value={publicReply}
                   onChange={e => setPublicReply(e.target.value)}
-                  placeholder="Mensagem oficial que todos os clientes poderão ver..."
+                  placeholder={t('admin_metavoice.public_ph')}
                   className="w-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 h-48 resize-none"
                 />
               </div>
@@ -373,7 +378,7 @@ export function MetaVoiceAdminView() {
             {/* Moderation & Safety Tools */}
             <div className="border-t border-neutral-100 dark:border-neutral-800 pt-6">
               <h4 className="text-xs font-black uppercase text-neutral-500 mb-3 flex items-center gap-1">
-                <ShieldAlert className="w-4 h-4 text-indigo-500" /> Ferramentas de Moderação e Segurança
+                <ShieldAlert className="w-4 h-4 text-indigo-500" /> {t('admin_metavoice.tools')}
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 
@@ -388,7 +393,7 @@ export function MetaVoiceAdminView() {
                   />
                   <label htmlFor="hide-suggestion" className="text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5 cursor-pointer">
                     {isHidden ? <EyeOff className="w-4 h-4 text-neutral-500" /> : <Eye className="w-4 h-4 text-emerald-500" />}
-                    {isHidden ? 'Oculto (Exibir)' : 'Ocultar do MetaVoice'}
+                    {isHidden ? t('admin_metavoice.hidden_show') : t('admin_metavoice.hide')}
                   </label>
                 </div>
 
@@ -406,7 +411,7 @@ export function MetaVoiceAdminView() {
                     )}
                   >
                     {isBlocked ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
-                    {isBlocked ? 'Desbloquear Autor' : 'Bloquear Autor'}
+                    {isBlocked ? t('admin_metavoice.unblock_author') : t('admin_metavoice.block_author')}
                   </button>
                 )}
 
@@ -418,7 +423,7 @@ export function MetaVoiceAdminView() {
                   className="px-4 py-3 bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Excluir Sugestão
+                  {t('admin_metavoice.delete_btn')}
                 </button>
 
               </div>
@@ -430,7 +435,7 @@ export function MetaVoiceAdminView() {
                 onClick={() => setShowModal(false)}
                 className="px-5 py-2 text-sm font-bold text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
               >
-                Cancelar
+                {t('admin_metavoice.cancel')}
               </button>
               <button
                 type="submit"
@@ -438,7 +443,7 @@ export function MetaVoiceAdminView() {
                 className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black uppercase tracking-wider rounded-xl transition-colors flex items-center gap-2"
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                Salvar Avaliação
+                {t('admin_metavoice.save')}
               </button>
             </div>
           </form>
@@ -462,14 +467,14 @@ export function MetaVoiceAdminView() {
               onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
               className="px-4 py-2 text-xs font-bold text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
             >
-              Cancelar
+              {t('admin_metavoice.cancel')}
             </button>
             <button
               type="button"
               onClick={confirmModal.onConfirm}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
             >
-              Confirmar
+              {t('admin_metavoice.confirm')}
             </button>
           </div>
         </div>

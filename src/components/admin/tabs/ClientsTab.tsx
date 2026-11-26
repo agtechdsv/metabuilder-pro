@@ -50,7 +50,8 @@ function BillingBox({ preview, mode, checked, onCheck, disabled }: { preview: Bi
 }
 
 export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const {
     searchQuery,
     setSearchQuery,
@@ -105,7 +106,7 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input
               type="text"
-              placeholder="Buscar workspaces por nome, proprietário ou e-mail..."
+              placeholder={t('admin_clients.search_ph')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-xs font-medium focus:outline-none focus:border-indigo-500 text-neutral-800 dark:text-neutral-200"
@@ -144,13 +145,7 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
                     : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'
                 )}
               >
-                {filter === 'all'
-                  ? 'Todos'
-                  : filter === 'active'
-                    ? 'Ativos'
-                    : filter === 'blocked'
-                      ? 'Bloqueados'
-                      : 'Cadastrados'}
+                {t('admin_clients.filter_' + filter)}
               </button>
             ))}
             </div>
@@ -163,13 +158,13 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-neutral-150 dark:border-neutral-850 bg-neutral-50/50 dark:bg-neutral-950/40 text-[10px] font-black uppercase text-neutral-400 tracking-wider">
-                  <th className="px-6 py-4">Dono / Email</th>
-                  <th className="px-6 py-4">Licenças</th>
-                  <th className="px-6 py-4">Workspaces</th>
-                  <th className="px-6 py-4">Projetos</th>
-                  <th className="px-6 py-4">Criação</th>
-                  <th className="px-6 py-4 text-center">Status</th>
-                  <th className="px-6 py-4 text-right">Ação</th>
+                  <th className="px-6 py-4">{t('admin_clients.col_owner')}</th>
+                  <th className="px-6 py-4">{t('admin_clients.col_licenses')}</th>
+                  <th className="px-6 py-4">{t('admin_clients.col_workspaces')}</th>
+                  <th className="px-6 py-4">{t('admin_clients.col_projects')}</th>
+                  <th className="px-6 py-4">{t('admin_clients.col_created')}</th>
+                  <th className="px-6 py-4 text-center">{t('admin_clients.col_status')}</th>
+                  <th className="px-6 py-4 text-right">{t('admin_clients.col_action')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-850/60">
@@ -198,11 +193,11 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
                         <td className="px-6 py-4.5 font-mono font-bold text-xs">
                           {client.ownerLicenses > 0 ? (
                             <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400">
-                              {client.ownerLicenses} Contratada(s) / {1 + client.guestCount} Consumida(s)
+                              {t('admin_clients.licenses_count').replace('{n}', String(client.ownerLicenses)).replace('{m}', String(1 + client.guestCount))}
                             </span>
                           ) : (
                             <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-neutral-100 text-neutral-500 dark:bg-neutral-800">
-                              Gratuito
+                              {t('admin_clients.free')}
                             </span>
                           )}
                         </td>
@@ -224,12 +219,12 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
                             {client.projects.length > 0 ? client.projects.map((p: any) => (
                               <span key={p.id} className="whitespace-nowrap px-1 py-0.5">{p.name} (/{p.slug})</span>
                             )) : (
-                              <span className="whitespace-nowrap px-1 py-0.5 text-neutral-400">Nenhum projeto</span>
+                              <span className="whitespace-nowrap px-1 py-0.5 text-neutral-400">{t('admin_clients.no_projects')}</span>
                             )}
                           </div>
                         </td>
                         <td className="px-6 py-4.5 text-neutral-400">
-                          {new Date(client.created_at).toLocaleDateString('pt-BR')}
+                          {new Date(client.created_at).toLocaleDateString(locale)}
                         </td>
                         <td className="px-6 py-4.5 text-center">
                           <span className={cn(
@@ -238,7 +233,7 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
                               ? "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400"
                               : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-450"
                           )}>
-                            {client.is_blocked ? 'Bloqueado' : 'Ativo'}
+                            {client.is_blocked ? t('admin_clients.status_blocked') : t('admin_clients.status_active')}
                           </span>
                         </td>
                         <td className="px-6 py-4.5 text-right">
@@ -261,7 +256,7 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
                                 className="px-3 py-1.5 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 shrink-0"
                               >
                                 <Unlock className="w-3.5 h-3.5" />
-                                <span>Ativar</span>
+                                <span>{t('admin_clients.activate')}</span>
                               </button>
                             ) : (
                               <button
@@ -270,7 +265,7 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
                                 className="px-3 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1.5 shrink-0"
                               >
                                 <Lock className="w-3.5 h-3.5" />
-                                <span>Bloquear</span>
+                                <span>{t('admin_clients.block')}</span>
                               </button>
                             )}
                             <button
@@ -279,7 +274,7 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
                               className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 text-neutral-500 rounded-lg transition-all flex items-center gap-1.5 font-black text-[9px] uppercase tracking-wider shrink-0"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
-                              <span>Excluir</span>
+                              <span>{t('admin_clients.delete')}</span>
                             </button>
                           </div>
                         </td>
@@ -303,7 +298,7 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
                                       </td>
                                       <td className="py-2.5">
                                         <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-neutral-100 text-neutral-500 dark:bg-neutral-800">
-                                          Guest
+                                          {t('admin_clients.guest')}
                                         </span>
                                       </td>
                                       <td className="py-2.5 text-neutral-400 text-center">-</td>
@@ -314,7 +309,7 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
                                             ? "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400"
                                             : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-450"
                                         )}>
-                                          {guest.is_blocked ? 'Bloqueado' : 'Ativo'}
+                                          {guest.is_blocked ? t('admin_clients.status_blocked') : t('admin_clients.status_active')}
                                         </span>
                                       </td>
                                       <td className="py-2.5 text-right">
@@ -326,7 +321,7 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
                                               className="px-2 py-1 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1 shrink-0"
                                             >
                                               <Unlock className="w-3 h-3" />
-                                              <span>Ativar</span>
+                                              <span>{t('admin_clients.activate')}</span>
                                             </button>
                                           ) : (
                                             <button
@@ -335,7 +330,7 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
                                               className="px-2 py-1 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded transition-all font-black text-[9px] uppercase tracking-wider flex items-center gap-1 shrink-0"
                                             >
                                               <Lock className="w-3 h-3" />
-                                              <span>Bloquear</span>
+                                              <span>{t('admin_clients.block')}</span>
                                             </button>
                                           )}
                                           <button
@@ -344,7 +339,7 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
                                             className="px-2 py-1 bg-neutral-100 dark:bg-neutral-800 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 text-neutral-500 rounded transition-all flex items-center gap-1 font-black text-[9px] uppercase tracking-wider shrink-0"
                                           >
                                             <Trash2 className="w-3 h-3" />
-                                            <span>Excluir</span>
+                                            <span>{t('admin_clients.delete')}</span>
                                           </button>
                                         </div>
                                       </td>
@@ -361,7 +356,7 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
                 ) : (
                   <tr>
                     <td colSpan={8} className="px-6 py-12 text-center text-neutral-400 italic">
-                      Nenhum cliente/workspace encontrado.
+                      {t('admin_clients.empty')}
                     </td>
                   </tr>
                 )}
@@ -380,10 +375,10 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
             setWorkspaceToBlock(null)
           }
         }}
-        title={workspaceToBlock?.isBlocked ? "Bloquear Workspace" : "Ativar Workspace"}
+        title={workspaceToBlock?.isBlocked ? t('admin_clients.block_title') : t('admin_clients.activate_title')}
         description={workspaceToBlock?.isBlocked
-          ? "Isso suspenderá o acesso do cliente a este workspace temporariamente."
-          : "Isso restaurará o acesso do cliente a este workspace."}
+          ? t('admin_clients.block_desc')
+          : t('admin_clients.activate_desc')}
         size="md"
       >
         <div className="space-y-6">
@@ -393,9 +388,9 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
                 <Lock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-sm font-black">Atenção!</p>
+                <p className="text-sm font-black">{t('admin_clients.attention')}</p>
                 <p className="text-xs opacity-90 mt-0.5">
-                  O workspace <span className="font-bold">"{workspaceToBlock?.name}"</span> será bloqueado. Todos os seus usuários perderão acesso imediato.
+                  {t('admin_clients.block_warn').replace('{name}', workspaceToBlock?.name ?? '')}
                 </p>
               </div>
             </div>
@@ -405,9 +400,9 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
                 <Unlock className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
-                <p className="text-sm font-black">Acesso Restaurado</p>
+                <p className="text-sm font-black">{t('admin_clients.restored')}</p>
                 <p className="text-xs opacity-90 mt-0.5">
-                  O workspace <span className="font-bold">"{workspaceToBlock?.name}"</span> será ativado e os usuários poderão acessar novamente.
+                  {t('admin_clients.activate_warn').replace('{name}', workspaceToBlock?.name ?? '')}
                 </p>
               </div>
             </div>
@@ -427,7 +422,7 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
               }}
               className="h-10 px-5 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 font-bold text-xs uppercase tracking-widest border border-neutral-200 dark:border-neutral-750 rounded-xl transition-all"
             >
-              Cancelar
+              {t('admin_clients.cancel')}
             </button>
             <button
               type="button"
@@ -443,17 +438,17 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
               {isBlockingWorkspace ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Processando...</span>
+                  <span>{t('admin_clients.processing')}</span>
                 </>
               ) : workspaceToBlock?.isBlocked ? (
                 <>
                   <Lock className="w-4 h-4" />
-                  <span>Confirmar Bloqueio</span>
+                  <span>{t('admin_clients.confirm_block')}</span>
                 </>
               ) : (
                 <>
                   <Unlock className="w-4 h-4" />
-                  <span>Confirmar Ativação</span>
+                  <span>{t('admin_clients.confirm_activate')}</span>
                 </>
               )}
             </button>
@@ -470,8 +465,8 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
             setClientToDelete(null)
           }
         }}
-        title="Excluir Geral o Cliente"
-        description="Esta ação removerá permanentemente o cliente, seu usuário de acesso, workspaces e todos os dados associados."
+        title={t('admin_clients.delete_title')}
+        description={t('admin_clients.delete_desc')}
         size="md"
       >
         <div className="space-y-6">
@@ -480,9 +475,9 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
               <AlertTriangle className="w-6 h-6 animate-pulse" />
             </div>
             <div>
-              <p className="text-sm font-black">Remover permanentemente?</p>
+              <p className="text-sm font-black">{t('admin_clients.delete_q')}</p>
               <p className="text-xs opacity-90 mt-0.5">
-                O cliente <span className="font-bold">"{clientToDelete?.ownerName}"</span> será apagado de forma irreversível.
+                {t('admin_clients.delete_warn').replace('{name}', clientToDelete?.ownerName ?? '')}
               </p>
             </div>
           </div>
@@ -499,7 +494,7 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
               }}
               className="h-10 px-5 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 font-bold text-xs uppercase tracking-widest border border-neutral-200 dark:border-neutral-750 rounded-xl transition-all"
             >
-              Cancelar
+              {t('admin_clients.cancel')}
             </button>
             <button
               type="button"
@@ -510,12 +505,12 @@ export function ClientsTab({ hook, onViewCharges }: ClientsTabProps) {
               {isDeletingClient ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Excluindo...</span>
+                  <span>{t('admin_clients.deleting')}</span>
                 </>
               ) : (
                 <>
                   <Trash2 className="w-4 h-4" />
-                  <span>Confirmar Exclusão</span>
+                  <span>{t('admin_clients.confirm_delete')}</span>
                 </>
               )}
             </button>

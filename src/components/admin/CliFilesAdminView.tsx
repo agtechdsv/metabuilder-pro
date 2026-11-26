@@ -5,8 +5,15 @@ import { IdeUpdaterButton } from '@/components/runtime/IdeUpdaterButton'
 import { createClient } from '@/utils/supabase/client'
 import { Download, Upload, Trash2, File as FileIcon, Loader2, X, Check, Filter } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/i18n/I18nContext'
 
 export function CliFilesAdminView() {
+  const { t } = useI18n()
+  const k = (key: string, vars: Record<string, string> = {}) => {
+    let out = t('admin_cli_files.' + key)
+    for (const [name, v] of Object.entries(vars)) out = out.split('{' + name + '}').join(v)
+    return out
+  }
   const [files, setFiles] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
@@ -41,7 +48,7 @@ export function CliFilesAdminView() {
 
     if (error) {
       console.error(error)
-      toast('Erro ao carregar arquivos: ' + error.message, 'error')
+      toast(k('t_load_error', { msg: error.message }), 'error')
     } else {
       setFiles(data || [])
     }
@@ -78,7 +85,7 @@ export function CliFilesAdminView() {
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!uploadForm.file || !uploadForm.name || !uploadForm.version) {
-      toast('Preencha todos os campos e selecione um arquivo.', 'error')
+      toast(k('t_fill_all'), 'error')
       return
     }
 
@@ -96,7 +103,7 @@ export function CliFilesAdminView() {
       })
 
     if (uploadError) {
-      toast('Erro ao fazer upload no bucket: ' + uploadError.message, 'error')
+      toast(k('t_upload_error', { msg: uploadError.message }), 'error')
       setIsUploading(false)
       return
     }
@@ -114,9 +121,9 @@ export function CliFilesAdminView() {
       }])
 
     if (dbError) {
-      toast('Erro ao salvar no banco de dados: ' + dbError.message, 'error')
+      toast(k('t_db_error', { msg: dbError.message }), 'error')
     } else {
-      toast('Arquivo enviado e cadastrado com sucesso!', 'success')
+      toast(k('t_uploaded'), 'success')
       setShowModal(false)
       setUploadForm({ name: '', category: 'cli-win', version: '', isActive: true, file: null })
       fetchFiles()
@@ -131,9 +138,9 @@ export function CliFilesAdminView() {
       .eq('id', id)
 
     if (error) {
-      toast('Erro ao atualizar status: ' + error.message, 'error')
+      toast(k('t_status_error', { msg: error.message }), 'error')
     } else {
-      toast('Status atualizado com sucesso.', 'success')
+      toast(k('t_status_ok'), 'success')
       setFiles(files.map(f => f.id === id ? { ...f, is_active: !currentStatus } : f))
     }
   }
@@ -146,12 +153,12 @@ export function CliFilesAdminView() {
     try {
       const { data, error } = await supabase.storage.from('releases').createSignedUrl(bucketPath, 60 * 60)
       if (error || !data) {
-        toast('Erro ao gerar link de download: ' + (error?.message || 'Erro desconhecido'), 'error')
+        toast(k('t_link_error', { msg: error?.message || k('t_unknown') }), 'error')
         return
       }
       window.open(data.signedUrl, '_blank')
     } catch (e: any) {
-      toast('Falha ao tentar baixar: ' + e.message, 'error')
+      toast(k('t_download_fail', { msg: e.message }), 'error')
     }
   }
 
@@ -170,7 +177,7 @@ export function CliFilesAdminView() {
 
     if (!error && category.startsWith('ide-')) {
       try {
-        toast('Excluindo assets do GitHub...', 'info')
+        toast(k('t_deleting_github'), 'info')
         await fetch(`/api/admin/release/assets?category=${category}`, { method: 'DELETE' })
       } catch (e) {
         console.error('Failed to delete github assets', e)
@@ -178,22 +185,22 @@ export function CliFilesAdminView() {
     }
 
     if (error) {
-      toast('Erro ao excluir do banco de dados: ' + error.message, 'error')
+      toast(k('t_delete_db_error', { msg: error.message }), 'error')
     } else {
-      toast('Arquivo excluído com sucesso.', 'success')
+      toast(k('t_deleted'), 'success')
       fetchFiles()
     }
   }
 
   const getCategoryLabel = (cat: string) => {
     switch (cat) {
-      case 'cli-win': return 'CLI (Windows)'
-      case 'cli-linux': return 'CLI (Linux)'
-      case 'template': return 'Template JSON'
-      case 'manual': return 'Manual PDF'
-      case 'ide-win': return 'App (Windows)'
-      case 'ide-mac': return 'App (macOS)'
-      case 'ide-linux': return 'App (Linux)'
+      case 'cli-win': return k('cat_cli_win')
+      case 'cli-linux': return k('cat_cli_linux')
+      case 'template': return k('cat_template')
+      case 'manual': return k('cat_manual')
+      case 'ide-win': return k('cat_ide_win')
+      case 'ide-mac': return k('cat_ide_mac')
+      case 'ide-linux': return k('cat_ide_linux')
       default: return cat
     }
   }
@@ -236,12 +243,12 @@ export function CliFilesAdminView() {
                     {isUpdating ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Atualizando...
+                        {k('updating')}
                       </>
                     ) : (
                       <>
                         <Download className="w-4 h-4" />
-                        Atualizar para a versão {latest}
+                        {k('update_to', { v: latest })}
                       </>
                     )}
                   </button>
@@ -254,15 +261,15 @@ export function CliFilesAdminView() {
 
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 shadow-sm gap-4">
         <div>
-          <h2 className="text-xl font-black text-neutral-900 dark:text-white">IDEs, Arquivos CLI & Manuais</h2>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Gerencie os arquivos que seus clientes podem baixar na Central de Downloads.</p>
+          <h2 className="text-xl font-black text-neutral-900 dark:text-white">{k('title')}</h2>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">{k('subtitle')}</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-lg active:scale-95 text-sm"
         >
           <Upload className="w-5 h-5" />
-          Enviar Arquivo
+          {k('upload')}
         </button>
       </div>
 
@@ -270,17 +277,17 @@ export function CliFilesAdminView() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 px-3 py-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-neutral-500 dark:text-neutral-400">
           <Filter className="w-4 h-4" />
-          <span className="text-xs font-bold uppercase tracking-wider">Filtros:</span>
+          <span className="text-xs font-bold uppercase tracking-wider">{k('filters')}</span>
         </div>
         {[
-          { id: 'all', label: 'Todos' },
-          { id: 'ide-win', label: 'App (Windows)' },
-          { id: 'ide-mac', label: 'App (macOS)' },
-          { id: 'ide-linux', label: 'App (Linux)' },
-          { id: 'cli-win', label: 'CLI Windows' },
-          { id: 'cli-linux', label: 'CLI Linux' },
-          { id: 'template', label: 'Templates' },
-          { id: 'manual', label: 'Manuais' }
+          { id: 'all', label: k('f_all') },
+          { id: 'ide-win', label: k('cat_ide_win') },
+          { id: 'ide-mac', label: k('cat_ide_mac') },
+          { id: 'ide-linux', label: k('cat_ide_linux') },
+          { id: 'cli-win', label: k('f_cli_win') },
+          { id: 'cli-linux', label: k('f_cli_linux') },
+          { id: 'template', label: k('f_template') },
+          { id: 'manual', label: k('f_manual') }
         ].map(f => (
           <button
             key={f.id}
@@ -300,12 +307,12 @@ export function CliFilesAdminView() {
           <table className="w-full text-left border-collapse relative">
             <thead className="sticky top-0 z-10 bg-neutral-50/95 dark:bg-neutral-800/95 backdrop-blur-sm shadow-sm border-b border-neutral-200 dark:border-neutral-700">
               <tr>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Arquivo</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Categoria</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Versão</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Tamanho</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-center">Ativo?</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">Ações</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">{k('col_file')}</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">{k('col_category')}</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">{k('col_version')}</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">{k('col_size')}</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-center">{k('col_active')}</th>
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">{k('col_actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -348,14 +355,14 @@ export function CliFilesAdminView() {
                       <button
                         onClick={() => handleDownloadFile(file.bucket_path, file.name)}
                         className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 text-neutral-400 hover:text-indigo-500 rounded-lg transition-colors"
-                        title="Baixar Arquivo"
+                        title={k('download')}
                       >
                         <Download className="w-5 h-5" />
                       </button>
                       <button
                         onClick={() => handleDeleteClick(file.id, file.bucket_path, file.name, file.category)}
                         className="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 text-neutral-400 hover:text-red-500 rounded-lg transition-colors"
-                        title="Excluir Arquivo"
+                        title={k('delete')}
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
@@ -369,7 +376,7 @@ export function CliFilesAdminView() {
                   <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <Download className="w-8 h-8 text-neutral-400" />
                   </div>
-                  <p className="text-sm font-bold text-neutral-500">Nenhum arquivo encontrado.</p>
+                  <p className="text-sm font-bold text-neutral-500">{k('empty')}</p>
                 </td>
               </tr>
             )}
@@ -383,7 +390,7 @@ export function CliFilesAdminView() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-neutral-900 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800">
             <div className="p-6 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
-              <h3 className="text-xl font-black text-neutral-900 dark:text-white">Enviar Novo Arquivo</h3>
+              <h3 className="text-xl font-black text-neutral-900 dark:text-white">{k('modal_title')}</h3>
               <button onClick={() => setShowModal(false)} className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300">
                 <X className="w-6 h-6" />
               </button>
@@ -391,11 +398,11 @@ export function CliFilesAdminView() {
 
             <form onSubmit={handleUploadSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">Nome do Arquivo (Exibição)</label>
+                <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">{k('name_label')}</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ex: CLI Windows - MetaBuilder"
+                  placeholder={k('name_ph')}
                   className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm dark:text-white"
                   value={uploadForm.name}
                   onChange={e => setUploadForm({ ...uploadForm, name: e.target.value })}
@@ -404,27 +411,27 @@ export function CliFilesAdminView() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">Categoria</label>
+                  <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">{k('col_category')}</label>
                   <select
                     className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm dark:text-white"
                     value={uploadForm.category}
                     onChange={e => setUploadForm({ ...uploadForm, category: e.target.value })}
                   >
-                    <option value="cli-win">CLI (Windows)</option>
-                    <option value="cli-linux">CLI (Linux)</option>
-                    <option value="template">Template JSON</option>
-                    <option value="manual">Manual PDF</option>
-                    <option value="ide-win">App Desktop (Windows)</option>
-                    <option value="ide-mac">App Desktop (macOS)</option>
-                    <option value="ide-linux">App Desktop (Linux)</option>
+                    <option value="cli-win">{k('cat_cli_win')}</option>
+                    <option value="cli-linux">{k('cat_cli_linux')}</option>
+                    <option value="template">{k('cat_template')}</option>
+                    <option value="manual">{k('cat_manual')}</option>
+                    <option value="ide-win">{k('opt_ide_win')}</option>
+                    <option value="ide-mac">{k('opt_ide_mac')}</option>
+                    <option value="ide-linux">{k('opt_ide_linux')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">Versão</label>
+                  <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">{k('col_version')}</label>
                   <input
                     type="text"
                     required
-                    placeholder="Ex: 1.0.0"
+                    placeholder={k('version_ph')}
                     className="w-full px-4 py-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm dark:text-white"
                     value={uploadForm.version}
                     onChange={e => setUploadForm({ ...uploadForm, version: e.target.value })}
@@ -433,7 +440,7 @@ export function CliFilesAdminView() {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">Selecione o Arquivo</label>
+                <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">{k('pick_file')}</label>
                 <input
                   type="file"
                   required
@@ -453,8 +460,8 @@ export function CliFilesAdminView() {
                   <Check className="w-4 h-4 text-white absolute left-1 pointer-events-none opacity-0 peer-checked:opacity-100" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-neutral-900 dark:text-white">Deixar arquivo Ativo?</div>
-                  <div className="text-xs text-neutral-500">Se marcado, aparecerá imediatamente para os clientes.</div>
+                  <div className="text-sm font-bold text-neutral-900 dark:text-white">{k('active_q')}</div>
+                  <div className="text-xs text-neutral-500">{k('active_hint')}</div>
                 </div>
               </label>
 
@@ -464,7 +471,7 @@ export function CliFilesAdminView() {
                   onClick={() => setShowModal(false)}
                   className="flex-1 px-6 py-3 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-xl font-bold transition-all text-sm"
                 >
-                  Cancelar
+                  {k('cancel')}
                 </button>
                 <button
                   type="submit"
@@ -472,7 +479,7 @@ export function CliFilesAdminView() {
                   className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all text-sm disabled:opacity-50"
                 >
                   {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
-                  {isUploading ? 'Enviando...' : 'Salvar e Enviar'}
+                  {isUploading ? k('sending') : k('save_send')}
                 </button>
               </div>
             </form>
@@ -487,23 +494,23 @@ export function CliFilesAdminView() {
             <div className="w-16 h-16 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Trash2 className="w-8 h-8" />
             </div>
-            <h3 className="text-xl font-black text-neutral-900 dark:text-white mb-2">Excluir Arquivo</h3>
+            <h3 className="text-xl font-black text-neutral-900 dark:text-white mb-2">{k('delete_title')}</h3>
             <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">
-              Tem certeza que deseja excluir <strong>{deleteConfirm.name}</strong>?<br />
-              Esta ação não pode ser desfeita.
+              {k('delete_q_pre')}<strong>{deleteConfirm.name}</strong>{k('delete_q_post')}<br />
+              {k('delete_irreversible')}
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteConfirm(null)}
                 className="flex-1 px-6 py-3 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-xl font-bold transition-all text-sm"
               >
-                Cancelar
+                {k('cancel')}
               </button>
               <button
                 onClick={confirmDelete}
                 className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold transition-all text-sm"
               >
-                Sim, Excluir
+                {k('delete_yes')}
               </button>
             </div>
           </div>

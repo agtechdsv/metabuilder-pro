@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/i18n/I18nContext'
 import { getIClubAdminRules, saveIClubAdminRule, deleteIClubAdminRule } from '@/app/actions/iclub'
 import { IClubRule, getLocalizedIClubRuleName } from '@/lib/iclub'
 
 export function useIClubAdmin(activeTab: string) {
   const { toast } = useToast()
+  const { t } = useI18n()
 
   const [iclubRules, setIclubRules] = useState<IClubRule[]>([])
   const [isLoadingRules, setIsLoadingRules] = useState(false)
@@ -32,7 +34,7 @@ export function useIClubAdmin(activeTab: string) {
     if (res.success && res.rules) {
       setIclubRules(res.rules)
     } else {
-      toast(res.error || 'Erro ao carregar regras do iClub.', 'error')
+      toast(res.error || t('admin_iclub.t_load_error'), 'error')
     }
     setIsLoadingRules(false)
   }
@@ -101,7 +103,7 @@ export function useIClubAdmin(activeTab: string) {
   const handleSaveRule = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!ruleNamePt.trim() && !ruleNameEn.trim() && !ruleNameEs.trim()) {
-      toast('Nome da regra em pelo menos um idioma é obrigatório', 'info')
+      toast(t('admin_iclub.t_name_required'), 'info')
       return
     }
 
@@ -125,11 +127,11 @@ export function useIClubAdmin(activeTab: string) {
     setIsSavingRule(false)
 
     if (result.success) {
-      toast(editingRule ? 'Regra atualizada com sucesso!' : 'Nova regra criada com sucesso!', 'success')
+      toast(editingRule ? t('admin_iclub.t_updated') : t('admin_iclub.t_created'), 'success')
       setIsRuleModalOpen(false)
       fetchIClubRules()
     } else {
-      toast(result.error || 'Erro ao salvar a regra', 'error')
+      toast(result.error || t('admin_iclub.t_save_error'), 'error')
     }
   }
 
@@ -140,12 +142,12 @@ export function useIClubAdmin(activeTab: string) {
     setIsDeletingRule(false)
     if (result.success) {
       const localizedName = getLocalizedIClubRuleName(ruleToDelete.name, 'pt')
-      toast(`Regra "${localizedName}" excluída com sucesso.`, 'success')
+      toast(t('admin_iclub.t_deleted').replace('{name}', localizedName), 'success')
       setIsDeleteRuleModalOpen(false)
       setRuleToDelete(null)
       fetchIClubRules()
     } else {
-      toast(result.error || 'Erro ao excluir a regra.', 'error')
+      toast(result.error || t('admin_iclub.t_delete_error'), 'error')
     }
   }
 

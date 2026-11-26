@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/i18n/I18nContext'
 import {
   getAllAppointments,
   updateAppointmentStatus,
@@ -29,6 +30,7 @@ export interface Appointment {
 
 export function useAgendaAdmin(activeTab: string) {
   const { toast } = useToast()
+  const { t } = useI18n()
 
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [isLoadingAppointments, setIsLoadingAppointments] = useState(false)
@@ -56,7 +58,7 @@ export function useAgendaAdmin(activeTab: string) {
     if (res.success && res.appointments) {
       setAppointments(res.appointments as Appointment[])
     } else {
-      toast(res.error || 'Erro ao carregar a agenda.', 'error')
+      toast(res.error || t('admin_agenda.t_load_error'), 'error')
     }
     setIsLoadingAppointments(false)
   }
@@ -83,13 +85,13 @@ export function useAgendaAdmin(activeTab: string) {
     setIsSavingLink(true)
     const res = await updateAppointmentLink(id, demoLink)
     if (res.success) {
-      toast('Link da demonstração atualizado com sucesso!', 'success')
+      toast(t('admin_agenda.t_link_ok'), 'success')
       setAppointments(prev => prev.map(a => a.id === id ? { ...a, link_demonstracao: demoLink } : a))
       if (selectedAppointment?.id === id) {
         setSelectedAppointment(prev => prev ? { ...prev, link_demonstracao: demoLink } : null)
       }
     } else {
-      toast(res.error || 'Erro ao atualizar link da demonstração.', 'error')
+      toast(res.error || t('admin_agenda.t_link_error'), 'error')
     }
     setIsSavingLink(false)
   }
@@ -98,7 +100,7 @@ export function useAgendaAdmin(activeTab: string) {
 
   const handleSendEmail = async (app: Appointment) => {
     if (!app.link_demonstracao) {
-      toast('Por favor, defina e salve um link da demonstração primeiro antes de enviar o e-mail.', 'error')
+      toast(t('admin_agenda.t_need_link'), 'error')
       return
     }
     setIsSendingEmail(app.id)
@@ -110,13 +112,13 @@ export function useAgendaAdmin(activeTab: string) {
       linkDemonstracao: app.link_demonstracao
     })
     if (res.success) {
-      toast('E-mail de confirmação enviado com sucesso para o cliente!', 'success')
+      toast(t('admin_agenda.t_email_ok'), 'success')
       setAppointments(prev => prev.map(a => a.id === app.id ? { ...a, status: 'Confirmado' } : a))
       if (selectedAppointment?.id === app.id) {
         setSelectedAppointment(prev => prev ? { ...prev, status: 'Confirmado' } : null)
       }
     } else {
-      toast(res.error || 'Erro ao enviar o e-mail de confirmação.', 'error')
+      toast(res.error || t('admin_agenda.t_email_error'), 'error')
     }
     setIsSendingEmail(null)
   }
@@ -167,19 +169,19 @@ Nos vemos em breve!`
     const res = await updateAppointmentStatus(id, newStatus)
     if (res.success) {
       if (newStatus === 'Cancelado') {
-        toast('Compromisso cancelado com sucesso.', 'success', {
-          label: 'Desfazer',
+        toast(t('admin_agenda.t_canceled_ok'), 'success', {
+          label: t('admin_agenda.t_undo'),
           onClick: () => handleUpdateStatus(id, 'Pendente')
         })
       } else {
-        toast(`Status do compromisso atualizado para ${newStatus}.`, 'success')
+        toast(t('admin_agenda.t_status_ok').replace('{status}', t('admin_agenda.status_' + newStatus)), 'success')
       }
       setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus as any } : a))
       if (selectedAppointment?.id === id) {
         setSelectedAppointment(prev => prev ? { ...prev, status: newStatus as any } : null)
       }
     } else {
-      toast(res.error || 'Erro ao atualizar status.', 'error')
+      toast(res.error || t('admin_agenda.t_status_error'), 'error')
     }
     setIsUpdatingStatus(false)
   }
@@ -189,7 +191,7 @@ Nos vemos em breve!`
     setIsDeletingAppointment(true)
     const res = await deleteAppointment(appointmentToDelete.id)
     if (res.success) {
-      toast('Compromisso excluído permanentemente.', 'success')
+      toast(t('admin_agenda.t_deleted_ok'), 'success')
       setAppointments(prev => prev.filter(a => a.id !== appointmentToDelete.id))
       setIsDeleteAppointmentModalOpen(false)
       setAppointmentToDelete(null)
@@ -197,7 +199,7 @@ Nos vemos em breve!`
         setSelectedAppointment(null)
       }
     } else {
-      toast(res.error || 'Erro ao excluir compromisso.', 'error')
+      toast(res.error || t('admin_agenda.t_delete_error'), 'error')
     }
     setIsDeletingAppointment(false)
   }
@@ -219,7 +221,7 @@ Nos vemos em breve!`
       )
 
       if (res.success) {
-        toast('Compromisso reagendado com sucesso!', 'success')
+        toast(t('admin_agenda.t_resched_ok'), 'success')
         setAppointments(prev => prev.map(a => a.id === reschedulingAppointment.id ? {
           ...a,
           data_inicio: startDateTime.toISOString(),
@@ -230,10 +232,10 @@ Nos vemos em breve!`
         setFastRescheduleMode(false)
         setReschedulingAppointment(null)
       } else {
-        toast(res.error || 'Erro ao reagendar compromisso.', 'error')
+        toast(res.error || t('admin_agenda.t_resched_error'), 'error')
       }
     } catch (err) {
-      toast('Erro de processamento. Verifique os dados.', 'error')
+      toast(t('admin_agenda.t_process_error'), 'error')
     } finally {
       setIsRescheduling(false)
     }
@@ -273,7 +275,7 @@ Nos vemos em breve!`
     startDateTime.setHours(hours, minutes, 0, 0)
 
     if (startDateTime < new Date()) {
-      toast('Não é possível reagendar compromissos para um horário passado.', 'error')
+      toast(t('admin_agenda.t_past_slot'), 'error')
       return
     }
 
@@ -282,7 +284,7 @@ Nos vemos em breve!`
 
     const isOccupied = findAppointmentForSlot(targetDate, targetSlot)
     if (isOccupied && isOccupied.id !== id) {
-      toast('Este horário já está ocupado por outro compromisso.', 'error')
+      toast(t('admin_agenda.t_busy_slot'), 'error')
       return
     }
 
@@ -291,7 +293,7 @@ Nos vemos em breve!`
     setIsRescheduling(false)
 
     if (res.success) {
-      toast('Compromisso reagendado com sucesso!', 'success')
+      toast(t('admin_agenda.t_resched_ok'), 'success')
       setAppointments(prev => prev.map(a => a.id === id ? {
         ...a,
         data_inicio: startDateTime.toISOString(),
@@ -307,7 +309,7 @@ Nos vemos em breve!`
         } : null)
       }
     } else {
-      toast(res.error || 'Erro ao reagendar compromisso.', 'error')
+      toast(res.error || t('admin_agenda.t_resched_error'), 'error')
     }
   }
 

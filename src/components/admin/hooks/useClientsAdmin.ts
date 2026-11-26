@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/i18n/I18nContext'
 import { toggleClientBlock, deleteClientAdmin, inspectClientBilling } from '@/app/actions/admin'
 import type { BillingInspection } from '@/lib/admin/billingCancel'
 
@@ -18,6 +19,7 @@ export function useClientsAdmin(
   setClientProfiles: React.Dispatch<React.SetStateAction<any[]>>
 ) {
   const { toast } = useToast()
+  const { t } = useI18n()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'blocked' | 'registered'>('all')
@@ -38,7 +40,7 @@ export function useClientsAdmin(
   const loadBillingPreview = async (ownerId: string) => {
     setBillingPreview({ loading: true, info: null, error: null })
     const r = await inspectClientBilling(ownerId)
-    setBillingPreview(r.success ? { loading: false, info: r.info ?? null, error: null } : { loading: false, info: null, error: r.error || 'Não foi possível consultar o Asaas.' })
+    setBillingPreview(r.success ? { loading: false, info: r.info ?? null, error: null } : { loading: false, info: null, error: r.error || t('admin_clients.asaas_unavailable') })
   }
 
   const filteredClients = useMemo(() => {

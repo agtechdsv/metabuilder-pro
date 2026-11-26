@@ -5,11 +5,14 @@ import { Plus, Trash2, Save, Loader2, Info, X, Check } from 'lucide-react'
 import { getPricingRules, savePricingRules } from '@/app/actions/admin'
 import { useToast } from '@/components/ui/Toast'
 import { RepriceCard } from '@/components/admin/RepriceCard'
+import { useI18n } from '@/i18n/I18nContext'
+import { moneyLocale } from '@/lib/billing/localeFormat'
 
 export function PricingRulesAdmin() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const { toast } = useToast()
+  const { t, language } = useI18n()
   const [confirmDeleteIdx, setConfirmDeleteIdx] = useState<number | null>(null)
 
   const [basePrice, setBasePrice] = useState(450)
@@ -56,7 +59,7 @@ export function PricingRulesAdmin() {
     }
 
     if (!isValid) {
-      toast('As regras de quantidade de licenças devem ser estritamente crescentes (a linha de baixo deve ter mais licenças que a de cima).', 'error')
+      toast(t('admin_pricing.t_tiers_order'), 'error')
       return
     }
 
@@ -69,10 +72,10 @@ export function PricingRulesAdmin() {
     setIsSaving(false)
 
     if (res.success) {
-      toast('Regras de precificação atualizadas com sucesso!', 'success')
+      toast(t('admin_pricing.t_saved'), 'success')
       setVolumeTiers(sortedTiers)
     } else {
-      toast(res.error || 'Erro ao salvar regras', 'error')
+      toast(res.error || t('admin_pricing.t_save_error'), 'error')
     }
   }
 
@@ -90,10 +93,10 @@ export function PricingRulesAdmin() {
   }
 
   const CYCLE_ROWS = [
-    { key: 'monthly', label: 'Mensal', months: 1 },
-    { key: 'quarterly', label: 'Trimestral', months: 3 },
-    { key: 'semiannual', label: 'Semestral', months: 6 },
-    { key: 'yearly', label: 'Anual', months: 12 }
+    { key: 'monthly', label: t('admin_pricing.cycle_monthly'), months: 1 },
+    { key: 'quarterly', label: t('admin_pricing.cycle_quarterly'), months: 3 },
+    { key: 'semiannual', label: t('admin_pricing.cycle_semiannual'), months: 6 },
+    { key: 'yearly', label: t('admin_pricing.cycle_yearly'), months: 12 }
   ] as const
 
   const disabledCycles: string[] = Array.isArray(cycleDiscounts.disabled_cycles) ? cycleDiscounts.disabled_cycles : []
@@ -105,7 +108,7 @@ export function PricingRulesAdmin() {
   const dimCol = (key: string) => (isCycleOn(key) ? '' : ' opacity-30')
 
   const formatCurrency = (val: number) => {
-    return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    return moneyLocale(val, language)
   }
 
   if (isLoading) {
@@ -123,8 +126,8 @@ export function PricingRulesAdmin() {
 
       <div className="flex justify-between items-center bg-white dark:bg-neutral-900/40 p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm">
         <div>
-          <h2 className="text-xl font-black text-neutral-900 dark:text-white">Regras de Precificação Dinâmica</h2>
-          <p className="text-sm text-neutral-500 mt-1">Configure o valor base e os descontos progressivos por volume e ciclo de pagamento.</p>
+          <h2 className="text-xl font-black text-neutral-900 dark:text-white">{t('admin_pricing.title')}</h2>
+          <p className="text-sm text-neutral-500 mt-1">{t('admin_pricing.subtitle')}</p>
         </div>
         <button
           onClick={handleSave}
@@ -132,7 +135,7 @@ export function PricingRulesAdmin() {
           className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-bold uppercase tracking-widest flex items-center gap-2"
         >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Salvar Regras
+          {t('admin_pricing.save')}
         </button>
       </div>
 
@@ -140,9 +143,9 @@ export function PricingRulesAdmin() {
         {/* Preço Base */}
         <div className="bg-white dark:bg-neutral-900/40 p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-4">
           <h3 className="font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-            Valor Base (Mensal)
+            {t('admin_pricing.base_title')}
           </h3>
-          <p className="text-xs text-neutral-500">Este é o valor de 1 licença no ciclo mensal sem descontos.</p>
+          <p className="text-xs text-neutral-500">{t('admin_pricing.base_hint')}</p>
           <div className="flex items-center gap-2 mt-2">
             <span className="text-neutral-500 font-bold">R$</span>
             <input
@@ -156,8 +159,8 @@ export function PricingRulesAdmin() {
 
         {/* Descontos de Ciclo */}
         <div className="bg-white dark:bg-neutral-900/40 p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-4">
-          <h3 className="font-bold text-neutral-900 dark:text-white">Descontos por Ciclo de Renovação</h3>
-          <p className="text-xs text-neutral-500">Porcentagem de desconto aplicada sobre o valor total em renovações mais longas.</p>
+          <h3 className="font-bold text-neutral-900 dark:text-white">{t('admin_pricing.cycle_title')}</h3>
+          <p className="text-xs text-neutral-500">{t('admin_pricing.cycle_hint')}</p>
           
           <div className="space-y-3">
             {CYCLE_ROWS.map(({ key, label, months }) => {
@@ -173,7 +176,7 @@ export function PricingRulesAdmin() {
                         type="button"
                         role="switch"
                         aria-checked={enabled}
-                        title={enabled ? 'Ativo: aparece no site e no checkout' : 'Inativo: oculto no site e no checkout'}
+                        title={enabled ? t('admin_pricing.cycle_on') : t('admin_pricing.cycle_off')}
                         onClick={() => toggleCycle(key)}
                         className={`relative w-9 h-5 rounded-full shrink-0 transition-colors ${enabled ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-neutral-700'}`}
                       >
@@ -183,8 +186,8 @@ export function PricingRulesAdmin() {
                     <label className="text-sm font-semibold">{label}</label>
                   </div>
                   <div className="flex flex-col text-right w-2/4 px-4">
-                    <span className="text-[11px] text-neutral-400">Total: {formatCurrency(basePrice * months * (1 - discount / 100))}</span>
-                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(basePrice * (1 - discount / 100))} / mês</span>
+                    <span className="text-[11px] text-neutral-400">{t('admin_pricing.total').replace('{value}', formatCurrency(basePrice * months * (1 - discount / 100)))}</span>
+                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{t('admin_pricing.per_month').replace('{value}', formatCurrency(basePrice * (1 - discount / 100)))}</span>
                   </div>
                   <div className="flex items-center gap-1 w-1/4 justify-end">
                     <input
@@ -206,30 +209,30 @@ export function PricingRulesAdmin() {
         <div className="md:col-span-2 bg-white dark:bg-neutral-900/40 p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-6">
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="font-bold text-neutral-900 dark:text-white">Descontos por Volume (Licenças)</h3>
-              <p className="text-xs text-neutral-500 mt-1">Configure faixas de desconto com base na quantidade de licenças adquiridas.</p>
+              <h3 className="font-bold text-neutral-900 dark:text-white">{t('admin_pricing.vol_title')}</h3>
+              <p className="text-xs text-neutral-500 mt-1">{t('admin_pricing.vol_hint')}</p>
               <div className="bg-amber-500/10 text-amber-600 dark:text-amber-500 p-2 rounded-lg mt-2 text-xs flex gap-2 items-start">
                 <Info className="w-4 h-4 shrink-0 mt-0.5" />
-                <p>Regra de Ouro: A linha de baixo deve <strong>sempre</strong> exigir um número de licenças maior que a linha de cima. As faixas devem ser cadastradas de forma crescente.</p>
+                <p>{t('admin_pricing.golden_rule').split('{always}').flatMap((part, i) => i === 0 ? [part] : [<strong key="a">{t('admin_pricing.always')}</strong>, part])}</p>
               </div>
             </div>
             <button
               onClick={addTier}
               className="px-3 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl font-bold flex items-center gap-1 hover:bg-indigo-100 transition-colors"
             >
-              <Plus className="w-4 h-4" /> Add Faixa
+              <Plus className="w-4 h-4" /> {t('admin_pricing.add_tier')}
             </button>
           </div>
 
           <div className="space-y-3">
             <div className="grid grid-cols-12 gap-4 text-[10px] font-black uppercase text-neutral-400 px-2 items-center text-center">
-              <div className="col-span-2 text-left">Licenças (≥)</div>
-              <div className="col-span-2 text-left">Desconto</div>
-              <div className="col-span-2">Mensal</div>
-              <div className={`col-span-2${dimCol('quarterly')}`}>Trimestral</div>
-              <div className={`col-span-2${dimCol('semiannual')}`}>Semestral</div>
-              <div className={`col-span-1${dimCol('yearly')}`}>Anual</div>
-              <div className="col-span-1 text-right">Ação</div>
+              <div className="col-span-2 text-left">{t('admin_pricing.col_licenses')}</div>
+              <div className="col-span-2 text-left">{t('admin_pricing.col_discount')}</div>
+              <div className="col-span-2">{t('admin_pricing.cycle_monthly')}</div>
+              <div className={`col-span-2${dimCol('quarterly')}`}>{t('admin_pricing.cycle_quarterly')}</div>
+              <div className={`col-span-2${dimCol('semiannual')}`}>{t('admin_pricing.cycle_semiannual')}</div>
+              <div className={`col-span-1${dimCol('yearly')}`}>{t('admin_pricing.cycle_yearly')}</div>
+              <div className="col-span-1 text-right">{t('admin_pricing.col_action')}</div>
             </div>
             
             <div className="space-y-2">
@@ -274,7 +277,7 @@ export function PricingRulesAdmin() {
                       {formatCurrency(basePrice * (1 - tier.discount_percent / 100) * tier.min_licenses)}
                     </span>
                     <span className="text-[9px] text-neutral-400 font-normal mt-0.5">
-                      {formatCurrency(basePrice * (1 - tier.discount_percent / 100))} / licença
+                      {t('admin_pricing.per_license').replace('{value}', formatCurrency(basePrice * (1 - tier.discount_percent / 100)))}
                     </span>
                   </div>
                   <div className={`col-span-2 flex flex-col justify-center${dimCol('quarterly')}`}>
@@ -282,8 +285,8 @@ export function PricingRulesAdmin() {
                       {formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.quarterly / 100) * tier.min_licenses * 3)}
                     </span>
                     <span className="text-[9px] text-neutral-400 font-normal mt-0.5 flex flex-col">
-                      <span>{formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.quarterly / 100) * tier.min_licenses)} / mês</span>
-                      <span>{formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.quarterly / 100))} / licença</span>
+                      <span>{t('admin_pricing.per_month').replace('{value}', formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.quarterly / 100) * tier.min_licenses))}</span>
+                      <span>{t('admin_pricing.per_license').replace('{value}', formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.quarterly / 100)))}</span>
                     </span>
                   </div>
                   <div className={`col-span-2 flex flex-col justify-center${dimCol('semiannual')}`}>
@@ -291,8 +294,8 @@ export function PricingRulesAdmin() {
                       {formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.semiannual / 100) * tier.min_licenses * 6)}
                     </span>
                     <span className="text-[9px] text-neutral-400 font-normal mt-0.5 flex flex-col">
-                      <span>{formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.semiannual / 100) * tier.min_licenses)} / mês</span>
-                      <span>{formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.semiannual / 100))} / licença</span>
+                      <span>{t('admin_pricing.per_month').replace('{value}', formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.semiannual / 100) * tier.min_licenses))}</span>
+                      <span>{t('admin_pricing.per_license').replace('{value}', formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.semiannual / 100)))}</span>
                     </span>
                   </div>
                   <div className={`col-span-1 flex flex-col justify-center${dimCol('yearly')}`}>
@@ -300,8 +303,8 @@ export function PricingRulesAdmin() {
                       {formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.yearly / 100) * tier.min_licenses * 12)}
                     </span>
                     <span className="text-[9px] text-neutral-400 font-normal mt-0.5 flex flex-col">
-                      <span>{formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.yearly / 100) * tier.min_licenses)} / mês</span>
-                      <span>{formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.yearly / 100))} / licença</span>
+                      <span>{t('admin_pricing.per_month').replace('{value}', formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.yearly / 100) * tier.min_licenses))}</span>
+                      <span>{t('admin_pricing.per_license').replace('{value}', formatCurrency(basePrice * (1 - tier.discount_percent / 100) * (1 - cycleDiscounts.yearly / 100)))}</span>
                     </span>
                   </div>
                   <div className="col-span-1 flex justify-end">
@@ -310,7 +313,7 @@ export function PricingRulesAdmin() {
                         <button
                           onClick={() => setConfirmDeleteIdx(null)}
                           className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors"
-                          title="Cancelar"
+                          title={t('admin_pricing.cancel')}
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -320,7 +323,7 @@ export function PricingRulesAdmin() {
                             setConfirmDeleteIdx(null)
                           }}
                           className="p-1 text-red-500 hover:text-red-700 transition-colors"
-                          title="Confirmar exclusão"
+                          title={t('admin_pricing.confirm_delete')}
                         >
                           <Check className="w-4 h-4 stroke-[3]" />
                         </button>

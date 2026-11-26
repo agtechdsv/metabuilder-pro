@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/utils/supabase/client'
+import { useI18n } from '@/i18n/I18nContext'
 import { CheckCircle2, X, Rocket, ExternalLink, Package } from 'lucide-react'
 
 interface ReleaseNotification {
@@ -12,6 +13,8 @@ interface ReleaseNotification {
 }
 
 export function ReleaseCompletionNotifier() {
+  const { t } = useI18n()
+  const k = (key: string) => t('admin_release_view.' + key)
   const [notification, setNotification] = useState<ReleaseNotification | null>(null)
   const [isVisible, setIsVisible] = useState(false)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -97,10 +100,10 @@ export function ReleaseCompletionNotifier() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                      Build Concluído!
+                      {k('n_done')}
                     </p>
                     <h4 className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">
-                      Instalador Pronto 🎉
+                      {k('n_ready')}
                     </h4>
                   </div>
                 </div>
@@ -117,7 +120,7 @@ export function ReleaseCompletionNotifier() {
                 <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-500/5 rounded-xl border border-emerald-100 dark:border-emerald-800/30">
                   <Package className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Plataforma</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{k('n_platform')}</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                       {notification.name}
                     </p>
@@ -128,7 +131,7 @@ export function ReleaseCompletionNotifier() {
                 </div>
 
                 <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                  O instalador da versão <strong className="text-gray-700 dark:text-gray-300">v{notification.version}</strong> foi compilado e está disponível para download no Supabase e no Github.
+                  {k('n_body_a')}<strong className="text-gray-700 dark:text-gray-300">v{notification.version}</strong>{k('n_body_b')}
                 </p>
               </div>
 
@@ -141,13 +144,13 @@ export function ReleaseCompletionNotifier() {
                   className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-xs font-semibold rounded-lg transition-colors"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  Ver no Github
+                  {k('n_view')}
                 </a>
                 <button
                   onClick={handleDismiss}
                   className="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-600 dark:text-gray-400 text-xs font-semibold rounded-lg transition-colors"
                 >
-                  Dispensar
+                  {k('n_dismiss')}
                 </button>
               </div>
             </div>

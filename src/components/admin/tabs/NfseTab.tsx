@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
+import { dayLocale, moneyLocale } from '@/lib/billing/localeFormat'
 import { askDialog } from '@/utils/askDialog'
 import { isTauri, openExternalUrl } from '@/utils/tauriUtils'
 import { nfseIssueAction, nfseSaveSettingsAction, nfseSetStatusAction } from '@/app/actions/nfse'
@@ -76,7 +77,7 @@ function CopyField({ label, value, shown, testId }: { label: string; value: stri
 
 export function NfseTab({ hook }: { hook: NfseQueueHook }) {
   const { toast } = useToast()
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const k = (key: string, vars?: Record<string, string | number>) => {
     let s = t(`admin_nfse.${key}`)
     for (const [name, v] of Object.entries(vars || {})) s = s.split(`{${name}}`).join(String(v))
@@ -251,17 +252,17 @@ export function NfseTab({ hook }: { hook: NfseQueueHook }) {
                       <div className="text-[11px] text-neutral-500">{formatDoc(i.doc) || <span className="text-amber-600 dark:text-amber-400">{k('no_doc')}</span>}</div>
                       {i.status === 'issued' && (
                         <div className="mt-1 text-[11px] text-neutral-500">
-                          {k('issued_on', { date: formatDateBr(i.issuedAt) })}{i.nfseNumber ? ` · ${k('number', { n: i.nfseNumber })}` : ''}
-                          {' · '}{i.emailedAt ? k('emailed', { date: formatDateBr(i.emailedAt) }) : k('not_emailed')}
+                          {k('issued_on', { date: dayLocale(i.issuedAt, language) })}{i.nfseNumber ? ` · ${k('number', { n: i.nfseNumber })}` : ''}
+                          {' · '}{i.emailedAt ? k('emailed', { date: dayLocale(i.emailedAt, language) }) : k('not_emailed')}
                         </div>
                       )}
                       {i.status === 'issued' && i.refunded && <div className="mt-1 text-[11px] font-bold text-red-600 dark:text-red-400">{k('refund_warn')}</div>}
                       {i.status === 'canceled' && i.note && <div className="mt-1 text-[11px] text-neutral-500">{i.note}</div>}
                     </td>
-                    <td className="px-6 py-4 font-black">{moneyBr(i.amount)}</td>
-                    <td className="px-6 py-4 text-neutral-500">{formatDateBr(i.paidOn)}</td>
+                    <td className="px-6 py-4 font-black">{moneyLocale(i.amount, language)}</td>
+                    <td className="px-6 py-4 text-neutral-500">{dayLocale(i.paidOn, language)}</td>
                     <td className="px-6 py-4">
-                      <div>{formatDateBr(i.emitOn)}</div>
+                      <div>{dayLocale(i.emitOn, language)}</div>
                       {i.status === 'pending' && <span className={cn('mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-black', dueCls(i))}>{dueLabel(i)}</span>}
                     </td>
                     <td className="px-6 py-4 text-right">

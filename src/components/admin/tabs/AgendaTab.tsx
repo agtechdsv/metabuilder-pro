@@ -4,6 +4,8 @@ import { Calendar, Search, Loader2, Clock, Mail, Phone, Video, MessageCircle, Ch
 import { cn } from '@/lib/utils'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
+import { useI18n } from '@/i18n/I18nContext'
+import { localeOf } from '@/lib/billing/localeFormat'
 import { useAgendaAdmin, Appointment } from '../hooks/useAgendaAdmin'
 
 interface AgendaTabProps {
@@ -12,6 +14,9 @@ interface AgendaTabProps {
 
 export function AgendaTab({ hook }: AgendaTabProps) {
   const { toast } = useToast()
+  const { t, language } = useI18n()
+  const locale = localeOf(language)
+  const statusText = (s: string) => t('admin_agenda.status_' + s)
   const {
     appointments,
     isLoadingAppointments,
@@ -101,7 +106,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
             key={slotStr}
             className="h-10 border border-neutral-100 dark:border-neutral-900 bg-neutral-100/50 dark:bg-neutral-950/20 rounded-lg flex items-center justify-center text-[9px] font-semibold text-neutral-350 dark:text-neutral-700"
           >
-            Passado
+            {t('admin_agenda.past')}
           </div>
         )
       }
@@ -113,7 +118,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
           onClick={() => handleFastRescheduleClick(dayDate, slotStr)}
           className="h-10 border border-dashed border-indigo-500/40 hover:border-indigo-500 hover:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg flex items-center justify-center text-[9px] font-bold cursor-pointer transition-all hover:scale-95 animate-pulse"
         >
-          <span>Escolher</span>
+          <span>{t('admin_agenda.pick')}</span>
         </button>
       )
     }
@@ -130,7 +135,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
             : "border-neutral-200 dark:border-neutral-850 bg-neutral-50/50 dark:bg-neutral-950/20 text-neutral-400 dark:text-neutral-500 hover:border-indigo-500/40 hover:bg-indigo-500/5 hover:text-indigo-500 cursor-default"
         )}
       >
-        <span>Livre</span>
+        <span>{t('admin_agenda.free')}</span>
       </div>
     )
   }
@@ -151,7 +156,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
             <div className="flex items-center gap-3">
               <Calendar className="w-5 h-5 animate-bounce" />
               <span className="text-xs font-bold">
-                Reagendamento Rápido Ativo: Clique em um horário disponível no calendário para reagendar a demonstração de {reschedulingAppointment.cliente_nome}.
+                {t('admin_agenda.fast_banner').replace('{name}', reschedulingAppointment.cliente_nome ?? '')}
               </span>
             </div>
             <button
@@ -161,7 +166,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
               }}
               className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-black uppercase transition-colors"
             >
-              Cancelar
+              {t('admin_agenda.cancel')}
             </button>
           </div>
         )}
@@ -169,23 +174,23 @@ export function AgendaTab({ hook }: AgendaTabProps) {
         {/* KPI Cards for Agenda */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div className="bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Total de Agendados</span>
+            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">{t('admin_agenda.kpi_total')}</span>
             <h3 className="text-2xl font-black text-neutral-900 dark:text-white mt-2">{appointments.length}</h3>
           </div>
           <div className="bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider text-indigo-500">Pendentes</span>
+            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider text-indigo-500">{t('admin_agenda.kpi_pending')}</span>
             <h3 className="text-2xl font-black text-neutral-900 dark:text-white mt-2">
               {appointments.filter(a => a.status === 'Pendente').length}
             </h3>
           </div>
           <div className="bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider text-emerald-500">Confirmados</span>
+            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider text-emerald-500">{t('admin_agenda.kpi_confirmed')}</span>
             <h3 className="text-2xl font-black text-neutral-900 dark:text-white mt-2">
               {appointments.filter(a => a.status === 'Confirmado').length}
             </h3>
           </div>
           <div className="bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider text-red-500">Cancelados</span>
+            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider text-red-500">{t('admin_agenda.kpi_canceled')}</span>
             <h3 className="text-2xl font-black text-neutral-900 dark:text-white mt-2">
               {appointments.filter(a => a.status === 'Cancelado').length}
             </h3>
@@ -201,7 +206,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
                 <input
                   type="text"
-                  placeholder="Buscar por nome, email..."
+                  placeholder={t('admin_agenda.search_ph')}
                   value={agendaSearchQuery}
                   onChange={e => setAgendaSearchQuery(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-800 dark:text-neutral-200"
@@ -221,7 +226,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                         : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
                     )}
                   >
-                    {f === 'all' ? 'Todos' : f}
+                    {f === 'all' ? t('admin_agenda.filter_all') : statusText(f)}
                   </button>
                 ))}
               </div>
@@ -232,7 +237,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
               {isLoadingAppointments ? (
                 <div className="py-12 flex flex-col items-center justify-center gap-3 text-neutral-500 bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-2xl">
                   <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Buscando compromissos...</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider">{t('admin_agenda.loading')}</span>
                 </div>
               ) : filteredAppointments.length > 0 ? (
                 filteredAppointments.map(app => {
@@ -260,16 +265,16 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                               ? "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400"
                               : "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400"
                         )}>
-                          {app.status}
+                          {statusText(app.status)}
                         </span>
                         <span className="text-[9px] text-neutral-400 font-bold">
-                          {startDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
+                          {startDate.toLocaleDateString(locale, { day: 'numeric', month: 'short' })}
                         </span>
                       </div>
 
                       {/* Client details */}
                       <div>
-                        <h4 className="font-black text-xs text-neutral-900 dark:text-white line-clamp-1">{app.cliente_nome || 'Sem Nome'}</h4>
+                        <h4 className="font-black text-xs text-neutral-900 dark:text-white line-clamp-1">{app.cliente_nome || t('admin_agenda.no_name')}</h4>
                         <div className="flex items-center gap-1.5 mt-1 text-[10px] text-neutral-500">
                           <Clock className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
                           <span className="font-bold">
@@ -299,13 +304,13 @@ export function AgendaTab({ hook }: AgendaTabProps) {
 
                           {/* Campo de link da demonstração */}
                           <div className="space-y-1.5 border-t border-neutral-100 dark:border-neutral-850/60 pt-2 pb-1">
-                            <label className="text-[9px] font-black uppercase tracking-wider text-neutral-450 dark:text-neutral-400 block">Link da Demonstração (Meet / Zoom)</label>
+                            <label className="text-[9px] font-black uppercase tracking-wider text-neutral-450 dark:text-neutral-400 block">{t('admin_agenda.link_label')}</label>
                             <div className="flex gap-1.5">
                               <input
                                 type="text"
                                 value={demoLink}
                                 onChange={(e) => setDemoLink(e.target.value)}
-                                placeholder="Ex: https://meet.google.com/abc-defg-hij"
+                                placeholder={t('admin_agenda.link_ph')}
                                 onClick={(e) => e.stopPropagation()}
                                 className="flex-grow px-2 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-[10px] font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-200 placeholder-neutral-400 dark:placeholder-neutral-600"
                               />
@@ -318,7 +323,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                                 disabled={isSavingLink}
                                 className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg font-bold text-[9px] uppercase tracking-wider cursor-pointer"
                               >
-                                {isSavingLink ? '...' : 'Salvar'}
+                                {isSavingLink ? '...' : t('admin_agenda.save')}
                               </button>
                             </div>
                             {app.link_demonstracao && (
@@ -331,7 +336,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                                   onClick={(e) => e.stopPropagation()}
                                   className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline truncate"
                                 >
-                                  Acessar link salvo
+                                  {t('admin_agenda.open_link')}
                                 </a>
                               </div>
                             )}
@@ -348,7 +353,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                               className="h-8 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-colors flex items-center justify-center gap-1.5 font-bold text-[10px] uppercase tracking-wider cursor-pointer"
                             >
                               <MessageCircle className="w-3.5 h-3.5" />
-                              <span>WhatsApp</span>
+                              <span>{t('admin_agenda.whatsapp')}</span>
                             </button>
                             <button
                               type="button"
@@ -364,7 +369,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                               ) : (
                                 <Mail className="w-3.5 h-3.5" />
                               )}
-                              <span>{isSendingEmail === app.id ? 'Enviando...' : 'Enviar Email'}</span>
+                              <span>{isSendingEmail === app.id ? t('admin_agenda.sending') : t('admin_agenda.send_email')}</span>
                             </button>
                           </div>
 
@@ -380,7 +385,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                                 className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg font-bold text-[9px] uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                               >
                                 <Check className="w-3.5 h-3.5" />
-                                <span>Confirmar</span>
+                                <span>{t('admin_agenda.confirm')}</span>
                               </button>
                             )}
 
@@ -394,7 +399,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                                 className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg font-bold text-[9px] uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                               >
                                 <X className="w-3.5 h-3.5" />
-                                <span>Cancelar</span>
+                                <span>{t('admin_agenda.cancel')}</span>
                               </button>
                             ) : (
                               <button
@@ -406,7 +411,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                                 className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg font-bold text-[9px] uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                               >
                                 <Clock className="w-3.5 h-3.5" />
-                                <span>Reverter Cancelamento</span>
+                                <span>{t('admin_agenda.revert_cancel')}</span>
                               </button>
                             )}
 
@@ -415,12 +420,12 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                                 e.stopPropagation()
                                 setReschedulingAppointment(app)
                                 setFastRescheduleMode(true)
-                                toast('Selecione um horário no calendário para reagendar.', 'info')
+                                toast(t('admin_agenda.pick_slot_toast'), 'info')
                               }}
                               className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-750 text-white rounded-lg font-bold text-[9px] uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                             >
                               <Calendar className="w-3.5 h-3.5" />
-                              <span>Reagendar</span>
+                              <span>{t('admin_agenda.reschedule')}</span>
                             </button>
 
                             <button
@@ -430,7 +435,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                                 setIsDeleteAppointmentModalOpen(true)
                               }}
                               className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg ml-auto cursor-pointer"
-                              title="Excluir agendamento"
+                              title={t('admin_agenda.delete_title_attr')}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -442,7 +447,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                 })
               ) : (
                 <div className="py-12 text-center text-neutral-400 italic bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-2xl text-xs">
-                  Nenhum agendamento encontrado para os filtros selecionados.
+                  {t('admin_agenda.empty')}
                 </div>
               )}
             </div>
@@ -464,7 +469,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <span className="text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-white min-w-[200px] text-center capitalize">
-                  {weekDays[0].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} - {weekDays[6].toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
+                  {weekDays[0].toLocaleDateString(locale, { day: 'numeric', month: 'short' })} - {weekDays[6].toLocaleDateString(locale, { day: 'numeric', month: 'short' })}
                 </span>
                 <button
                   onClick={() => {
@@ -483,9 +488,9 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                   onClick={() => setFocusDate(new Date())}
                   className="px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl bg-neutral-50 hover:bg-neutral-100 dark:bg-neutral-950 dark:hover:bg-neutral-850 border border-neutral-200 dark:border-neutral-800 cursor-pointer"
                 >
-                  Hoje
+                  {t('admin_agenda.today')}
                 </button>
-                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest hidden sm:inline">Grade Comercial</span>
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest hidden sm:inline">{t('admin_agenda.business_grid')}</span>
               </div>
             </div>
 
@@ -495,7 +500,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                 {/* Time labels column */}
                 <div className="flex flex-col gap-2.5 pt-8">
                   {/* Morning Header */}
-                  <span className="text-[8px] font-black uppercase text-neutral-400 tracking-wider text-center h-4 flex items-center justify-center border-b border-neutral-200 dark:border-neutral-800/80 pb-1">Manhã</span>
+                  <span className="text-[8px] font-black uppercase text-neutral-400 tracking-wider text-center h-4 flex items-center justify-center border-b border-neutral-200 dark:border-neutral-800/80 pb-1">{t('admin_agenda.morning')}</span>
 
                   {/* Generate typical morning slots */}
                   {Array.from({ length: 8 }).map((_, idx) => {
@@ -509,7 +514,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                   })}
 
                   {/* Evening Header */}
-                  <span className="text-[8px] font-black uppercase text-neutral-400 tracking-wider text-center h-4 flex items-center justify-center border-b border-neutral-200 dark:border-neutral-800/80 pb-1 mt-2">Noite</span>
+                  <span className="text-[8px] font-black uppercase text-neutral-400 tracking-wider text-center h-4 flex items-center justify-center border-b border-neutral-200 dark:border-neutral-800/80 pb-1 mt-2">{t('admin_agenda.evening')}</span>
 
                   {/* Generate typical evening slots */}
                   {Array.from({ length: 4 }).map((_, idx) => {
@@ -527,7 +532,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                 {weekDays.map((dayDate, dayIdx) => {
                   const dayOfWeek = dayDate.getDay() // 0: Sunday, 6: Saturday
                   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
-                  const dayNameShort = dayDate.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')
+                  const dayNameShort = dayDate.toLocaleDateString(locale, { weekday: 'short' }).replace('.', '')
                   const isToday = new Date().toDateString() === dayDate.toDateString()
 
                   return (
@@ -565,7 +570,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
                             key={`empty-weekend-${idx}`}
                             className="h-10 border border-dashed border-neutral-100 dark:border-neutral-900 bg-neutral-50/20 dark:bg-neutral-950/10 rounded-lg flex items-center justify-center text-[9px] font-semibold text-neutral-300 dark:text-neutral-800"
                           >
-                            Indisponível
+                            {t('admin_agenda.unavailable')}
                           </div>
                         ))
                       ) : (
@@ -588,19 +593,19 @@ export function AgendaTab({ hook }: AgendaTabProps) {
             <div className="flex flex-wrap gap-4 items-center text-[10px] text-neutral-500 font-bold border-t border-neutral-100 dark:border-neutral-850/60 pt-4">
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />
-                <span>Pendente</span>
+                <span>{statusText('Pendente')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />
-                <span>Confirmado</span>
+                <span>{statusText('Confirmado')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 bg-red-500 rounded-full" />
-                <span>Cancelado</span>
+                <span>{statusText('Cancelado')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded" />
-                <span>Livre / Disponível</span>
+                <span>{t('admin_agenda.legend_free')}</span>
               </div>
             </div>
           </div>
@@ -616,8 +621,8 @@ export function AgendaTab({ hook }: AgendaTabProps) {
             setAppointmentToDelete(null)
           }
         }}
-        title="Excluir Agendamento"
-        description="Esta ação removerá o compromisso permanentemente da agenda."
+        title={t('admin_agenda.delete_title')}
+        description={t('admin_agenda.delete_desc')}
         size="md"
       >
         <div className="space-y-6">
@@ -626,9 +631,9 @@ export function AgendaTab({ hook }: AgendaTabProps) {
               <AlertTriangle className="w-6 h-6 animate-pulse" />
             </div>
             <div>
-              <p className="text-sm font-black">Excluir Compromisso?</p>
+              <p className="text-sm font-black">{t('admin_agenda.delete_q')}</p>
               <p className="text-xs opacity-90 mt-0.5">
-                O agendamento de <span className="font-bold">"{appointmentToDelete?.cliente_nome}"</span> será apagado permanentemente.
+                {t('admin_agenda.delete_warn').replace('{name}', appointmentToDelete?.cliente_nome ?? '')}
               </p>
             </div>
           </div>
@@ -643,7 +648,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
               }}
               className="h-10 px-5 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 font-bold text-xs uppercase tracking-widest border border-neutral-200 dark:border-neutral-750 rounded-xl transition-all"
             >
-              Cancelar
+              {t('admin_agenda.cancel')}
             </button>
             <button
               type="button"
@@ -654,12 +659,12 @@ export function AgendaTab({ hook }: AgendaTabProps) {
               {isDeletingAppointment ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Excluindo...</span>
+                  <span>{t('admin_agenda.deleting')}</span>
                 </>
               ) : (
                 <>
                   <Trash2 className="w-4 h-4" />
-                  <span>Confirmar Exclusão</span>
+                  <span>{t('admin_agenda.confirm_delete')}</span>
                 </>
               )}
             </button>
@@ -677,28 +682,28 @@ export function AgendaTab({ hook }: AgendaTabProps) {
             setFastRescheduleTargetSlot(null)
           }
         }}
-        title="Confirmar Reagendamento Rápido"
-        description="Você está alterando a data e o horário da demonstração."
+        title={t('admin_agenda.resched_title')}
+        description={t('admin_agenda.resched_desc')}
         size="md"
       >
         <div className="space-y-6">
           <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-neutral-850 dark:text-indigo-300">
-            <p className="text-sm font-bold">Deseja reagendar o compromisso?</p>
+            <p className="text-sm font-bold">{t('admin_agenda.resched_q')}</p>
             <div className="mt-3 space-y-2 text-xs">
               <p>
-                <span className="text-neutral-400">Cliente:</span>{" "}
+                <span className="text-neutral-400">{t('admin_agenda.lbl_client')}</span>{" "}
                 <span className="font-bold text-neutral-900 dark:text-white">{reschedulingAppointment?.cliente_nome}</span>
               </p>
               <p>
-                <span className="text-neutral-400">De:</span>{" "}
+                <span className="text-neutral-400">{t('admin_agenda.lbl_from')}</span>{" "}
                 <span className="font-semibold text-red-500 line-through">
-                  {reschedulingAppointment && new Date(reschedulingAppointment.data_inicio).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}h
+                  {reschedulingAppointment && new Date(reschedulingAppointment.data_inicio).toLocaleDateString(locale, { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}h
                 </span>
               </p>
               <p>
-                <span className="text-neutral-400">Para:</span>{" "}
+                <span className="text-neutral-400">{t('admin_agenda.lbl_to')}</span>{" "}
                 <span className="font-bold text-emerald-500">
-                  {fastRescheduleTargetDate && fastRescheduleTargetDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })} às {fastRescheduleTargetSlot}h
+                  {fastRescheduleTargetDate && fastRescheduleTargetDate.toLocaleDateString(locale, { day: 'numeric', month: 'long' })} {t('admin_agenda.at')} {fastRescheduleTargetSlot}h
                 </span>
               </p>
             </div>
@@ -715,7 +720,7 @@ export function AgendaTab({ hook }: AgendaTabProps) {
               }}
               className="h-10 px-5 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 font-bold text-xs uppercase tracking-widest border border-neutral-200 dark:border-neutral-750 rounded-xl transition-all"
             >
-              Cancelar
+              {t('admin_agenda.cancel')}
             </button>
             <button
               type="button"
@@ -726,12 +731,12 @@ export function AgendaTab({ hook }: AgendaTabProps) {
               {isRescheduling ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Reagendando...</span>
+                  <span>{t('admin_agenda.rescheduling')}</span>
                 </>
               ) : (
                 <>
                   <Check className="w-4 h-4" />
-                  <span>Confirmar Reagendamento</span>
+                  <span>{t('admin_agenda.confirm_resched')}</span>
                 </>
               )}
             </button>

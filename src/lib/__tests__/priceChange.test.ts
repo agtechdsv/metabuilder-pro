@@ -284,7 +284,12 @@ describe('ligação no servidor', () => {
   it('a tela tem o botão Reajustar e o aviso ao cliente', () => {
     expect(read('src/components/admin/PricingRulesAdmin.tsx')).toContain('<RepriceCard />')
     const card = read('src/components/admin/RepriceCard.tsx')
-    for (const s of ['data-testid="reprice-card"', 'data-testid="reprice-go"', 'Confirmar e avisar', 'Cancelar reajuste']) expect(card, s).toContain(s)
+    for (const s of ['data-testid="reprice-card"', 'data-testid="reprice-go"', "k('confirm_notify')", "k('cancel_btn')"]) expect(card, s).toContain(s)
+    // os textos do card moram nos três idiomas (admin_reprice)
+    for (const l of ['pt', 'en', 'es']) {
+      const j = JSON.parse(read(`src/i18n/translations/${l}.json`))
+      for (const key of ['confirm_notify', 'cancel_btn']) expect(j.admin_reprice?.[key], `${l}: ${key}`).toBeTruthy()
+    }
     expect(read('src/components/client/ClientSubscriptionView.tsx')).toContain('data-testid="price-change-notice"')
   })
 

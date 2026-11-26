@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Modal } from '@/components/ui/Modal'
 import { cancelChargeAction, cancelSubscriptionAction, refundChargeAction } from '@/app/actions/adminChargeActions'
-import { formatDateBr, moneyBr } from '@/lib/nfse/queue'
+import { dayLocale, moneyLocale } from '@/lib/billing/localeFormat'
 import { parseMoneyInput, type ChargeActionKind, type ChargeActionResult } from '@/lib/billing/chargeActions'
 import type { ChargeDto } from '@/lib/billing/adminCharges'
 
@@ -24,10 +24,11 @@ export function actionErrorText(k: K, r: ChargeActionResult): string {
  * Confirmação das ações do SuperAdmin sobre uma cobrança: cancelar a cobrança, cancelar a assinatura ou estornar. Sempre mostra o que vai
  * acontecer, pede o motivo (obrigatório no estorno) e, no estorno, a palavra de confirmação. Quem confirma de verdade é a Edge Function.
  */
-export function ChargeActionModal({ action, charge, k, onClose, onDone }: {
+export function ChargeActionModal({ action, charge, k, language, onClose, onDone }: {
   action: ChargeActionKind
   charge: ChargeDto
   k: K
+  language: string
   onClose: () => void
   onDone: (message: string, warning?: string) => void | Promise<void>
 }) {
@@ -68,17 +69,17 @@ export function ChargeActionModal({ action, charge, k, onClose, onDone }: {
       <div className="space-y-5" data-testid={`charge-modal-${action}`}>
         <div className="grid gap-3 rounded-2xl border border-neutral-200 p-4 text-xs dark:border-neutral-700 sm:grid-cols-2">
           <div><span className={labelCls}>{k('lbl_customer')}</span><div className="font-bold">{charge.name || charge.email || k('no_customer')}</div>{charge.name && <div className="text-neutral-500">{charge.email}</div>}</div>
-          <div><span className={labelCls}>{k('lbl_amount')}</span><div className="font-black">{moneyBr(charge.amount)}</div></div>
-          <div><span className={labelCls}>{k('lbl_due')}</span><div>{formatDateBr(charge.dueDate) || '—'}</div></div>
+          <div><span className={labelCls}>{k('lbl_amount')}</span><div className="font-black">{moneyLocale(charge.amount, language)}</div></div>
+          <div><span className={labelCls}>{k('lbl_due')}</span><div>{dayLocale(charge.dueDate, language) || '—'}</div></div>
           <div><span className={labelCls}>{k('lbl_id')}</span><div className="font-mono text-[11px] break-all">{charge.asaasPaymentId || '—'}</div></div>
         </div>
 
         {action === 'refund' && (
           <div>
-            <label className={labelCls} htmlFor="refund-value">{k('refund_value_label', { total: moneyBr(charge.amount) })}</label>
-            <input id="refund-value" data-testid="refund-value" className={cn(inputCls, valueBad && 'border-red-400')} inputMode="decimal" placeholder={moneyBr(charge.amount)}
+            <label className={labelCls} htmlFor="refund-value">{k('refund_value_label', { total: moneyLocale(charge.amount, language) })}</label>
+            <input id="refund-value" data-testid="refund-value" className={cn(inputCls, valueBad && 'border-red-400')} inputMode="decimal" placeholder={moneyLocale(charge.amount, language)}
               value={valueText} onChange={e => setValueText(e.target.value)} disabled={busy} />
-            {valueBad && <p className="mt-1 text-[11px] font-bold text-red-600">{k('err_value_range', { total: moneyBr(charge.amount) })}</p>}
+            {valueBad && <p className="mt-1 text-[11px] font-bold text-red-600">{k('err_value_range', { total: moneyLocale(charge.amount, language) })}</p>}
           </div>
         )}
 

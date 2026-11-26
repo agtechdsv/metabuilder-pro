@@ -1,4 +1,5 @@
 import React from 'react'
+import { useI18n } from '@/i18n/I18nContext'
 import { motion } from 'framer-motion'
 import { CreditCard, TrendingUp, Building2, Users, Activity, Sparkles, ShieldCheck, AlertTriangle } from 'lucide-react'
 import { useDashboardAdmin } from '../hooks/useDashboardAdmin'
@@ -12,6 +13,9 @@ interface DashboardTabProps {
 }
 
 export function DashboardTab({ hook, initialWorkspaces, clientProfiles, mappedWorkspaces }: DashboardTabProps) {
+  const { t, language } = useI18n()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
+  const money = (v: number) => new Intl.NumberFormat(locale, { style: 'currency', currency: 'BRL' }).format(v)
   const {
     dashboardPeriod,
     setDashboardPeriod,
@@ -38,30 +42,30 @@ export function DashboardTab({ hook, initialWorkspaces, clientProfiles, mappedWo
         <div className="flex flex-wrap items-end gap-4">
           {/* Período */}
           <div className="flex-1 min-w-[200px] space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Período</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">{t('admin.dash_period')}</label>
             <select
               value={dashboardPeriod}
               onChange={(e) => setDashboardPeriod(e.target.value as any)}
               className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-200"
             >
-              <option value="all">Todos os períodos</option>
-              <option value="today">Hoje</option>
-              <option value="7days">Últimos 7 Dias</option>
-              <option value="15days">Últimos 15 Dias</option>
-              <option value="30days">Últimos 30 Dias</option>
-              <option value="custom">Personalizado</option>
+              <option value="all">{t('admin.dash_all_periods')}</option>
+              <option value="today">{t('admin.dash_today')}</option>
+              <option value="7days">{t('admin.dash_7days')}</option>
+              <option value="15days">{t('admin.dash_15days')}</option>
+              <option value="30days">{t('admin.dash_30days')}</option>
+              <option value="custom">{t('admin.dash_custom')}</option>
             </select>
           </div>
 
           {/* Clientes */}
           <div className="flex-1 min-w-[200px] space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Clientes</label>
+            <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">{t('admin.dash_clients')}</label>
             <select
               value={dashboardClient}
               onChange={(e) => setDashboardClient(e.target.value)}
               className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-neutral-850 dark:text-neutral-200"
             >
-              <option value="all">Todos os Clientes</option>
+              <option value="all">{t('admin.dash_all_clients')}</option>
               {initialWorkspaces
                 .filter(w => {
                   const ownerProfile = clientProfiles.find(p => p.id === w.owner_id)
@@ -78,7 +82,7 @@ export function DashboardTab({ hook, initialWorkspaces, clientProfiles, mappedWo
         {dashboardPeriod === 'custom' && (
           <div className="flex flex-wrap gap-4 pt-2 border-t border-neutral-100 dark:border-neutral-850/60 animate-in fade-in duration-300">
             <div className="w-[180px] space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Data de Início</label>
+              <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">{t('admin.dash_start_date')}</label>
               <input
                 type="date"
                 value={dashboardCustomStart}
@@ -87,7 +91,7 @@ export function DashboardTab({ hook, initialWorkspaces, clientProfiles, mappedWo
               />
             </div>
             <div className="w-[180px] space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Data de Fim (Opcional)</label>
+              <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">{t('admin.dash_end_date')}</label>
               <input
                 type="date"
                 value={dashboardCustomEnd}
@@ -106,17 +110,17 @@ export function DashboardTab({ hook, initialWorkspaces, clientProfiles, mappedWo
         <div className="relative bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-bl-full pointer-events-none"></div>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Faturamento (Caixa)</span>
+            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">{t('admin.dash_revenue')}</span>
             <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-xl">
               <CreditCard className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
             <h3 className="text-3xl font-black text-neutral-900 dark:text-white">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(metrics.faturamento)}
+              {money(metrics.faturamento)}
             </h3>
             <p className="text-[10px] font-bold text-neutral-400 mt-1">
-              Total recebido no período
+              {t('admin.dash_revenue_hint')}
             </p>
           </div>
         </div>
@@ -125,18 +129,18 @@ export function DashboardTab({ hook, initialWorkspaces, clientProfiles, mappedWo
         <div className="relative bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-bl-full pointer-events-none"></div>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Recorrência Mensal (MRR)</span>
+            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">{t('admin.dash_mrr')}</span>
             <div className="p-2.5 bg-rose-500/10 text-rose-500 rounded-xl">
               <TrendingUp className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
             <h3 className="text-3xl font-black text-neutral-900 dark:text-white">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(metrics.activeMRR)}
+              {money(metrics.activeMRR)}
             </h3>
             <p className="text-[10px] font-bold text-emerald-500 flex items-center gap-1 mt-1">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Calculado a partir de planos ativos</span>
+              <span>{t('admin.dash_mrr_hint')}</span>
             </p>
           </div>
         </div>
@@ -145,7 +149,7 @@ export function DashboardTab({ hook, initialWorkspaces, clientProfiles, mappedWo
         <div className="relative bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-bl-full pointer-events-none"></div>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Total de Clientes</span>
+            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">{t('admin.dash_total_clients')}</span>
             <div className="p-2.5 bg-indigo-500/10 text-indigo-500 rounded-xl">
               <Building2 className="w-5 h-5" />
             </div>
@@ -155,7 +159,7 @@ export function DashboardTab({ hook, initialWorkspaces, clientProfiles, mappedWo
               {metrics.totalClients}
             </h3>
             <p className="text-[10px] font-bold text-neutral-400 mt-1">
-              Donos de workspaces
+              {t('admin.dash_total_clients_hint')}
             </p>
           </div>
         </div>
@@ -164,7 +168,7 @@ export function DashboardTab({ hook, initialWorkspaces, clientProfiles, mappedWo
         <div className="relative bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-bl-full pointer-events-none"></div>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Usuários Ativos</span>
+            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">{t('admin.dash_active_users')}</span>
             <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-xl">
               <Users className="w-5 h-5" />
             </div>
@@ -174,7 +178,7 @@ export function DashboardTab({ hook, initialWorkspaces, clientProfiles, mappedWo
               {metrics.totalUsers}
             </h3>
             <p className="text-[10px] font-bold text-neutral-400 mt-1">
-              Total de usuários
+              {t('admin.dash_active_users_hint')}
             </p>
           </div>
         </div>
@@ -183,7 +187,7 @@ export function DashboardTab({ hook, initialWorkspaces, clientProfiles, mappedWo
         <div className="relative bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-850 rounded-[2rem] p-6 shadow-sm flex flex-col justify-between overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/5 rounded-bl-full pointer-events-none"></div>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">Taxa de Conversão</span>
+            <span className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">{t('admin.dash_conversion')}</span>
             <div className="p-2.5 bg-violet-500/10 text-violet-500 rounded-xl">
               <Activity className="w-5 h-5" />
             </div>
@@ -193,7 +197,7 @@ export function DashboardTab({ hook, initialWorkspaces, clientProfiles, mappedWo
               {metrics.conversionRate.toFixed(1)}%
             </h3>
             <p className="text-[10px] font-bold text-neutral-400 mt-1">
-              Workspaces convertidos para planos pagos
+              {t('admin.dash_conversion_hint')}
             </p>
           </div>
         </div>
@@ -206,34 +210,34 @@ export function DashboardTab({ hook, initialWorkspaces, clientProfiles, mappedWo
         {/* Quick Platform Security Health Card */}
         <div className="bg-white dark:bg-neutral-900/40 p-6 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 shadow-sm flex flex-col justify-between h-[300px]">
           <div>
-            <h4 className="text-xs font-black uppercase text-neutral-400 tracking-wider mb-2">Segurança & Conexões</h4>
-            <p className="text-[10px] text-neutral-400 font-medium">Visualização rápida de integridade da infraestrutura.</p>
+            <h4 className="text-xs font-black uppercase text-neutral-400 tracking-wider mb-2">{t('admin.dash_security')}</h4>
+            <p className="text-[10px] text-neutral-400 font-medium">{t('admin.dash_security_hint')}</p>
           </div>
 
           <div className="space-y-4 my-2">
             <div className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-950/60 rounded-2xl border border-neutral-100 dark:border-neutral-850">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                <span className="text-[11px] font-bold dark:text-white">Criptografia Base de Dados</span>
+                <span className="text-[11px] font-bold dark:text-white">{t('admin.dash_db_encryption')}</span>
               </div>
-              <span className="text-[9px] font-black uppercase text-emerald-500 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded">Ativa</span>
+              <span className="text-[9px] font-black uppercase text-emerald-500 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded">{t('admin.dash_active')}</span>
             </div>
 
             <div className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-950/60 rounded-2xl border border-neutral-100 dark:border-neutral-850">
               <div className="flex items-center gap-2">
                 <Activity className="w-4 h-4 text-indigo-500" />
-                <span className="text-[11px] font-bold dark:text-white">Supabase RPC Connection</span>
+                <span className="text-[11px] font-bold dark:text-white">{t('admin.dash_rpc')}</span>
               </div>
-              <span className="text-[9px] font-black uppercase text-indigo-500 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded">Excelente</span>
+              <span className="text-[9px] font-black uppercase text-indigo-500 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded">{t('admin.dash_excellent')}</span>
             </div>
 
             <div className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-950/60 rounded-2xl border border-neutral-100 dark:border-neutral-850">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-500" />
-                <span className="text-[11px] font-bold dark:text-white">Clientes Bloqueados</span>
+                <span className="text-[11px] font-bold dark:text-white">{t('admin.dash_blocked_clients')}</span>
               </div>
               <span className="text-[9px] font-black uppercase text-amber-500 bg-amber-50 dark:bg-amber-950 px-2 py-0.5 rounded">
-                {mappedWorkspaces.filter(w => w.is_blocked && !w.ownerIsSuperAdmin).length} Bloqueados
+                {t('admin.dash_blocked_count').replace('{n}', String(mappedWorkspaces.filter(w => w.is_blocked && !w.ownerIsSuperAdmin).length))}
               </span>
             </div>
           </div>

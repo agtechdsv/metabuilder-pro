@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { useI18n } from '@/i18n/I18nContext'
 import { ArrowLeft, Send, Loader2, X, Mail, MessageCircle, Check, AlertTriangle, Layers } from 'lucide-react'
 import {
   getStackInterestSummary,
@@ -19,6 +20,7 @@ type Recipient = { userIds: string[]; label: string }
 
 /** Totais de interessados por stack (botão "Quero ser avisado" do Eject & Sync) + lista e envio de mensagem */
 export function StackInterestCard() {
+  const { t } = useI18n()
   const [rows, setRows] = useState<StackInterestSummaryRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +41,7 @@ export function StackInterestCard() {
   const loadSummary = async () => {
     setLoading(true)
     const r = await getStackInterestSummary()
-    if (r.success) { setRows(r.rows || []); setError(null) } else setError(r.error || 'Erro ao carregar')
+    if (r.success) { setRows(r.rows || []); setError(null) } else setError(r.error || t('admin.stack_load_error'))
     setLoading(false)
   }
   useEffect(() => { loadSummary() }, [])
@@ -53,7 +55,7 @@ export function StackInterestCard() {
     setUsers([])
     setUsersLoading(true)
     const r = await getStackInterestUsers(id)
-    if (r.success) setUsers(r.users || []); else setError(r.error || 'Erro ao carregar')
+    if (r.success) setUsers(r.users || []); else setError(r.error || t('admin.stack_load_error'))
     setUsersLoading(false)
   }
 
@@ -79,7 +81,7 @@ export function StackInterestCard() {
     setSendError(null)
     const r = await sendStackInterestMessage({ stack, userIds: recipient.userIds, subject, message, channels: { email: useEmail, chat: useChat } })
     setSending(false)
-    if (r.success) setResults(r.results || []); else setSendError(r.error || 'Erro ao enviar')
+    if (r.success) setResults(r.results || []); else setSendError(r.error || t('admin.stack_send_error'))
   }
 
   const okCount = (k: 'email' | 'chat') => (results || []).filter(r => r[k].ok).length
@@ -90,8 +92,8 @@ export function StackInterestCard() {
         <>
           <div className="mb-3 flex items-start justify-between gap-3">
             <div>
-              <h4 className="text-xs font-black uppercase text-neutral-400 tracking-wider mb-2">Interesse por Stack</h4>
-              <p className="text-[10px] text-neutral-400 font-medium">Quem pediu para ser avisado no Eject & Sync. Clique em uma stack para ver a lista.</p>
+              <h4 className="text-xs font-black uppercase text-neutral-400 tracking-wider mb-2">{t('admin.stack_title')}</h4>
+              <p className="text-[10px] text-neutral-400 font-medium">{t('admin.stack_desc')}</p>
             </div>
             <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-xl shrink-0"><Layers className="w-5 h-5" /></div>
           </div>
@@ -124,21 +126,21 @@ export function StackInterestCard() {
         <>
           <div className="flex items-center justify-between gap-3 mb-3">
             <button type="button" onClick={() => { setStack(null); loadSummary() }} className="flex items-center gap-1.5 text-[11px] font-bold text-neutral-500 hover:text-indigo-500">
-              <ArrowLeft className="w-4 h-4" /> Voltar
+              <ArrowLeft className="w-4 h-4" /> {t('admin.stack_back')}
             </button>
-            <h4 className="text-xs font-black uppercase text-neutral-500 tracking-wider">{stackInfo(stack)?.icon} {stackInfo(stack)?.label} — {users.length} {users.length === 1 ? 'interessado' : 'interessados'}</h4>
+            <h4 className="text-xs font-black uppercase text-neutral-500 tracking-wider">{stackInfo(stack)?.icon} {stackInfo(stack)?.label} — {users.length} {users.length === 1 ? t('admin.stack_interested_one') : t('admin.stack_interested_many')}</h4>
             <button
               type="button"
               disabled={users.length === 0}
-              onClick={() => openCompose({ userIds: users.map(u => u.userId), label: `todos (${users.length})` })}
+              onClick={() => openCompose({ userIds: users.map(u => u.userId), label: t('admin.stack_all_label').replace('{n}', String(users.length)) })}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-[11px] font-bold"
             >
-              <Send className="w-3.5 h-3.5" /> Enviar para todos
+              <Send className="w-3.5 h-3.5" /> {t('admin.stack_send_all')}
             </button>
           </div>
           <div className="flex-1 overflow-y-auto space-y-2">
             {usersLoading && <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-neutral-400" /></div>}
-            {!usersLoading && users.length === 0 && <p className="text-[11px] text-neutral-400 text-center py-6">Ninguém registrou interesse nesta stack ainda.</p>}
+            {!usersLoading && users.length === 0 && <p className="text-[11px] text-neutral-400 text-center py-6">{t('admin.stack_nobody')}</p>}
             {users.map(u => (
               <div key={u.userId} className="flex items-center justify-between gap-3 p-2.5 bg-neutral-50 dark:bg-neutral-950/60 rounded-2xl border border-neutral-100 dark:border-neutral-850">
                 <div className="flex items-center gap-3 min-w-0">
@@ -153,7 +155,7 @@ export function StackInterestCard() {
                 </div>
                 <button
                   type="button"
-                  title="Enviar mensagem (e-mail + MetaBuilders)"
+                  title={t('admin.stack_send_title_attr')}
                   onClick={() => openCompose({ userIds: [u.userId], label: u.name })}
                   className="p-2 rounded-xl text-neutral-400 hover:text-indigo-500 hover:bg-indigo-500/10 shrink-0"
                 >
@@ -169,18 +171,18 @@ export function StackInterestCard() {
         <div className="fixed inset-0 z-[100000] bg-black/60 flex items-center justify-center p-4" onClick={() => !sending && setRecipient(null)}>
           <div className="w-full max-w-lg bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-2xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-black dark:text-white">Enviar mensagem para {recipient.label}</h3>
+              <h3 className="text-sm font-black dark:text-white">{t('admin.stack_send_to').replace('{label}', recipient.label)}</h3>
               <button type="button" disabled={sending} onClick={() => setRecipient(null)} className="p-1.5 text-neutral-400 hover:text-neutral-700"><X className="w-4 h-4" /></button>
             </div>
 
             {!results ? (
               <>
                 <div className="space-y-1.5">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Enviar por</p>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-neutral-400">{t('admin.stack_send_by')}</p>
                   <div className="flex items-center gap-2">
                     {([
                       { key: 'email', label: 'E-mail', icon: Mail, on: useEmail, set: setUseEmail },
-                      { key: 'chat', label: 'Chat do MetaBuilders', icon: MessageCircle, on: useChat, set: setUseChat },
+                      { key: 'chat', label: t('admin.stack_chat'), icon: MessageCircle, on: useChat, set: setUseChat },
                     ] as const).map(c => (
                       <button
                         key={c.key}
@@ -197,10 +199,10 @@ export function StackInterestCard() {
                       </button>
                     ))}
                   </div>
-                  {!useEmail && !useChat && <p className="text-[10px] text-amber-600">Marque ao menos um canal.</p>}
+                  {!useEmail && !useChat && <p className="text-[10px] text-amber-600">{t('admin.stack_pick_channel')}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Modelo de mensagem</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">{t('admin.stack_template')}</label>
                   <select
                     defaultValue="progress"
                     onChange={e => applyTemplate(e.target.value)}
@@ -208,19 +210,19 @@ export function StackInterestCard() {
                   >
                     {STACK_MESSAGE_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                   </select>
-                  <p className="text-[10px] text-neutral-400">Você pode editar o texto. <code>{'{nome}'}</code> vira o primeiro nome de cada pessoa e <code>{'{stack}'}</code> vira a linguagem.</p>
+                  <p className="text-[10px] text-neutral-400">{t('admin.stack_edit_hint')}</p>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Assunto</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">{t('admin.stack_subject')}</label>
                   <input value={subject} onChange={e => setSubject(e.target.value)} className="w-full h-10 px-3.5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 dark:text-neutral-200" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">Mensagem</label>
-                  <textarea value={message} onChange={e => setMessage(e.target.value)} rows={6} className="w-full px-3.5 py-2.5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs focus:outline-none focus:border-indigo-500 dark:text-neutral-200 resize-none" placeholder="Escreva a mensagem..." />
+                  <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400">{t('admin.stack_message')}</label>
+                  <textarea value={message} onChange={e => setMessage(e.target.value)} rows={6} className="w-full px-3.5 py-2.5 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs focus:outline-none focus:border-indigo-500 dark:text-neutral-200 resize-none" placeholder={t('admin.stack_message_ph')} />
                 </div>
                 {sendError && <p className="text-[11px] text-red-500">{sendError}</p>}
                 <div className="flex justify-end gap-2">
-                  <button type="button" disabled={sending} onClick={() => setRecipient(null)} className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800">Cancelar</button>
+                  <button type="button" disabled={sending} onClick={() => setRecipient(null)} className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800">{t('admin.stack_cancel')}</button>
                   <button type="button" disabled={sending || !subject.trim() || !message.trim() || (!useEmail && !useChat)} onClick={send} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold">
                     {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />} Enviar
                   </button>
@@ -230,11 +232,11 @@ export function StackInterestCard() {
               <>
                 <div className="grid grid-cols-2 gap-3 text-center">
                   <div className="p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-100 dark:border-neutral-800">
-                    <p className="text-[10px] font-black uppercase text-neutral-400">E-mails enviados</p>
+                    <p className="text-[10px] font-black uppercase text-neutral-400">{t('admin.stack_emails_sent')}</p>
                     <p className="text-xl font-black dark:text-white">{useEmail ? `${okCount('email')}/${results.length}` : '—'}</p>
                   </div>
                   <div className="p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-950/60 border border-neutral-100 dark:border-neutral-800">
-                    <p className="text-[10px] font-black uppercase text-neutral-400">Mensagens no chat</p>
+                    <p className="text-[10px] font-black uppercase text-neutral-400">{t('admin.stack_chat_sent')}</p>
                     <p className="text-xl font-black dark:text-white">{useChat ? `${okCount('chat')}/${results.length}` : '—'}</p>
                   </div>
                 </div>
@@ -246,11 +248,11 @@ export function StackInterestCard() {
                     </div>
                   ))}
                   {results.every(r => (r.email.ok || r.email.skipped) && (r.chat.ok || r.chat.skipped)) && (
-                    <p className="flex items-center gap-2 text-[11px] text-emerald-600"><Check className="w-3.5 h-3.5" /> Tudo enviado.</p>
+                    <p className="flex items-center gap-2 text-[11px] text-emerald-600"><Check className="w-3.5 h-3.5" /> {t('admin.stack_all_sent')}</p>
                   )}
                 </div>
                 <div className="flex justify-end">
-                  <button type="button" onClick={() => setRecipient(null)} className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold">Fechar</button>
+                  <button type="button" onClick={() => setRecipient(null)} className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold">{t('admin.stack_close')}</button>
                 </div>
               </>
             )}

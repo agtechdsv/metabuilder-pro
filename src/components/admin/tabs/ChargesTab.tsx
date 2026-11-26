@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { Check, Copy, ExternalLink, Loader2, RefreshCw, Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
-import { formatDateBr, moneyBr } from '@/lib/nfse/queue'
+import { dayLocale, moneyLocale } from '@/lib/billing/localeFormat'
 import { invoiceLinkKind } from '@/lib/billing/invoiceLink'
 import { availableActions, type ChargeActionKind } from '@/lib/billing/chargeActions'
 import { useToast } from '@/components/ui/Toast'
@@ -41,7 +41,7 @@ function CopyId({ id }: { id: string }) {
 
 /** Subaba Clientes > Cobranças: lista de todas as cobranças da plataforma, com busca, filtros e totais. Só leitura (fase 1). */
 export function ChargesTab({ hook, userLabel, onClearUser }: { hook: AdminChargesHook; userLabel: string; onClearUser: () => void }) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const k = (key: string, vars?: Record<string, string | number>) => {
     let s = t(`admin_charges.${key}`)
     for (const [name, v] of Object.entries(vars || {})) s = s.split(`{${name}}`).join(String(v))
@@ -85,7 +85,7 @@ export function ChargesTab({ hook, userLabel, onClearUser }: { hook: AdminCharge
             className={cn('rounded-2xl border bg-white p-5 text-left shadow-sm transition-all hover:border-indigo-300 dark:bg-neutral-900/40',
               filters.status === group ? 'border-indigo-400 dark:border-indigo-600' : 'border-neutral-200 dark:border-neutral-800')}>
             <span className={labelCls}>{k(`card_${group}`)}</span>
-            <div className={cn('text-2xl font-black', tone)}>{summary ? moneyBr(summary[group].sum) : '—'}</div>
+            <div className={cn('text-2xl font-black', tone)}>{summary ? moneyLocale(summary[group].sum, language) : '—'}</div>
             <div className="text-[11px] text-neutral-500">{summary ? k('count', { n: summary[group].count }) : ''}</div>
           </button>
         ))}
@@ -184,9 +184,9 @@ export function ChargesTab({ hook, userLabel, onClearUser }: { hook: AdminCharge
                       {c.name && <div className="text-[11px] text-neutral-500">{c.email}</div>}
                       {c.asaasPaymentId && <CopyId id={c.asaasPaymentId} />}
                     </td>
-                    <td className="px-6 py-4 font-black">{moneyBr(c.amount)}</td>
-                    <td className="px-6 py-4 text-neutral-500">{formatDateBr(c.dueDate) || '—'}</td>
-                    <td className="px-6 py-4 text-neutral-500">{formatDateBr(c.paidOn) || '—'}</td>
+                    <td className="px-6 py-4 font-black">{moneyLocale(c.amount, language)}</td>
+                    <td className="px-6 py-4 text-neutral-500">{dayLocale(c.dueDate, language) || '—'}</td>
+                    <td className="px-6 py-4 text-neutral-500">{dayLocale(c.paidOn, language) || '—'}</td>
                     <td className="px-6 py-4">
                       <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-[10px] font-black', BADGE[c.group])}>{k(`status_${c.group}`)}</span>
                       {c.refundRequested && <span data-testid="charges-refund-pending" className="ml-1.5 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">{k('refund_pending')}</span>}
@@ -226,7 +226,7 @@ export function ChargesTab({ hook, userLabel, onClearUser }: { hook: AdminCharge
       {summary?.truncated && <p className="text-[11px] text-neutral-400">{k('truncated_note')}</p>}
 
       {act && (
-        <ChargeActionModal action={act.action} charge={act.charge} k={k} onClose={() => setAct(null)}
+        <ChargeActionModal action={act.action} charge={act.charge} k={k} language={language} onClose={() => setAct(null)}
           onDone={async (message, warning) => { setAct(null); toast(message, 'success'); if (warning) toast(warning, 'error'); await reload() }} />
       )}
     </div>

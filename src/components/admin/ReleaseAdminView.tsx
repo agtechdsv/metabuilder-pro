@@ -5,9 +5,16 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Rocket, FileText, CheckCircle2, AlertCircle, Loader2, Terminal, GitCommit, UploadCloud, ExternalLink, Trash2, Calendar, DownloadCloud, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/i18n/I18nContext'
+import { localeOf } from '@/lib/billing/localeFormat'
 
 export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: boolean }) {
-  const { t } = useI18n()
+  const { t: tr, language } = useI18n()
+  const locale = localeOf(language)
+  const k = (key: string, vars: Record<string, string | number> = {}) => {
+    let out = tr('admin_release_view.' + key)
+    for (const [name, v] of Object.entries(vars)) out = out.split('{' + name + '}').join(String(v))
+    return out
+  }
 
   const [version, setVersion] = useState('')
   // desmarcado por padrão: as notas são escritas à mão (o automático por IA caía no texto "melhorias gerais")
@@ -117,21 +124,21 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
   const handleDeploy = async () => {
     if (!version.trim()) {
       setStatus('error')
-      setErrorMessage('Por favor, informe a versão (ex: 0.2.0)')
+      setErrorMessage(k('e_version'))
       return
     }
 
     // sem notas e sem o automático, a release sairia sem entrada no histórico
     if (!generateReleaseNotes && !releaseNotes.trim()) {
       setStatus('error')
-      setErrorMessage('Escreva as release notes (ou ligue o "Release Notes Automático") antes de gerar a release.')
+      setErrorMessage(k('e_notes'))
       return
     }
 
     // Validação básica do formato sem o "v"
     if (version.startsWith('v')) {
       setStatus('error')
-      setErrorMessage('Informe apenas os números da versão (ex: 0.2.0), não use o prefixo "v"')
+      setErrorMessage(k('e_prefix'))
       return
     }
 
@@ -158,7 +165,7 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
       try { data = JSON.parse(texto) } catch { /* resposta sem JSON */ }
 
       if (!response.ok) {
-        throw new Error(data.error || (response.status === 504 ? 'O servidor demorou mais de 5 minutos e foi interrompido (504). Veja os logs da Vercel: costuma ser a chamada do Gemini ou do GitHub parada.' : `Erro ao gerar release (HTTP ${response.status}).`))
+        throw new Error(data.error || (response.status === 504 ? k('e_504') : k('e_http', { n: response.status })))
       }
 
       setStatus('success')
@@ -167,13 +174,13 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
     } catch (error: any) {
       console.error(error)
       setStatus('error')
-      setErrorMessage(error.message || 'Falha na comunicação com a API')
+      setErrorMessage(error.message || k('e_comm'))
     }
   }
 
   const handleGitAction = async (action: 'commit' | 'push') => {
     if (action === 'commit' && !gitMessage.trim()) {
-      setGitError('A mensagem de commit é obrigatória.')
+      setGitError(k('e_git_msg'))
       setGitStatus('error')
       return
     }
@@ -192,7 +199,7 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erro na execução do git')
+        throw new Error(data.error || k('e_git_run'))
       }
 
       setGitLog(`STDOUT:\n${data.stdout}\n\nSTDERR:\n${data.stderr}`)
@@ -204,7 +211,7 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
     } catch (error: any) {
       console.error(error)
       setGitStatus('error')
-      setGitError(error.message || 'Falha na comunicação')
+      setGitError(error.message || k('e_git_comm'))
     }
   }
 
@@ -215,11 +222,11 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <Rocket className="w-6 h-6 text-indigo-500" />
-              Releases (IDE)
+              {k('title')}
             </h2>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Lance novas atualizações do Desktop com apenas 1 clique ou gerencie o histórico.
+            {k('subtitle')}
           </p>
         </div>
       </div>
@@ -235,7 +242,7 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
               : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
           )}
         >
-          Lançamento
+          {k('tab_launch')}
         </button>
         <button
           onClick={() => setActiveTab('history')}
@@ -246,7 +253,7 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
               : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
           )}
         >
-          Histórico
+          {k('tab_history')}
         </button>
       </div>
 
@@ -264,17 +271,17 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
           {/* Version Input */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Nova Versão da IDE
+              {k('new_version')}
             </label>
             <input
               type="text"
-              placeholder="Ex: 0.2.0"
+              placeholder={k('version_ph')}
               value={version}
               onChange={(e) => setVersion(e.target.value)}
               className="w-full sm:w-1/3 px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
             />
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Esta versão será alterada automaticamente no package.json e no tauri.conf.json
+              {k('version_hint')}
             </p>
           </div>
 
@@ -283,10 +290,10 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
             <div className="flex items-center justify-between">
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Release Notes Automático
+                  {k('auto_notes')}
                 </label>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Deixe o Github preencher as novidades usando os commits mais recentes
+                  {k('auto_notes_hint')}
                 </p>
               </div>
               <button
@@ -314,13 +321,13 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
               >
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
                   <FileText className="w-4 h-4" />
-                  Release Notes Personalizado (Markdown)
+                  {k('custom_notes')}
                 </label>
                 <textarea
                   rows={5}
                   value={releaseNotes}
                   onChange={(e) => setReleaseNotes(e.target.value)}
-                  placeholder={'Descreva as novidades desta versão (Markdown e emojis valem).\nPara 3 idiomas, separe com linhas: === pt ===, === en ===, === es ===. Sem marcadores, o mesmo texto vale para os três.'}
+                  placeholder={k('notes_ph')}
                   className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-y"
                 />
               </motion.div>
@@ -331,10 +338,10 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
           <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Sistemas Operacionais
+                {k('os_title')}
               </label>
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                Selecione para quais plataformas você deseja gerar os instaladores.
+                {k('os_hint')}
               </p>
 
               <div className="flex flex-wrap gap-3">
@@ -376,12 +383,12 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
               {status === 'loading' ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Atualizando Repositório...
+                  {k('updating_repo')}
                 </>
               ) : (
                 <>
                   <Rocket className="w-5 h-5" />
-                  Gerar Release e Disparar Deploy
+                  {k('deploy')}
                 </>
               )}
             </button>
@@ -396,7 +403,7 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
             >
               <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-medium">Falha ao lançar release</h4>
+                <h4 className="font-medium">{k('fail_title')}</h4>
                 <p className="text-sm mt-1 opacity-90">{errorMessage}</p>
               </div>
             </motion.div>
@@ -410,10 +417,9 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
             >
               <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-medium">Build disparado com sucesso! 🚀</h4>
+                <h4 className="font-medium">{k('ok_title')}</h4>
                 <p className="text-sm mt-1 opacity-90">
-                  Os arquivos do projeto foram atualizados no Github e o <strong>Github Actions</strong> já está rodando em background para compilar os instaladores e publicar a release automaticamente.
-                  Pode navegar à vontade por onde quiser!
+                  {k('ok_a')}<strong>Github Actions</strong>{k('ok_b')}
                 </p>
               </div>
             </motion.div>
@@ -438,7 +444,7 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
         ) : (
           <div className="space-y-4">
             {historyReleases.length === 0 ? (
-              <div className="text-center p-8 text-gray-500 dark:text-gray-400">Nenhuma release encontrada no Github.</div>
+              <div className="text-center p-8 text-gray-500 dark:text-gray-400">{k('empty')}</div>
             ) : (
               <>
                 <div className="flex items-center justify-between p-2 mb-2">
@@ -455,13 +461,13 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
                         }
                       }}
                     />
-                    Selecionar Todos
+                    {k('select_all')}
                   </label>
                   {selectedReleases.length > 0 && (
                     <div className="flex items-center justify-end shrink-0">
                       {showBulkConfirm ? (
                         <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-200">
-                          <span className="text-xs font-bold text-red-500 mr-2">Excluir {selectedReleases.length} releases?</span>
+                          <span className="text-xs font-bold text-red-500 mr-2">{k('bulk_q', { n: selectedReleases.length })}</span>
                           <button onClick={() => setShowBulkConfirm(false)} className="p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded-lg transition-colors">
                             <X className="w-4 h-4" />
                           </button>
@@ -475,7 +481,7 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
                           className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 font-medium rounded-lg transition-colors shadow-sm text-sm"
                         >
                           <Trash2 className="w-4 h-4" />
-                          Excluir selecionados ({selectedReleases.length})
+                          {k('bulk_btn', { n: selectedReleases.length })}
                         </button>
                       )}
                     </div>
@@ -502,8 +508,8 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
                           <span className="px-2 py-0.5 text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 rounded-full font-mono">{release.tag_name}</span>
                         </div>
                         <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                          <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(release.published_at).toLocaleDateString()} às {new Date(release.published_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                          <span className="flex items-center gap-1"><DownloadCloud className="w-3.5 h-3.5" /> {release.assets.length} assets disponíveis</span>
+                          <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {k('date_at', { date: new Date(release.published_at).toLocaleDateString(locale), time: new Date(release.published_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) })}</span>
+                          <span className="flex items-center gap-1"><DownloadCloud className="w-3.5 h-3.5" /> {k('assets_count', { n: release.assets.length })}</span>
                         </div>
                         {release.assets && release.assets.length > 0 && (
                           <div className="mt-2">
@@ -512,7 +518,7 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
                               onClick={() => setExpandedReleaseTag(expandedReleaseTag === release.tag_name ? null : release.tag_name)}
                             >
                               {expandedReleaseTag === release.tag_name ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                              <span>{expandedReleaseTag === release.tag_name ? 'Ocultar arquivos' : 'Ver arquivos para download'}</span>
+                              <span>{expandedReleaseTag === release.tag_name ? k('hide_files') : k('show_files')}</span>
                             </div>
                             
                             <AnimatePresence>
@@ -529,7 +535,7 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
                                         key={asset.id} 
                                         href={asset.browser_download_url} 
                                         className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-colors shadow-sm"
-                                        title={`Baixar ${asset.name} (${(asset.size / 1024 / 1024).toFixed(2)} MB)`}
+                                        title={k('download_asset', { name: asset.name, mb: (asset.size / 1024 / 1024).toFixed(2) })}
                                       >
                                         <DownloadCloud className="w-3.5 h-3.5" /> 
                                         {asset.name}
@@ -548,14 +554,14 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
                       <button 
                         onClick={() => window.open(release.html_url, '_blank')} 
                         className="p-2 text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg transition-colors"
-                        title="Ver no GitHub"
+                        title={k('view_github')}
                       >
                         <ExternalLink className="w-5 h-5" />
                       </button>
                     )}
                     {deleteConfirmTag === release.tag_name ? (
                       <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-200">
-                        <span className="text-xs font-bold text-red-500 mr-2">Excluir Tudo?</span>
+                        <span className="text-xs font-bold text-red-500 mr-2">{k('delete_all_q')}</span>
                         <button onClick={() => setDeleteConfirmTag(null)} className="p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded-lg transition-colors">
                           <X className="w-4 h-4" />
                         </button>
@@ -589,21 +595,21 @@ export function ReleaseAdminView({ refreshTrigger = false }: { refreshTrigger?: 
         >
           <div className="flex items-center gap-2 mb-4">
             <Terminal className="w-5 h-5 text-zinc-500" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Painel de Versionamento Local (Dev Only)</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{k('git_title')}</h3>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-            Ferramentas exclusivas para o seu ambiente de desenvolvimento. Estes botões realizam operações do Git diretamente na sua máquina local.
+            {k('git_desc')}
           </p>
 
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4 items-end">
               <div className="flex-1 space-y-2 w-full">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Mensagem do Commit
+                  {k('git_msg')}
                 </label>
                 <input
                   type="text"
-                  placeholder="Ex: feat: adiciona novo componente de upload"
+                  placeholder={k('git_ph')}
                   value={gitMessage}
                   onChange={(e) => setGitMessage(e.target.value)}
                   className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500/50"
