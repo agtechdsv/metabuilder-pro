@@ -11,7 +11,38 @@ export const MAX_HTML_BYTES = 500_000
 
 const EMAIL_RE = /^[^\s@<>,;"'()[\]\\]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,24}$/
 
-export type EmailRequest = { to: string[]; subject: string; html: string }
+/** Anexos das automações (planilha do resultado de uma consulta): poucos, pequenos e só xlsx/csv. O limite de corpo da plataforma é ~4,5 MB (base64 incha 33%). */
+export const MAX_ATTACHMENTS = 2
+export const MAX_ATTACHMENT_BYTES = 2_500_000
+const ATTACHMENT_TYPES: Record<string, string> = {
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  csv: 'text/csv; charset=utf-8',
+}
+const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/
+
+export type EmailAttachment = { filename: string; content: Buffer; contentType: string }
+export type EmailRequest = { to: string[]; subject: string; html: string; attachments?: EmailAttachment[] }
+
+/** Valida os anexos: nome limpo, extensão permitida (o tipo vem dela, não do pedido) e tamanho total limitado. */
+export function parseAttachments(raw: unknown): { ok: true; attachments: EmailAttachment[] } | { ok: false; error: string } {
+  if (raw === undefined || raw === null) return { ok: true, attachments: [] }
+  if (!Array.isArray(raw)) return { ok: false, error: 'Anexos inválidos.' }
+  if (raw.length > MAX_ATTACHMENTS) return { ok: false, error: `No máximo ${MAX_ATTACHMENTS} anexos por envio.` }
+  const out: EmailAttachment[] = []
+  let total = 0
+  for (const item of raw) {
+    const name = typeof item?.filename === 'string' ? item.filename.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 80) : ''
+    const ext = (name.split('.').pop() || '').toLowerCase()
+    if (!name || !ATTACHMENT_TYPES[ext]) return { ok: false, error: 'Anexo inválido: só planilhas (.xlsx) e CSV (.csv).' }
+    const b64 = typeof item?.content === 'string' ? item.content : ''
+    if (!b64 || !BASE64_RE.test(b64)) return { ok: false, error: 'Anexo inválido: conteúdo ausente ou corrompido.' }
+    const content = Buffer.from(b64, 'base64')
+    total += content.length
+    if (content.length === 0 || total > MAX_ATTACHMENT_BYTES) return { ok: false, error: 'Anexos grandes demais (limite de ' + Math.floor(MAX_ATTACHMENT_BYTES / 1_000_000) + ' MB no total). Reduza o número de linhas da consulta.' }
+    out.push({ filename: name, content, contentType: ATTACHMENT_TYPES[ext] })
+  }
+  return { ok: true, attachments: out }
+}
 
 export function parseEmailRequest(body: any): { ok: true; req: EmailRequest } | { ok: false; error: string } {
   const rawTo = body?.to
@@ -28,5 +59,8 @@ export function parseEmailRequest(body: any): { ok: true; req: EmailRequest } | 
   if (!html.trim()) return { ok: false, error: 'Corpo do e-mail vazio.' }
   if (Buffer.byteLength(html, 'utf8') > MAX_HTML_BYTES) return { ok: false, error: 'Corpo do e-mail grande demais.' }
 
-  return { ok: true, req: { to: list, subject, html } }
+  const att = parseAttachments(body?.attachments)
+  if (!att.ok) return { ok: false, error: att.error }
+
+  return { ok: true, req: { to: list, subject, html, ...(att.attachments.length ? { attachments: att.attachments } : {}) } }
 }

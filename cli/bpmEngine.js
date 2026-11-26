@@ -6,6 +6,7 @@ const { wrapEmailInTemplate } = require('./emailTemplates');
 const { t } = require('./i18n');
 const { BpmCore } = require('./bpmCore');
 const { resolveSystemRecipientEmails } = require('./recipients');
+const { buildAttachment } = require('./attachments');
 
 /**
  * Casca do motor de BPM para o Agente CLI: a lógica dos fluxos está em bpmCore.js (a mesma que vai no app exportado);
@@ -40,7 +41,7 @@ class BpmEngine {
         },
       },
       mail: {
-        send: async ({ to, subject, body, template }) => {
+        send: async ({ to, subject, body, template, attachments }) => {
           try {
             await axios.post(`${this.apiUrl}/api/automations/email`, {
               project_id: this.project.id,
@@ -48,7 +49,9 @@ class BpmEngine {
               to,
               subject,
               html: wrapEmailInTemplate(template, body),
-            });
+              // planilha (xlsx) ou CSV do resultado de uma "Consultar dados"
+              ...(attachments && attachments.length ? { attachments: attachments.map((a) => buildAttachment(a)) } : {}),
+            }, { timeout: 60000, maxBodyLength: 8 * 1024 * 1024 });
           } catch (err) {
             throw new Error(err.response?.data?.error || err.message);
           }

@@ -185,6 +185,150 @@ describe('núcleo do BPM: comportamento extra', () => {
     })
   })
 
+  describe('ação Consultar dados (relatórios agendados)', () => {
+    const {
+      relativeDate, buildHtmlTable,
+    } = require('../../../../cli/bpmCore.js') as { relativeDate: (c: any, now?: Date) => Date | null; buildHtmlTable: (d: any, max?: number) => string }
+
+    type Rec = { sql: string; params: any[] }
+    function make(handler: (sql: string, params: any[]) => any[], flowNodes: any[], edges: any[] = []) {
+      const queries: Rec[] = []
+      const mails: any[] = []
+      const runs: any[] = []
+      const core = new BpmCore({
+        db: { dialect: 'postgres', async query(sql: string, params: any[]) { queries.push({ sql, params }); return handler(sql, params) } },
+        models: { tableOf: async (id: string) => (fixtures.models as any)[id] || null, isKnownTable: async (n: string) => Object.values(fixtures.models as any).includes(n) },
+        mail: { async send(m: any) { mails.push(m) } },
+        runs: { async report(r: any) { runs.push(r) } },
+      })
+      core.setWorkflows([{ id: 'f', name: 'Relatório', flow_data: { nodes: flowNodes, edges } } as any])
+      return { core: core as any, queries, mails, runs }
+    }
+    const trigger = { id: 't', type: 'trigger', data: { triggerType: ['INSERT'], triggerModelId: 'm_orders' } }
+    const queryNode = (over: any = {}) => ({ id: 'q', type: 'action', data: { actionType: 'query', queryModelId: 'm_orders', queryName: 'consulta', queryColumns: [{ field: 'id', label: 'Pedido', type: 'integer' }, { field: 'total', label: 'Total', type: 'numeric' }, { field: 'data_pedido', label: 'Data', type: 'timestamp with time zone' }], queryLimit: 50, ...over } })
+    const emailNode = (over: any = {}) => ({ id: 'e', type: 'action', data: { actionType: 'email', emailRecipientType: 'custom', customEmailField: 'gestor@x.com', actionSubject: 'Resumo ({{consulta.total}})', actionBody: 'Pedidos: {{consulta.tabela}}', ...over } })
+    const chain = [{ source: 't', target: 'q' }, { source: 'q', target: 'e' }]
+
+    it('monta o SQL só com colunas validadas, filtros em parâmetros, ordem e limite; o e-mail recebe tabela e total', async () => {
+      const rows = [{ id: '1', total: '1500.5', data_pedido: new Date(2026, 10, 20) }, { id: '2', total: '99', data_pedido: new Date(2026, 10, 21, 14, 5) }]
+      const { core, queries, mails } = make(() => rows, [trigger, queryNode({ queryFilters: [{ field: 'status', operator: '==', valueType: 'fixed', value: 'Aprovado' }, { field: 'total', operator: '>=', valueType: 'fixed', value: '100' }], queryOrderBy: 'data_pedido', queryOrderDir: 'desc' }), emailNode()], chain)
+      await core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(queries[0].sql).toBe('SELECT "id", "total", "data_pedido" FROM "orders" WHERE "status" = $1 AND "total" >= $2 ORDER BY "data_pedido" DESC LIMIT 50')
+      expect(queries[0].params).toEqual(['Aprovado', '100'])
+      expect(mails).toHaveLength(1)
+      expect(mails[0].subject).toBe('Resumo (2)')
+      // sem quebras de linha (o envio trocaria por <br/> e quebraria a tabela); datas e valores em pt-BR
+      expect(mails[0].body).not.toMatch(/<br\/>.*<table|<table[^>]*>[^]*<br\/>/)
+      expect(mails[0].body).toContain('1.500,50')
+      expect(mails[0].body).toContain('20/11/2026')
+      expect(mails[0].body).toContain('21/11/2026 14:05')
+      expect(mails[0].body).toContain('>Pedido<')
+    })
+
+    it('filtro de data relativa vira parâmetro (Date) e nunca texto no SQL', async () => {
+      const { core, queries } = make(() => [], [trigger, queryNode({ queryFilters: [{ field: 'criado_em', operator: '>=', valueType: 'relative', relKind: 'now_minus', relAmount: 48, relUnit: 'hours' }] })], [{ source: 't', target: 'q' }])
+      const before = Date.now()
+      await core.processEvent('orders', 'INSERT', { id: 1 })
+      const p = queries[0].params[0] as Date
+      expect(p).toBeInstanceOf(Date)
+      expect(Math.abs(before - 48 * 3600_000 - p.getTime())).toBeLessThan(5000)
+      expect(queries[0].sql).toContain('"criado_em" >= $1')
+    })
+
+    it('datas relativas: início da semana (segunda), da semana passada, do mês e do mês passado', () => {
+      const now = new Date(2026, 10, 26, 15, 30) // quinta-feira, 26/11/2026
+      const fmt = (d: Date | null) => d && `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()} ${d.getHours()}:${d.getMinutes()}`
+      expect(fmt(relativeDate({ relKind: 'start_of_today' }, now))).toBe('2026-11-26 0:0')
+      expect(fmt(relativeDate({ relKind: 'start_of_week' }, now))).toBe('2026-11-23 0:0')
+      expect(fmt(relativeDate({ relKind: 'start_of_last_week' }, now))).toBe('2026-11-16 0:0')
+      expect(fmt(relativeDate({ relKind: 'start_of_month' }, now))).toBe('2026-11-1 0:0')
+      expect(fmt(relativeDate({ relKind: 'start_of_last_month' }, now))).toBe('2026-10-1 0:0')
+      expect(fmt(relativeDate({ relKind: 'start_of_year' }, now))).toBe('2026-1-1 0:0')
+      expect(fmt(relativeDate({ relKind: 'now_minus', relAmount: 15, relUnit: 'days' }, now))).toBe('2026-11-11 15:30')
+      expect(fmt(relativeDate({ relKind: 'now_minus', relAmount: 1, relUnit: 'weeks' }, now))).toBe('2026-11-19 15:30')
+      expect(relativeDate({ relKind: 'desconhecido' }, now)).toBeNull()
+    })
+
+    it('agrupar e contar com o nome vindo de outra tabela (chave estrangeira)', async () => {
+      const { core, queries, mails } = make((sql) => (/GROUP BY/.test(sql) ? [{ grupo: 'f1', valor: '7' }, { grupo: 'f2', valor: '3' }] : [{ id: 'f1', rotulo: 'Ana' }, { id: 'f2', rotulo: 'Beto' }]),
+        [trigger, queryNode({ queryColumns: [], queryGroupBy: 'funcionario_id', queryAggregate: 'count', queryGroupLabelModelId: 'm_clients', queryGroupLabelField: 'nome', queryGroupTitle: 'Funcionário', queryFilters: [{ field: 'data_pedido', operator: '>=', valueType: 'relative', relKind: 'now_minus', relAmount: 15, relUnit: 'days' }] }), emailNode()], chain)
+      await core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(queries[0].sql).toBe('SELECT "funcionario_id" AS "grupo", COUNT(*) AS "valor" FROM "orders" WHERE "data_pedido" >= $1 GROUP BY "funcionario_id" ORDER BY "valor" DESC LIMIT 50')
+      expect(queries[1].sql).toBe('SELECT "id", "nome" AS "rotulo" FROM "clients" WHERE "id" IN ($1,$2)')
+      expect(mails[0].body).toContain('>Ana<')
+      expect(mails[0].body).toContain('>Funcionário<')
+      expect(mails[0].body).toContain('>Quantidade<')
+      expect(mails[0].subject).toBe('Resumo (2)')
+    })
+
+    it('soma por grupo exige o campo; soma e média geram a função certa', async () => {
+      const bad = make(() => [], [trigger, queryNode({ queryColumns: [], queryGroupBy: 'status', queryAggregate: 'sum' })], [{ source: 't', target: 'q' }])
+      await bad.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(bad.runs[0].status).toBe('error')
+      expect(bad.runs[0].error_message).toContain('campo')
+      const good = make(() => [{ grupo: 'A', valor: '10' }], [trigger, queryNode({ queryColumns: [], queryGroupBy: 'status', queryAggregate: 'sum', queryAggregateField: 'total' })], [{ source: 't', target: 'q' }])
+      await good.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(good.queries[0].sql).toContain('SUM("total") AS "valor"')
+    })
+
+    it('"não continuar se não houver resultado": sem linhas o e-mail não sai; com o marcador desligado, sai com a mensagem de vazio', async () => {
+      const a = make(() => [], [trigger, queryNode({ querySkipWhenEmpty: true }), emailNode()], chain)
+      await a.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(a.mails).toHaveLength(0)
+      expect(a.runs[0].status).toBe('success')
+      const b = make(() => [], [trigger, queryNode(), emailNode()], chain)
+      await b.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(b.mails).toHaveLength(1)
+      expect(b.mails[0].body).toContain('Nenhum registro encontrado.')
+      expect(b.mails[0].subject).toBe('Resumo (0)')
+    })
+
+    it('segurança: tabela fora do projeto, coluna com nome suspeito e operador desconhecido nunca entram no SQL', async () => {
+      const t1 = make(() => [], [trigger, queryNode({ queryModelId: 'm_inexistente' })], [{ source: 't', target: 'q' }])
+      await t1.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(t1.queries).toHaveLength(0)
+      expect(t1.runs[0].status).toBe('error')
+      const t2 = make(() => [], [trigger, queryNode({ queryColumns: [{ field: 'id"; DROP TABLE orders; --', label: 'x' }, { field: 'total', label: 'Total' }], queryFilters: [{ field: 'status', operator: '; DROP', valueType: 'fixed', value: 'x' }, { field: 'x y', operator: '=', valueType: 'fixed', value: '1' }] })], [{ source: 't', target: 'q' }])
+      await t2.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(t2.queries[0].sql).toBe('SELECT "total" FROM "orders" LIMIT 50')
+      expect(t2.queries[0].params).toEqual([])
+    })
+
+    it('limite de linhas é aplicado (padrão 200, teto 5000)', async () => {
+      const a = make(() => [], [trigger, queryNode({ queryLimit: undefined })], [{ source: 't', target: 'q' }])
+      await a.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(a.queries[0].sql).toMatch(/LIMIT 200$/)
+      const b = make(() => [], [trigger, queryNode({ queryLimit: 999999 })], [{ source: 't', target: 'q' }])
+      await b.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(b.queries[0].sql).toMatch(/LIMIT 5000$/)
+    })
+
+    it('anexo: o e-mail leva o resultado como planilha; resultado inexistente vira erro anotado, sem anexo', async () => {
+      const rows = [{ id: '1', total: '10', data_pedido: new Date(2026, 10, 20) }]
+      const ok = make(() => rows, [trigger, queryNode(), emailNode({ emailAttachDataset: 'consulta', emailAttachFormat: 'xlsx' })], chain)
+      await ok.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(ok.mails[0].attachments).toHaveLength(1)
+      expect(ok.mails[0].attachments[0].format).toBe('xlsx')
+      expect(ok.mails[0].attachments[0].filename).toMatch(/^consulta-\d{4}-\d{2}-\d{2}\.xlsx$/)
+      expect(ok.mails[0].attachments[0].dataset.rows).toEqual(rows)
+      const missing = make(() => rows, [trigger, queryNode(), emailNode({ emailAttachDataset: 'outra' })], chain)
+      await missing.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(missing.mails[0].attachments).toBeUndefined()
+      expect(missing.runs[0].status).toBe('error')
+    })
+
+    it('tabela HTML: escapa texto, formata data e valor, limita as linhas do corpo e avisa quantas faltam', () => {
+      const ds = { columns: [{ key: 'n', label: 'Nome <b>', type: 'text' }, { key: 'v', label: 'Valor', type: 'numeric' }], rows: Array.from({ length: 5 }, (_, i) => ({ n: i === 0 ? '<script>x</script>' : 'L' + i, v: '1234.5' })), total: 5 }
+      const html = buildHtmlTable(ds, 3)
+      expect(html).not.toContain('<script>')
+      expect(html).toContain('&lt;script&gt;')
+      expect(html).toContain('Nome &lt;b&gt;')
+      expect(html).toContain('1.234,50')
+      expect(html).toContain('Mostrando 3 de 5 linhas.')
+      expect(html).not.toContain(String.fromCharCode(10))
+    })
+  })
+
   describe('aba Mensagem da ação (aviso na tela de quem gravou)', () => {
     const flow = (data: any = {}) => ({ id: 'f', name: 'F', flow_data: { nodes: [
       { id: 't', type: 'trigger', data: { triggerType: ['INSERT'], triggerModelId: 'm_orders' } },

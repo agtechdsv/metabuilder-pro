@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
-import { Zap, Play, CheckCircle2, GitMerge, Trash2, Mail, Edit, PlusCircle, Clock, MousePointer2, Webhook, ShieldAlert } from 'lucide-react';
+import { Zap, Play, CheckCircle2, GitMerge, Trash2, Mail, Edit, PlusCircle, Clock, MousePointer2, Webhook, ShieldAlert, Database } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nContext';
 
 // Common style for node wrappers
@@ -80,6 +80,11 @@ export const ActionNode = memo(({ id, data, selected }: NodeProps) => {
   let desc = t('bpm.nodes.configure_sidebar');
 
   if (type === 'email') { title = t('bpm.nodes.send_email'); desc = t('bpm.nodes.notification'); Icon = Mail; }
+  else if (type === 'query') {
+    title = t('bpm.nodes.query_data', 'Consultar Dados');
+    desc = data.queryGroupBy ? t('bpm.nodes.query_grouped', 'Agrupar e calcular') : t('bpm.nodes.query_list', 'Listar registros');
+    Icon = Database;
+  }
   else if (type === 'update') { 
     const fields = (data.actionFields as any[])?.length || 0;
     title = t('bpm.nodes.update_record'); 

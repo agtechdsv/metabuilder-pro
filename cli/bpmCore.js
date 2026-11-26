@@ -38,11 +38,116 @@ const toList = (raw) => {
 /** Corpo de mensagem (HTML do editor) → texto simples para o aviso na tela. */
 const htmlToText = (html) => String(html == null ? '' : html)
   .replace(/<\s*br\s*\/?>/gi, '\n')
-  .replace(/<\/\s*(p|div|li|h[1-6])\s*>/gi, '\n')
+  .replace(/<\/\s*(p|div|li|tr|h[1-6])\s*>/gi, '\n')
+  .replace(/<\/\s*t[dh]\s*>/gi, ' | ')
   .replace(/<[^>]*>/g, '')
+  .replace(/ \| *\n/g, '\n')
   .replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;/g, "'")
   .replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n')
   .trim()
+
+// ===== Consultar dados (relatórios agendados) =====
+const QUERY_DEFAULT_ROWS = 200
+const QUERY_MAX_ROWS = 5000
+const QUERY_BODY_ROWS = 200 // linhas da tabela no corpo do e-mail; o restante só vai na planilha anexa
+const QUERY_TIMEOUT_MS = 60000
+const QUERY_OPS = new Set(['=', '==', '!=', '<>', '>', '<', '>=', '<='])
+const AGG_FNS = { count: 'COUNT', sum: 'SUM', avg: 'AVG', min: 'MIN', max: 'MAX' }
+
+/** Identificador de tabela/coluna: só letras, números e "_" (vem da configuração do fluxo e entra no SQL). null se inválido. */
+const strictIdent = (name) => (/^[A-Za-z_][A-Za-z0-9_]*$/.test(String(name == null ? '' : name)) ? String(name) : null)
+/** Nome do resultado da consulta ({{nome.tabela}}): minúsculas, números e "_". */
+const datasetNameOf = (name) => {
+  const n = String(name || '').trim().toLowerCase()
+  return /^[a-z][a-z0-9_]{0,30}$/.test(n) ? n : 'consulta'
+}
+
+/**
+ * Data relativa de um filtro: "agora menos N horas/dias/semanas/meses" ou o início de hoje, da semana (segunda-feira),
+ * da semana passada, do mês, do mês passado e do ano. Usa o relógio da máquina do Agente. null se o tipo for desconhecido.
+ */
+function relativeDate(cfg, now = new Date()) {
+  const d = new Date(now.getTime())
+  const midnight = (x) => { x.setHours(0, 0, 0, 0); return x }
+  switch (cfg && cfg.relKind) {
+    case 'now_minus': {
+      const n = Math.max(0, Math.min(100000, Number(cfg.relAmount) || 0))
+      if (cfg.relUnit === 'hours') d.setHours(d.getHours() - n)
+      else if (cfg.relUnit === 'weeks') d.setDate(d.getDate() - 7 * n)
+      else if (cfg.relUnit === 'months') d.setMonth(d.getMonth() - n)
+      else d.setDate(d.getDate() - n)
+      return d
+    }
+    case 'start_of_today': return midnight(d)
+    case 'start_of_week': midnight(d); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d
+    case 'start_of_last_week': midnight(d); d.setDate(d.getDate() - ((d.getDay() + 6) % 7) - 7); return d
+    case 'start_of_month': midnight(d); d.setDate(1); return d
+    case 'start_of_last_month': midnight(d); d.setDate(1); d.setMonth(d.getMonth() - 1); return d
+    case 'start_of_year': midnight(d); d.setMonth(0, 1); return d
+    default: return null
+  }
+}
+
+/** Data para gente: dd/MM/aaaa (com HH:mm se tiver hora). */
+const humanDate = (v) => {
+  const p = (n) => String(n).padStart(2, '0')
+  const date = `${p(v.getDate())}/${p(v.getMonth() + 1)}/${v.getFullYear()}`
+  return v.getHours() || v.getMinutes() || v.getSeconds() ? `${date} ${p(v.getHours())}:${p(v.getMinutes())}` : date
+}
+
+/** 1234.5 → "1.234,50" (formato brasileiro, sem depender do ICU do Node). */
+const fmtNumber = (value, decimals) => {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return String(value)
+  const [int, dec] = Math.abs(n).toFixed(decimals).split('.')
+  return (n < 0 ? '-' : '') + int.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (dec ? ',' + dec : '')
+}
+
+const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+const NUMERIC_TYPE = /numeric|decimal|double|real|float|money/i
+const INTEGER_TYPE = /^(small|big)?int(eger)?\d*$|serial/i
+
+/** Valor de uma célula para ler na tela/e-mail, conforme o tipo da coluna. */
+function formatCell(value, type) {
+  if (value === null || value === undefined) return ''
+  const t = String(type || '')
+  if (value instanceof Date) return isNaN(value.getTime()) ? '' : humanDate(value)
+  if (typeof value === 'boolean') return value ? 'Sim' : 'Não'
+  if (NUMERIC_TYPE.test(t)) return fmtNumber(value, 2)
+  if (INTEGER_TYPE.test(t)) return fmtNumber(value, 0)
+  if (/date|time/i.test(t) && typeof value === 'string') {
+    const d = new Date(value)
+    if (!isNaN(d.getTime())) return humanDate(d)
+  }
+  return String(value)
+}
+
+/**
+ * Tabela HTML do resultado, para o corpo do e-mail. SEM quebras de linha (o envio troca "\n" por <br/> e quebraria a tabela).
+ * Mostra no máximo `maxRows` linhas e avisa quantas ficaram de fora.
+ */
+function buildHtmlTable(dataset, maxRows = QUERY_BODY_ROWS) {
+  const cols = dataset.columns || []
+  const rows = dataset.rows || []
+  if (rows.length === 0) return '<p>Nenhum registro encontrado.</p>'
+  const th = 'style="text-align:left;padding:6px 8px;background:#f1f5f9;border:1px solid #e2e8f0;font-size:12px"'
+  const head = '<tr>' + cols.map((c) => `<th ${th}>${escapeHtml(c.label || c.key)}</th>`).join('') + '</tr>'
+  const shown = rows.slice(0, maxRows)
+  const body = shown.map((r) => '<tr>' + cols.map((c) => {
+    const numeric = NUMERIC_TYPE.test(String(c.type || '')) || INTEGER_TYPE.test(String(c.type || ''))
+    return `<td style="padding:6px 8px;border:1px solid #e2e8f0;font-size:12px;${numeric ? 'text-align:right;' : ''}">${escapeHtml(formatCell(r[c.key], c.type))}</td>`
+  }).join('') + '</tr>').join('')
+  const more = rows.length > shown.length ? `<p style="font-size:12px;color:#64748b">Mostrando ${shown.length} de ${rows.length} linhas.</p>` : ''
+  return `<table style="border-collapse:collapse;width:100%">${head}${body}</table>${more}`
+}
+
+/** Espera `promise` no máximo `ms`; passado disso rejeita (a consulta não segura o Agente para sempre). */
+function withTimeout(promise, ms, message) {
+  let timer
+  const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), ms) })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
 
 /** Quem agiu (vindo da sessão assinada): só textos curtos; sem id, não há usuário. */
 const cleanActor = (a) => {
@@ -223,9 +328,7 @@ class BpmCore {
    */
   humanValue(v) {
     if (!(v instanceof Date) || isNaN(v.getTime())) return v
-    const p = n => String(n).padStart(2, '0')
-    const date = `${p(v.getDate())}/${p(v.getMonth() + 1)}/${v.getFullYear()}`
-    return v.getHours() || v.getMinutes() || v.getSeconds() ? `${date} ${p(v.getHours())}:${p(v.getMinutes())}` : date
+    return humanDate(v)
   }
 
   /**
@@ -234,6 +337,14 @@ class BpmCore {
    * nos demais usos (filtro, valor gravado) sai ISO (aaaa-MM-dd), que o banco entende. Desconhecida ou sem usuário: undefined (fica literal).
    */
   specialVariable(table, field, human) {
+    // resultado de uma ação "Consultar dados" desta execução: {{nome.tabela}} (HTML) e {{nome.total}} (quantidade de linhas)
+    const store = this.runCtx.getStore()
+    const dataset = store && store.datasets && store.datasets[table]
+    if (dataset) {
+      if (field === 'total') return String(dataset.total)
+      if (field === 'tabela') return buildHtmlTable(dataset, QUERY_BODY_ROWS)
+      return undefined
+    }
     if (table === 'sistema') {
       const now = new Date()
       const p = (n) => String(n).padStart(2, '0')
@@ -267,7 +378,7 @@ class BpmCore {
       const parts = match[1].split('.')
       if (parts.length === 2) {
         const table = parts[0]
-        if (table !== triggerTable && table !== actionTable && table !== 'webhook' && table !== 'sistema' && table !== 'usuario') {
+        if (table !== triggerTable && table !== actionTable && table !== 'webhook' && table !== 'sistema' && table !== 'usuario' && !(this.runCtx.getStore() && this.runCtx.getStore().datasets && this.runCtx.getStore().datasets[table])) {
           extraTables.add(table)
         }
       }
@@ -432,8 +543,122 @@ class BpmCore {
     return { where: `WHERE ${clauses.join(' AND ')}`, params }
   }
 
+  /**
+   * Ação "Consultar dados": lê linhas do banco (SÓ LEITURA) e guarda o resultado na execução para as ações seguintes
+   * ({{nome.tabela}}, {{nome.total}} e anexo de planilha no e-mail). O SQL é montado só com tabelas dos modelos do projeto, colunas
+   * validadas e valores como parâmetros; há limite de linhas e de tempo. Devolve { stop: true } se for para não seguir (sem resultado).
+   */
+  async runQueryAction(node, triggerTable, triggerData) {
+    const d = (node && node.data) || {}
+    const name = datasetNameOf(d.queryName)
+    const table = d.queryModelId ? await this.getModelTable(d.queryModelId) : null
+    if (!table || !strictIdent(table) || !(await this.isKnownTable(table))) throw new Error('Consultar dados: escolha uma tabela do projeto.')
+
+    const oracle = this.dbType === 'oracle'
+    const params = []
+    const bind = (value) => { params.push(value); return oracle ? `:${params.length}` : `$${params.length}` }
+
+    // filtros
+    const where = []
+    for (const f of d.queryFilters || []) {
+      const field = strictIdent(f && f.field)
+      if (!field) continue
+      let value
+      if (f.valueType === 'relative') {
+        value = relativeDate(f)
+        if (!value) continue
+      } else {
+        value = await this.replaceVariables(f.value == null ? '' : String(f.value), triggerTable, triggerData)
+      }
+      if (f.operator === 'contains') {
+        where.push(oracle ? `LOWER("${field}") LIKE LOWER(${bind('%' + String(value) + '%')})` : `CAST("${field}" AS text) ILIKE ${bind('%' + String(value) + '%')}`)
+      } else {
+        const op = f.operator === '==' ? '=' : (f.operator || '=')
+        if (!QUERY_OPS.has(String(op))) continue
+        where.push(`"${field}" ${op} ${bind(value)}`)
+      }
+    }
+    const whereSql = where.length ? ` WHERE ${where.join(' AND ')}` : ''
+
+    const limit = Math.max(1, Math.min(QUERY_MAX_ROWS, Math.floor(Number(d.queryLimit)) || QUERY_DEFAULT_ROWS))
+    const limitSql = oracle ? ` FETCH FIRST ${limit} ROWS ONLY` : ` LIMIT ${limit}`
+    const dir = String(d.queryOrderDir).toLowerCase() === 'desc' ? 'DESC' : 'ASC'
+
+    let sql
+    let columns
+    const groupField = strictIdent(d.queryGroupBy)
+    if (groupField) {
+      // agrupar e calcular: uma linha por grupo
+      const fn = AGG_FNS[d.queryAggregate] ? d.queryAggregate : 'count'
+      const aggField = fn === 'count' ? null : strictIdent(d.queryAggregateField)
+      if (fn !== 'count' && !aggField) throw new Error('Consultar dados: escolha o campo a somar, calcular a média ou comparar.')
+      const expr = fn === 'count' ? 'COUNT(*)' : `${AGG_FNS[fn]}("${aggField}")`
+      sql = `SELECT "${groupField}" AS "grupo", ${expr} AS "valor" FROM "${table}"${whereSql} GROUP BY "${groupField}" ORDER BY "valor" ${dir === 'ASC' && d.queryOrderDir ? 'ASC' : 'DESC'}${limitSql}`
+      columns = [
+        { key: 'grupo', label: d.queryGroupTitle || 'Grupo', type: 'text' },
+        { key: 'valor', label: d.queryValueTitle || (fn === 'count' ? 'Quantidade' : 'Total'), type: fn === 'count' ? 'integer' : (d.queryValueType || 'numeric') },
+      ]
+    } else {
+      const cols = (d.queryColumns || []).filter((c) => strictIdent(c && c.field))
+      if (cols.length === 0) throw new Error('Consultar dados: escolha ao menos uma coluna.')
+      const orderField = strictIdent(d.queryOrderBy)
+      sql = `SELECT ${cols.map((c) => `"${c.field}"`).join(', ')} FROM "${table}"${whereSql}${orderField ? ` ORDER BY "${orderField}" ${dir}` : ''}${limitSql}`
+      columns = cols.map((c) => ({ key: c.field, label: c.label || c.field, type: c.type || 'text' }))
+    }
+
+    this.log.sql(`[BPM] Consultando dados: ${sql} | Parametros: ${this.show(params)}`)
+    const raw = await withTimeout(this.executeQuery(sql, params), QUERY_TIMEOUT_MS, `Consultar dados: tempo limite de ${QUERY_TIMEOUT_MS / 1000} s atingido.`)
+    const rows = raw.map((r) => (oracle ? Object.fromEntries(Object.entries(r).map(([k, v]) => [k.toLowerCase(), v])) : r))
+
+    // mostra o nome (em vez do id) quando o grupo é uma chave estrangeira
+    if (groupField && d.queryGroupLabelModelId && strictIdent(d.queryGroupLabelField)) {
+      const labelTable = await this.getModelTable(d.queryGroupLabelModelId)
+      const ids = [...new Set(rows.map((r) => r.grupo).filter((v) => v !== null && v !== undefined))]
+      if (labelTable && strictIdent(labelTable) && (await this.isKnownTable(labelTable)) && ids.length > 0) {
+        const lp = ids.map((_, i) => (oracle ? `:${i + 1}` : `$${i + 1}`)).join(',')
+        const labelRows = await withTimeout(
+          this.executeQuery(`SELECT "id", "${d.queryGroupLabelField}" AS "rotulo" FROM "${labelTable}" WHERE "id" IN (${lp})`, ids),
+          QUERY_TIMEOUT_MS, `Consultar dados: tempo limite de ${QUERY_TIMEOUT_MS / 1000} s atingido.`)
+        const byId = new Map(labelRows.map((r) => [String(r.id ?? r.ID), r.rotulo ?? r.ROTULO]))
+        for (const r of rows) r.grupo = byId.get(String(r.grupo)) ?? r.grupo
+      }
+    }
+
+    const dataset = { name, columns, rows, total: rows.length }
+    const store = this.runCtx.getStore()
+    if (store) {
+      if (!store.datasets) store.datasets = {}
+      store.datasets[name] = dataset
+    }
+    this.log.ok(`[BPM] Consulta "${name}": ${rows.length} linha(s).`)
+
+    if (d.querySkipWhenEmpty && rows.length === 0) {
+      this.log.info(`[BPM] Consulta "${name}" sem resultado: o fluxo não continua.`)
+      return { stop: true }
+    }
+    return undefined
+  }
+
+  /** Anexos do e-mail: a planilha (ou CSV) do resultado de uma consulta feita antes, no mesmo fluxo. */
+  buildEmailAttachments(data) {
+    if (!data || !data.emailAttachDataset) return []
+    const name = datasetNameOf(data.emailAttachDataset)
+    const store = this.runCtx.getStore()
+    const dataset = store && store.datasets && store.datasets[name]
+    if (!dataset) {
+      this.log.error(`[BPM] Anexo: o resultado "${name}" não existe neste fluxo (coloque a ação Consultar dados antes do e-mail).`)
+      this.noteIssue(`Anexo: resultado "${name}" não encontrado.`)
+      return []
+    }
+    const format = data.emailAttachFormat === 'csv' ? 'csv' : 'xlsx'
+    const now = new Date()
+    const p = (n) => String(n).padStart(2, '0')
+    return [{ format, filename: `${name}-${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}.${format}`, dataset }]
+  }
+
   async runNodeAction(node, triggerTable, triggerData) {
     const data = node.data || {}
+    if (data.actionType === 'query') return await this.runQueryAction(node, triggerTable, triggerData)
     const actionTable = data.actionModelId ? await this.getModelTable(data.actionModelId) : null
 
     // Para update, a tabela é obrigatória. Para email, depende do tipo de destinatário.
@@ -633,7 +858,8 @@ class BpmCore {
         const templateType = data.emailTemplate || 'free'
         this.log.mail(`[BPM] Disparando e-mail para: ${this.verbose ? to : '[omitido]'} (Template: ${templateType})`)
         try {
-          await this.ports.mail.send({ to, subject, body: String(body).replace(/\n/g, '<br/>'), template: templateType })
+          const attachments = this.buildEmailAttachments(data)
+          await this.ports.mail.send({ to, subject, body: String(body).replace(/\n/g, '<br/>'), template: templateType, ...(attachments.length ? { attachments } : {}) })
           this.log.ok('[BPM] E-mail disparado com sucesso!')
         } catch (err) {
           this.log.error(`[BPM] Erro ao enviar e-mail: ${err.message}`)
@@ -680,7 +906,8 @@ class BpmCore {
       else if (currentNode.type === 'action') {
         const store = this.runCtx.getStore()
         const issuesBefore = store ? store.issues.length : 0
-        await this.runNodeAction(currentNode, triggerTable, triggerData)
+        const outcome = await this.runNodeAction(currentNode, triggerTable, triggerData)
+        if (outcome && outcome.stop) continue // ex.: consulta sem resultado e "não continuar" marcado
         if (!store || store.issues.length === issuesBefore) await this.queueSuccessMessage(currentNode, triggerTable, triggerData)
         const edges = flowData.edges.filter(e => e.source === currentNode.id)
 
@@ -723,7 +950,7 @@ class BpmCore {
     let errorMessage = null
     let extra = { table: tableName, source }
     let messages = []
-    await this.runCtx.run({ issues: [], messages: [] }, async () => {
+    await this.runCtx.run({ issues: [], messages: [], datasets: {} }, async () => {
       try {
         const result = await fn()
         extra = { ...extra, steps: result?.steps || 0, ...(result?.details || {}) }
@@ -895,8 +1122,8 @@ class BpmCore {
       return { mutatedData: newData }
     } else {
       // Executa a ação padrão no banco (ex: INSERT em outra tabela, Email, Webhook)
-      await this.runNodeAction(node, triggerTable, triggerData)
-      return null
+      const outcome = await this.runNodeAction(node, triggerTable, triggerData)
+      return outcome && outcome.stop ? { stop: true } : null
     }
   }
 
@@ -946,6 +1173,7 @@ class BpmCore {
         const store = this.runCtx.getStore()
         const issuesBefore = store ? store.issues.length : 0
         const actionResult = await this.runNodeActionSync(currentNode, triggerTable, currentData)
+        if (actionResult && actionResult.stop) continue
         if (actionResult && actionResult.mutatedData) {
           currentData = actionResult.mutatedData
         }
@@ -1024,4 +1252,4 @@ class BpmCore {
   }
 }
 
-module.exports = { BpmCore, MAX_STEPS, WEBHOOK_TIMEOUT_MS }
+module.exports = { BpmCore, MAX_STEPS, WEBHOOK_TIMEOUT_MS, relativeDate, buildHtmlTable, formatCell }

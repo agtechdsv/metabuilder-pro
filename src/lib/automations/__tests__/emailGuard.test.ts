@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseEmailRequest, MAX_RECIPIENTS } from '../emailGuard'
+import { parseEmailRequest, MAX_RECIPIENTS, MAX_ATTACHMENTS, MAX_ATTACHMENT_BYTES } from '../emailGuard'
 
 const ok = { to: 'ana@empresa.com.br', subject: 'Pedido aprovado', html: '<p>Olá</p>' }
 
@@ -31,5 +31,43 @@ describe('envio de e-mail das automações', () => {
     expect(parseEmailRequest({ ...ok, html: '' }).ok).toBe(false)
     expect(parseEmailRequest({ ...ok, html: 'x'.repeat(600_000) }).ok).toBe(false)
     expect(parseEmailRequest({ ...ok, html: 123 as any }).ok).toBe(false)
+  })
+
+  describe('anexos (planilha do resultado de uma consulta)', () => {
+    const b64 = (n: number) => Buffer.alloc(n, 1).toString('base64')
+    const att = (over: any = {}) => ({ filename: 'consulta-2026-11-26.xlsx', content: b64(100), ...over })
+
+    it('aceita xlsx e csv; o tipo vem da extensão, não do pedido', () => {
+      const r = parseEmailRequest({ ...ok, attachments: [att({ contentType: 'text/html' }), att({ filename: 'a.csv' })] })
+      expect(r.ok).toBe(true)
+      if (r.ok) {
+        expect(r.req.attachments).toHaveLength(2)
+        expect(r.req.attachments![0].contentType).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        expect(r.req.attachments![1].contentType).toBe('text/csv; charset=utf-8')
+        expect(r.req.attachments![0].content.length).toBe(100)
+      }
+    })
+
+    it('sem anexos o pedido continua igual', () => {
+      const r = parseEmailRequest(ok)
+      expect(r.ok && r.req.attachments).toBeUndefined()
+    })
+
+    it('recusa extensão perigosa, conteúdo que não é base64, lista grande demais e tamanho acima do limite', () => {
+      expect(parseEmailRequest({ ...ok, attachments: [att({ filename: 'virus.exe' })] }).ok).toBe(false)
+      expect(parseEmailRequest({ ...ok, attachments: [att({ filename: 'a.xlsx.html' })] }).ok).toBe(false)
+      expect(parseEmailRequest({ ...ok, attachments: [att({ content: 'isto não é base64!!' })] }).ok).toBe(false)
+      expect(parseEmailRequest({ ...ok, attachments: [att({ content: '' })] }).ok).toBe(false)
+      expect(parseEmailRequest({ ...ok, attachments: 'x' }).ok).toBe(false)
+      expect(parseEmailRequest({ ...ok, attachments: Array.from({ length: MAX_ATTACHMENTS + 1 }, () => att()) }).ok).toBe(false)
+      expect(parseEmailRequest({ ...ok, attachments: [att({ content: b64(MAX_ATTACHMENT_BYTES + 1) })] }).ok).toBe(false)
+      // o total conta (dois anexos que juntos passam do limite)
+      expect(parseEmailRequest({ ...ok, attachments: [att({ content: b64(MAX_ATTACHMENT_BYTES - 10) }), att({ filename: 'b.csv', content: b64(100) })] }).ok).toBe(false)
+    })
+
+    it('nome do arquivo é limpo (sem caminho nem caracteres estranhos)', () => {
+      const r = parseEmailRequest({ ...ok, attachments: [att({ filename: '../../etc/relatório final.xlsx' })] })
+      expect(r.ok && r.req.attachments![0].filename).toBe('.._.._etc_relat_rio_final.xlsx')
+    })
   })
 })

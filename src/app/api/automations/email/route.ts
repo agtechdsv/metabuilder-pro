@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     const parsed = parseEmailRequest(body);
     if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
-    const { to, subject, html } = parsed.req;
+    const { to, subject, html, attachments } = parsed.req;
 
     // Configurar o Nodemailer com as variáveis de ambiente
     const transporter = nodemailer.createTransport({
@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
       to,
       subject,
       html,
+      ...(attachments && attachments.length ? { attachments } : {}),
     });
 
     return NextResponse.json({ success: true, messageId: info.messageId });

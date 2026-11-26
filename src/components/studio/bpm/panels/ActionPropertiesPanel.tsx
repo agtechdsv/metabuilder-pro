@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Check, Info, Loader2, X, Edit2, MessageSquare, Settings2 } from "lucide-react";
 import RichTextEditor from "../RichTextEditor";
+import { QueryActionConfig } from "./QueryActionConfig";
 import { SystemVariableOptions } from "../SystemVariableOptions";
 
 // Fluxos antigos guardavam a mensagem como assunto + corpo em HTML (editor de texto rico). O campo novo é texto simples:
@@ -173,10 +174,21 @@ export function ActionPropertiesPanel(props: any) {
                         <option value="update">{t('bpm.nodes.update_record')}</option>
                         <option value="mutate">{t('bpm.nodes.mutate_record', 'Atualizar Dados do Formulário')}</option>
                         <option value="delete">{t('bpm.nodes.delete_record')}</option>
+                        <option value="query">{t('bpm.nodes.query_data', 'Consultar Dados')}</option>
                         <option value="email">{t('bpm.nodes.send_email')}</option>
                         <option value="webhook">{t('bpm.canvas.webhook_api_call')}</option>
                       </select>
                     </div>
+
+                    {selectedNode.data?.actionType === 'query' && (
+                      <QueryActionConfig
+                        selectedNode={selectedNode}
+                        updateNodeData={updateNodeData}
+                        dbModels={dbModels}
+                        dbFields={dbFields}
+                        t={t}
+                      />
+                    )}
 
                     {['insert', 'update', 'delete', 'mutate'].includes(selectedNode.data?.actionType as string) && (() => {
                       const actionFields = (selectedNode.data?.actionFields as any[]) || [];
@@ -487,6 +499,44 @@ export function ActionPropertiesPanel(props: any) {
                             </div>
                           )}
                         </div>
+                      </div>
+                    )}
+
+                    {selectedNode.data?.actionType === 'email' && (
+                      <div className="space-y-3 pt-4 border-t border-indigo-500/20">
+                        <label className="flex items-start gap-2 text-xs text-neutral-700 dark:text-neutral-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!selectedNode.data?.emailAttachDataset}
+                            onChange={(e) => updateNodeData(selectedNode.id, { emailAttachDataset: e.target.checked ? 'consulta' : '', emailAttachFormat: (selectedNode.data?.emailAttachFormat as string) || 'xlsx' })}
+                            className="mt-0.5 rounded border-neutral-300 text-indigo-500 focus:ring-indigo-500"
+                          />
+                          <span>{t('bpm.canvas.email_attach_result', 'Anexar o resultado de uma consulta (planilha)')}</span>
+                        </label>
+                        {!!selectedNode.data?.emailAttachDataset && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.query_name', 'Nome do resultado')}</label>
+                              <input
+                                type="text"
+                                value={(selectedNode.data?.emailAttachDataset as string) || ''}
+                                onChange={(e) => updateNodeData(selectedNode.id, { emailAttachDataset: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'consulta' })}
+                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 font-mono"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.email_attach_format', 'Formato')}</label>
+                              <select
+                                value={(selectedNode.data?.emailAttachFormat as string) || 'xlsx'}
+                                onChange={(e) => updateNodeData(selectedNode.id, { emailAttachFormat: e.target.value })}
+                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
+                              >
+                                <option value="xlsx">{t('bpm.canvas.email_attach_xlsx', 'Excel (.xlsx)')}</option>
+                                <option value="csv">{t('bpm.canvas.email_attach_csv', 'CSV (.csv)')}</option>
+                              </select>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
