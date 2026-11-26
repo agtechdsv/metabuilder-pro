@@ -186,6 +186,7 @@ export function ActionPropertiesPanel(props: any) {
                         updateNodeData={updateNodeData}
                         dbModels={dbModels}
                         dbFields={dbFields}
+                        localViews={props.localViews || []}
                         t={t}
                       />
                     )}
@@ -533,6 +534,7 @@ export function ActionPropertiesPanel(props: any) {
                               >
                                 <option value="xlsx">{t('bpm.canvas.email_attach_xlsx', 'Excel (.xlsx)')}</option>
                                 <option value="csv">{t('bpm.canvas.email_attach_csv', 'CSV (.csv)')}</option>
+                                <option value="pdf">{t('bpm.canvas.email_attach_pdf', 'PDF (.pdf)')}</option>
                               </select>
                             </div>
                           </div>

@@ -128,15 +128,33 @@ export function ConditionPropertiesPanel(props: any) {
                                         onChange={(e: any) => {
                                           const newGroups = [...groups];
                                           newGroups[gIndex].rules[rIndex].modelId = e.target.value;
-                                          newGroups[gIndex].rules[rIndex].field = '';
+                                          newGroups[gIndex].rules[rIndex].field = e.target.value === '__query__' ? 'consulta.total' : '';
                                           updateNodeData(selectedNode.id, { conditionGroups: newGroups });
                                         }}
                                         className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1.5 text-[10px] focus:ring-1 focus:ring-amber-500"
                                       >
                                         <option value="">{t('bpm.canvas.table_select')}</option>
+                                        <option value="__query__">{t('bpm.canvas.condition_query_result', 'Resultado da consulta')}</option>
                                         {dbModels.map((m: any) => <option key={m.id} value={m.id}>{m.display_name || m.db_table_name || m.name}</option>)}
                                       </select>
 
+                                      {rule.modelId === '__query__' ? (
+                                        <div>
+                                          <input
+                                            type="text"
+                                            value={String(rule.field || '').replace(/\.total$/, '')}
+                                            placeholder="consulta"
+                                            onChange={(e: any) => {
+                                              const name = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'consulta';
+                                              const newGroups = [...groups];
+                                              newGroups[gIndex].rules[rIndex].field = `${name}.total`;
+                                              updateNodeData(selectedNode.id, { conditionGroups: newGroups });
+                                            }}
+                                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-2 py-1.5 text-[10px] font-mono focus:ring-1 focus:ring-amber-500"
+                                          />
+                                          <p className="text-[9px] text-neutral-400 mt-1">{t('bpm.canvas.condition_query_hint', 'Nome do resultado; compara a quantidade de linhas.')}</p>
+                                        </div>
+                                      ) : (
                                       <select 
                                         value={rule.field} 
                                         onChange={(e: any) => {
@@ -152,6 +170,7 @@ export function ConditionPropertiesPanel(props: any) {
                                           <option key={f.id} value={f.db_column_name || f.name}>{f.display_name || f.db_column_name || f.name}</option>
                                         ))}
                                       </select>
+                                      )}
                                     </div>
 
                                     <div className="grid grid-cols-[1fr_2fr] gap-2">

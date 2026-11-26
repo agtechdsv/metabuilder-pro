@@ -317,6 +317,70 @@ describe('núcleo do BPM: comportamento extra', () => {
       expect(missing.runs[0].status).toBe('error')
     })
 
+    // campo calculado compilado pelo Studio: total do pedido = soma de quantidade × preço da tabela filha
+    const virtTotal = { key: 'virt_tot', label: 'Total Pedido', fn: 'sum', childTable: 'audit_log', fk: 'order_id', localKey: 'id', expr: [{ t: 'op', v: '(' }, { t: 'col', v: 'qty' }, { t: 'op', v: '*' }, { t: 'col', v: 'price' }, { t: 'op', v: ')' }] }
+    const SUBQ = '(SELECT COALESCE(SUM(( "c"."qty" * "c"."price" )), 0) FROM "audit_log" "c" WHERE "c"."order_id" = "t"."id") AS "virt_tot"'
+
+    it('campo calculado: o cálculo vira subconsulta; filtro no campo calculado fica na camada externa, o filtro comum dentro', async () => {
+      const { core, queries } = make(() => [], [trigger, queryNode({
+        queryVirtuals: { virt_tot: virtTotal }, queryColumns: [{ field: 'id', label: 'Pedido', type: 'integer' }, { field: 'virt_tot', label: 'Total Pedido', type: 'numeric' }],
+        queryFilters: [{ field: 'status', operator: '==', valueType: 'fixed', value: 'Aprovado' }, { field: 'virt_tot', operator: '>=', valueType: 'fixed', value: '100000' }],
+        queryOrderBy: 'virt_tot', queryOrderDir: 'desc',
+      })], [{ source: 't', target: 'q' }])
+      await core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(queries[0].sql).toBe(`SELECT "q"."id", "q"."virt_tot" FROM (SELECT "t".*, ${SUBQ} FROM "orders" "t" WHERE "t"."status" = $1) "q" WHERE "q"."virt_tot" >= $2 ORDER BY "q"."virt_tot" DESC LIMIT 50`)
+      expect(queries[0].params).toEqual(['Aprovado', '100000'])
+    })
+
+    it('campo calculado como valor a somar por grupo (ex.: faturamento por status)', async () => {
+      const { core, queries } = make(() => [{ grupo: 'Aprovado', valor: '250000.5' }], [trigger, queryNode({ queryVirtuals: { virt_tot: virtTotal }, queryColumns: [], queryGroupBy: 'status', queryAggregate: 'sum', queryAggregateField: 'virt_tot', queryValueType: 'numeric', queryLimit: undefined })], [{ source: 't', target: 'q' }])
+      await core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(queries[0].sql).toBe(`SELECT "q"."status" AS "grupo", SUM("q"."virt_tot") AS "valor" FROM (SELECT "t".*, ${SUBQ} FROM "orders" "t") "q" GROUP BY "q"."status" ORDER BY "valor" DESC LIMIT 200`)
+    })
+
+    it('campo calculado linha a linha (sem agregação) e campo calculado não usado não muda o SQL', async () => {
+      const own = { key: 'virt_dobro', label: 'Dobro', fn: null, expr: [{ t: 'col', v: 'desconto' }, { t: 'op', v: '*' }, { t: 'num', v: '2' }] }
+      const a = make(() => [], [trigger, queryNode({ queryVirtuals: { virt_dobro: own }, queryColumns: [{ field: 'virt_dobro', label: 'Dobro', type: 'numeric' }] })], [{ source: 't', target: 'q' }])
+      await a.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(a.queries[0].sql).toContain('("t"."desconto" * 2) AS "virt_dobro"')
+      const b = make(() => [], [trigger, queryNode({ queryVirtuals: { virt_tot: virtTotal }, queryColumns: [{ field: 'id', label: 'Pedido', type: 'integer' }] })], [{ source: 't', target: 'q' }])
+      await b.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(b.queries[0].sql).toBe('SELECT "id" FROM "orders" LIMIT 50')
+    })
+
+    it('segurança do campo calculado: coluna suspeita, operador estranho, tabela filha fora do projeto e agrupar por ele nunca chegam ao banco', async () => {
+      const bad = async (spec: any, over: any = {}) => {
+        const r = make(() => [], [trigger, queryNode({ queryVirtuals: { virt_x: spec }, queryColumns: [{ field: 'virt_x', label: 'X', type: 'numeric' }], ...over })], [{ source: 't', target: 'q' }])
+        await r.core.processEvent('orders', 'INSERT', { id: 1 })
+        expect(r.queries).toHaveLength(0)
+        expect(r.runs[0].status).toBe('error')
+      }
+      await bad({ ...virtTotal, key: 'virt_x', expr: [{ t: 'col', v: 'qty"; DROP TABLE orders; --' }] })
+      await bad({ ...virtTotal, key: 'virt_x', expr: [{ t: 'col', v: 'qty' }, { t: 'op', v: ';' }, { t: 'col', v: 'price' }] })
+      await bad({ ...virtTotal, key: 'virt_x', expr: [{ t: 'num', v: '1; DROP' }] })
+      await bad({ ...virtTotal, key: 'virt_x', childTable: 'tabela_de_outro_projeto' })
+      await bad({ ...virtTotal, key: 'virt_x', fk: 'order_id" OR 1=1 --' })
+      await bad({ ...virtTotal, key: 'virt_x', expr: [{ t: 'op', v: ')' }, { t: 'col', v: 'qty' }, { t: 'op', v: '(' }] })
+      await bad({ ...virtTotal, key: 'virt_x', fn: 'drop' })
+      await bad(virtTotal, { queryColumns: [], queryGroupBy: 'virt_tot', queryVirtuals: { virt_tot: virtTotal } })
+    })
+
+    it('a Condição compara a quantidade de linhas do resultado (<nome>.total): envia o e-mail só se houver linhas', async () => {
+      const cond = { id: 'c', type: 'condition', data: { conditionGroups: [{ id: 'g', logic: 'AND', groupLogic: 'AND', rules: [{ id: 'r', modelId: '__query__', field: 'consulta.total', operator: '>', value: '0' }] }] } }
+      const edges = [{ source: 't', target: 'q' }, { source: 'q', target: 'c' }, { source: 'c', target: 'e', sourceHandle: 'true' }]
+      const withRows = make(() => [{ id: '1', total: '5', data_pedido: new Date(2026, 10, 20) }], [trigger, queryNode(), cond, emailNode()], edges)
+      await withRows.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(withRows.mails).toHaveLength(1)
+      const empty = make(() => [], [trigger, queryNode(), cond, emailNode()], edges)
+      await empty.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(empty.mails).toHaveLength(0)
+      expect(empty.runs[0].status).toBe('success')
+      // valor maior que o limite: a regra usa número, não texto
+      const ge = { ...cond, data: { conditionGroups: [{ id: 'g', logic: 'AND', groupLogic: 'AND', rules: [{ id: 'r', modelId: '__query__', field: 'consulta.total', operator: '>=', value: '10' }] }] } }
+      const nine = make(() => Array.from({ length: 9 }, (_, i) => ({ id: String(i), total: '1', data_pedido: null })), [trigger, queryNode(), ge, emailNode()], edges)
+      await nine.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(nine.mails).toHaveLength(0)
+    })
     it('tabela HTML: escapa texto, formata data e valor, limita as linhas do corpo e avisa quantas faltam', () => {
       const ds = { columns: [{ key: 'n', label: 'Nome <b>', type: 'text' }, { key: 'v', label: 'Valor', type: 'numeric' }], rows: Array.from({ length: 5 }, (_, i) => ({ n: i === 0 ? '<script>x</script>' : 'L' + i, v: '1234.5' })), total: 5 }
       const html = buildHtmlTable(ds, 3)

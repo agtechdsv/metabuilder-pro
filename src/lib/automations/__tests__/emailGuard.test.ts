@@ -48,6 +48,11 @@ describe('envio de e-mail das automações', () => {
       }
     })
 
+    it('aceita PDF (tipo vem da extensão)', () => {
+      const r = parseEmailRequest({ ...ok, attachments: [att({ filename: 'relatorio.pdf', contentType: 'text/html' })] })
+      expect(r.ok && r.req.attachments![0].contentType).toBe('application/pdf')
+    })
+
     it('sem anexos o pedido continua igual', () => {
       const r = parseEmailRequest(ok)
       expect(r.ok && r.req.attachments).toBeUndefined()

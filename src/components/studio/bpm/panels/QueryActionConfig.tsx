@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import { Plus, X } from "lucide-react";
+import { virtualFieldsForTable } from "@/lib/bpm/virtualFields";
 
 /**
  * Configuração da ação "Consultar dados" (relatórios agendados): tabela, colunas (ou agrupar e calcular), filtros com data
@@ -28,6 +29,7 @@ const RELATIVE_KINDS = [
 
 export function QueryActionConfig(props: any) {
   const { selectedNode, updateNodeData, dbModels, dbFields, t } = props;
+  const localViews: any[] = props.localViews || [];
   const d: any = selectedNode.data || {};
   const set = (patch: any) => updateNodeData(selectedNode.id, patch);
 
@@ -38,24 +40,34 @@ export function QueryActionConfig(props: any) {
       .map((f) => ({ field: f.db_column_name || f.name, label: labelOf(f), type: f.data_type || 'text' }));
 
   const modelId: string = d.queryModelId || '';
-  const fields = modelId ? fieldsOf(modelId) : [];
+  // campos calculados dos casos de uso desta tabela (ex.: Total Pedido = soma dos itens): o Studio os compila e o nó guarda a especificação
+  const virtuals = useMemo(() => (modelId ? virtualFieldsForTable(localViews, dbModels, modelId) : []), [modelId, localViews, dbModels]);
+  const virtualsSignature = JSON.stringify(virtuals);
+  useEffect(() => {
+    const map: Record<string, any> = Object.fromEntries(virtuals.map((v) => [v.key, v]));
+    if (JSON.stringify(d.queryVirtuals || {}) !== JSON.stringify(map)) set({ queryVirtuals: map });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [virtualsSignature, modelId]);
+  const plainFields = modelId ? fieldsOf(modelId) : [];
+  const virtualFields = virtuals.map((v) => ({ field: v.key, label: `ƒ ${v.label}`, plainLabel: v.label, type: 'numeric' }));
+  const fields = [...plainFields, ...virtualFields];
   const columns: any[] = d.queryColumns || [];
   const filters: any[] = d.queryFilters || [];
   const grouping = d.queryMode === 'group';
   const aggregate: string = d.queryAggregate || 'count';
-  const numericFields = fields.filter((f) => NUMERIC_TYPE.test(String(f.type)));
+  const numericFields = [...plainFields.filter((f) => NUMERIC_TYPE.test(String(f.type))), ...virtualFields];
   const labelFields = d.queryGroupLabelModelId ? fieldsOf(d.queryGroupLabelModelId) : [];
 
   const setFilter = (index: number, patch: any) => set({ queryFilters: filters.map((f, i) => (i === index ? { ...f, ...patch } : f)) });
 
-  const toggleColumn = (f: { field: string; label: string; type: string }) => {
+  const toggleColumn = (f: { field: string; label: string; type: string; plainLabel?: string }) => {
     const has = columns.some((c) => c.field === f.field);
-    set({ queryColumns: has ? columns.filter((c) => c.field !== f.field) : [...columns, { field: f.field, label: f.label, type: f.type }] });
+    set({ queryColumns: has ? columns.filter((c) => c.field !== f.field) : [...columns, { field: f.field, label: f.plainLabel || f.label, type: f.type }] });
   };
 
   // ao escolher o campo de agrupamento, sugere a tabela e o campo que mostram o nome (ex.: funcionario_id → funcionarios.nome)
   const pickGroupField = (field: string) => {
-    const meta = fields.find((f) => f.field === field);
+    const meta = plainFields.find((f) => f.field === field);
     const patch: any = { queryGroupBy: field, queryGroupTitle: meta?.label || '', queryGroupLabelModelId: '', queryGroupLabelField: '' };
     if (field.endsWith('_id')) {
       const base = field.slice(0, -3);
@@ -120,6 +132,7 @@ export function QueryActionConfig(props: any) {
                   </label>
                 ))}
               </div>
+              {virtualFields.length > 0 && <p className="text-[9px] text-neutral-400 mt-2">{t('bpm.canvas.query_virtual_hint', 'ƒ = campo calculado do caso de uso (ex.: Total Pedido).')}</p>}
               {columns.length === 0 && <p className="text-[9px] text-red-500 mt-2">{t('bpm.canvas.query_columns_required', 'Escolha ao menos uma coluna.')}</p>}
             </div>
           )}
@@ -130,7 +143,7 @@ export function QueryActionConfig(props: any) {
                 <label className={LABEL}>{t('bpm.canvas.query_group_by', 'Agrupar por')}</label>
                 <select value={d.queryGroupBy || ''} onChange={(e) => pickGroupField(e.target.value)} className={INPUT}>
                   <option value="">{t('bpm.canvas.select_field')}</option>
-                  {fields.map((f) => <option key={f.field} value={f.field}>{f.label}</option>)}
+                  {plainFields.map((f) => <option key={f.field} value={f.field}>{f.label}</option>)}
                 </select>
               </div>
 

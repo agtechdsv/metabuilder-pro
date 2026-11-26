@@ -17,6 +17,7 @@ export const MAX_ATTACHMENT_BYTES = 2_500_000
 const ATTACHMENT_TYPES: Record<string, string> = {
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   csv: 'text/csv; charset=utf-8',
+  pdf: 'application/pdf',
 }
 const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/
 
@@ -33,7 +34,7 @@ export function parseAttachments(raw: unknown): { ok: true; attachments: EmailAt
   for (const item of raw) {
     const name = typeof item?.filename === 'string' ? item.filename.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 80) : ''
     const ext = (name.split('.').pop() || '').toLowerCase()
-    if (!name || !ATTACHMENT_TYPES[ext]) return { ok: false, error: 'Anexo inválido: só planilhas (.xlsx) e CSV (.csv).' }
+    if (!name || !ATTACHMENT_TYPES[ext]) return { ok: false, error: 'Anexo inválido: só planilhas (.xlsx), CSV (.csv) e PDF (.pdf).' }
     const b64 = typeof item?.content === 'string' ? item.content : ''
     if (!b64 || !BASE64_RE.test(b64)) return { ok: false, error: 'Anexo inválido: conteúdo ausente ou corrompido.' }
     const content = Buffer.from(b64, 'base64')

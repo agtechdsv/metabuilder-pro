@@ -44,4 +44,36 @@ describe('anexo de planilha das automações', () => {
     // célula que começa com = vira texto (não executa fórmula ao abrir no Excel)
     expect(lines[2].startsWith("'=SOMA(A1);")).toBe(true)
   })
+
+  it('pdf: arquivo válido, várias páginas, cabeçalho e valores formatados em pt-BR; caractere fora do Latin-1 vira ?', () => {
+    const zlib = require('node:zlib')
+    const big = {
+      name: 'consulta',
+      columns: [{ key: 'nome', label: 'Nome', type: 'text' }, { key: 'total', label: 'Total', type: 'numeric' }, { key: 'dia', label: 'Data', type: 'timestamp with time zone' }],
+      rows: Array.from({ length: 120 }, (_, i) => ({ nome: 'Cliente São João ' + i + (i === 0 ? ' ✓' : ''), total: String(1000 + i * 3.5), dia: new Date(2026, 10, 1 + (i % 25)) })),
+    }
+    const att = buildAttachment({ format: 'pdf', filename: 'consulta.pdf', dataset: big })
+    expect(att.contentType).toBe('application/pdf')
+    const buf = Buffer.from(att.content, 'base64')
+    expect(buf.subarray(0, 5).toString()).toBe('%PDF-')
+    const raw = buf.toString('latin1')
+    expect((raw.match(/\/Type \/Page\b(?!s)/g) || []).length).toBeGreaterThanOrEqual(2)
+    // junta o conteúdo descomprimido das páginas para conferir o texto desenhado
+    let text = ''
+    for (const m of raw.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)) {
+      try { text += zlib.inflateSync(Buffer.from(m[1], 'latin1')).toString('latin1') } catch { /* fluxo que não é de página */ }
+    }
+    expect(text).toContain('(Nome)')
+    expect(text).toContain('1.000,00')
+    expect(text).toContain('Gerado em')
+    expect(text).toContain('120 linha\\(s\\)') // no PDF os parênteses do texto são escapados
+    expect(text).toMatch(/P.gina 1 de \d/)
+    expect(text).toContain('Cliente S')
+    expect(text).toContain('0 ?')
+  })
+
+  it('pdf sem linhas também é gerado (só o cabeçalho)', () => {
+    const att = buildAttachment({ format: 'pdf', filename: 'v.pdf', dataset: { name: 'x', columns: [{ key: 'a', label: 'A', type: 'text' }], rows: [] } })
+    expect(Buffer.from(att.content, 'base64').subarray(0, 5).toString()).toBe('%PDF-')
+  })
 })

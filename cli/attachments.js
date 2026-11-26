@@ -6,6 +6,7 @@
  */
 
 const XLSX = require('xlsx')
+const { formatCell } = require('./bpmCore')
 
 const NUMERIC_TYPE = /numeric|decimal|double|real|float|money/i
 const INTEGER_TYPE = /^(small|big)?int(eger)?\d*$|serial/i
@@ -13,6 +14,7 @@ const DATE_TYPE = /date|time/i
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 const CSV_MIME = 'text/csv; charset=utf-8'
+const PDF_MIME = 'application/pdf'
 
 /** Valor tipado para a planilha: número como número, data como data, o resto como texto. */
 function cellValue(value, type) {
@@ -47,10 +49,80 @@ function csvCell(v) {
 }
 
 /**
+ * PDF do resultado: título, data da geração e uma tabela com cabeçalho repetido a cada página e numeração. Desenhado direto com o
+ * jsPDF (fonte padrão, Latin-1: acentos do português saem certos; o que estiver fora disso vira "?").
+ */
+function buildPdf(dataset, title) {
+  // carregado só aqui: quem não gera PDF não paga o custo de carregar a biblioteca
+  const { jsPDF } = require('jspdf')
+  const cols = (dataset && dataset.columns) || []
+  const rows = (dataset && dataset.rows) || []
+  const doc = new jsPDF({ orientation: cols.length > 5 ? 'landscape' : 'portrait', unit: 'pt', format: 'a4', compress: true })
+  const W = doc.internal.pageSize.getWidth()
+  const H = doc.internal.pageSize.getHeight()
+  const M = 36
+  const clean = (v) => String(v == null ? '' : v).replace(/[^\x20-\xFF]/g, '?')
+  const numeric = (c) => NUMERIC_TYPE.test(String(c.type || '')) || INTEGER_TYPE.test(String(c.type || ''))
+
+  // larguras proporcionais ao maior texto de cada coluna (amostra das primeiras linhas), com mínimo e máximo
+  const weights = cols.map((c) => Math.min(40, Math.max(6, String(c.label || c.key).length, ...rows.slice(0, 200).map((r) => clean(formatCell(r[c.key], c.type)).length))))
+  const total = weights.reduce((a, b) => a + b, 0) || 1
+  const colW = weights.map((w) => ((W - 2 * M) * w) / total)
+
+  const now = new Date()
+  const p2 = (n) => String(n).padStart(2, '0')
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(30, 41, 59)
+  doc.text(clean(title), M, M + 6)
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(100, 116, 139)
+  doc.text(`Gerado em ${p2(now.getDate())}/${p2(now.getMonth() + 1)}/${now.getFullYear()} ${p2(now.getHours())}:${p2(now.getMinutes())}  -  ${rows.length} linha(s)`, M, M + 20)
+
+  let y = M + 38
+  const header = () => {
+    doc.setFillColor(241, 245, 249); doc.rect(M, y - 10, W - 2 * M, 16, 'F')
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(30, 41, 59)
+    let x = M
+    cols.forEach((c, i) => {
+      const text = doc.splitTextToSize(clean(c.label || c.key), colW[i] - 6)[0] || ''
+      if (numeric(c)) doc.text(text, x + colW[i] - 3, y, { align: 'right' }); else doc.text(text, x + 3, y)
+      x += colW[i]
+    })
+    y += 14
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(51, 65, 85)
+  }
+  header()
+
+  for (const r of rows) {
+    // até 3 linhas de texto por célula; a altura da linha acompanha a célula mais alta
+    const cells = cols.map((c, i) => doc.splitTextToSize(clean(formatCell(r[c.key], c.type)), colW[i] - 6).slice(0, 3))
+    const lines = Math.max(1, ...cells.map((c) => c.length))
+    const rowH = lines * 10 + 4
+    if (y + rowH > H - M) { doc.addPage(); y = M + 10; header() }
+    let x = M
+    cols.forEach((c, i) => {
+      cells[i].forEach((line, li) => {
+        if (numeric(c)) doc.text(line, x + colW[i] - 3, y + li * 10, { align: 'right' }); else doc.text(line, x + 3, y + li * 10)
+      })
+      x += colW[i]
+    })
+    doc.setDrawColor(226, 232, 240); doc.line(M, y + rowH - 8, W - M, y + rowH - 8)
+    y += rowH
+  }
+
+  const pages = doc.getNumberOfPages()
+  doc.setFontSize(7); doc.setTextColor(148, 163, 184)
+  for (let i = 1; i <= pages; i++) { doc.setPage(i); doc.text(`Página ${i} de ${pages}`, W - M, H - 18, { align: 'right' }) }
+  return Buffer.from(doc.output('arraybuffer'))
+}
+
+/**
  * Gera o arquivo do anexo. Devolve { filename, content (base64), contentType }.
- * `format`: 'xlsx' (padrão) ou 'csv'.
+ * `format`: 'xlsx' (padrão), 'csv' ou 'pdf'.
  */
 function buildAttachment({ format, filename, dataset }) {
+  if (format === 'pdf') {
+    const title = (dataset && dataset.title) || `Relatório - ${(dataset && dataset.name) || 'consulta'}`
+    return { filename, content: buildPdf(dataset, title).toString('base64'), contentType: PDF_MIME }
+  }
   const aoa = datasetToRows(dataset)
   if (format === 'csv') {
     const text = '﻿' + aoa.map((row) => row.map(csvCell).join(';')).join('\r\n')

@@ -85,6 +85,7 @@ export function BpmNodePropertiesSidebar(props: any) {
                 updateNodeData={updateNodeData}
                 dbModels={dbModels}
                 dbFields={dbFields}
+                localViews={localViews}
                 setCursorPos={setCursorPos}
                 roles={roles}
                 openGroupUsersModal={openGroupUsersModal}

@@ -472,7 +472,14 @@ class BpmCore {
       const field = rule.field
       const operator = rule.operator
       let expectedValue = rule.value
-      const actualValue = (triggerData || {})[field]
+      let actualValue = (triggerData || {})[field]
+      // "<nome>.total" = quantidade de linhas do resultado de uma ação Consultar dados desta execução
+      const dsMatch = /^([a-z][a-z0-9_]*)\.total$/.exec(String(field))
+      if (dsMatch) {
+        const store = this.runCtx.getStore()
+        const ds = store && store.datasets && store.datasets[dsMatch[1]]
+        if (ds) actualValue = ds.total
+      }
 
       let isRuleTrue = false
 
@@ -544,9 +551,48 @@ class BpmCore {
   }
 
   /**
+   * SQL de um campo calculado (virtual) do caso de uso, já compilado pelo Studio (src/lib/bpm/virtualFields.ts): uma agregação sobre a
+   * tabela filha (subconsulta correlacionada) ou uma fórmula linha a linha. Tudo é validado de novo aqui: o motor nunca interpreta
+   * fórmula livre, só colunas (identificadores), números e + - * / ( ).
+   */
+  async virtualFieldSql(spec, alias) {
+    if (!spec || typeof spec !== 'object' || !Array.isArray(spec.expr) || spec.expr.length === 0 || spec.expr.length > 200) {
+      throw new Error('Consultar dados: campo calculado inválido.')
+    }
+    let depth = 0
+    const sqlOf = (prefix) => spec.expr.map((tk) => {
+      if (tk && tk.t === 'col' && strictIdent(tk.v)) return `"${prefix}"."${tk.v}"`
+      if (tk && tk.t === 'num' && /^\d+(\.\d+)?$/.test(String(tk.v))) return String(tk.v)
+      if (tk && tk.t === 'op' && ['+', '-', '*', '/', '(', ')'].includes(tk.v)) {
+        if (tk.v === '(') depth++
+        if (tk.v === ')') depth--
+        if (depth < 0) throw new Error('Consultar dados: fórmula do campo calculado com parênteses errados.')
+        return tk.v
+      }
+      throw new Error('Consultar dados: fórmula do campo calculado com termo inválido.')
+    }).join(' ')
+
+    if (!spec.fn) {
+      const expr = sqlOf(alias)
+      if (depth !== 0) throw new Error('Consultar dados: fórmula do campo calculado com parênteses errados.')
+      return `(${expr})`
+    }
+    const fn = AGG_FNS[spec.fn]
+    const child = strictIdent(spec.childTable)
+    const fk = strictIdent(spec.fk)
+    const localKey = strictIdent(spec.localKey)
+    if (!fn || !child || !fk || !localKey || !(await this.isKnownTable(child))) throw new Error('Consultar dados: campo calculado com relação inválida.')
+    const expr = sqlOf('c')
+    if (depth !== 0) throw new Error('Consultar dados: fórmula do campo calculado com parênteses errados.')
+    const agg = spec.fn === 'count' ? 'COUNT(*)' : spec.fn === 'sum' ? `COALESCE(SUM(${expr}), 0)` : `${fn}(${expr})`
+    return `(SELECT ${agg} FROM "${child}" "c" WHERE "c"."${fk}" = "${alias}"."${localKey}")`
+  }
+
+  /**
    * Ação "Consultar dados": lê linhas do banco (SÓ LEITURA) e guarda o resultado na execução para as ações seguintes
-   * ({{nome.tabela}}, {{nome.total}} e anexo de planilha no e-mail). O SQL é montado só com tabelas dos modelos do projeto, colunas
-   * validadas e valores como parâmetros; há limite de linhas e de tempo. Devolve { stop: true } se for para não seguir (sem resultado).
+   * ({{nome.tabela}}, {{nome.total}} e anexo de planilha/CSV/PDF no e-mail). O SQL é montado só com tabelas dos modelos do projeto,
+   * colunas validadas e valores como parâmetros; há limite de linhas e de tempo. Campos calculados do caso de uso entram como
+   * subconsulta (filtros sobre eles ficam numa camada externa). Devolve { stop: true } se for para não seguir (sem resultado).
    */
   async runQueryAction(node, triggerTable, triggerData) {
     const d = (node && node.data) || {}
@@ -558,8 +604,30 @@ class BpmCore {
     const params = []
     const bind = (value) => { params.push(value); return oracle ? `:${params.length}` : `$${params.length}` }
 
-    // filtros
-    const where = []
+    // campos calculados do caso de uso (compilados pelo Studio) usados em colunas, filtros, valor agregado ou ordem
+    const virtuals = d.queryVirtuals && typeof d.queryVirtuals === 'object' ? d.queryVirtuals : {}
+    const isVirtual = (f) => typeof f === 'string' && /^virt_[A-Za-z0-9]+$/.test(f) && !!virtuals[f]
+    const groupField = strictIdent(d.queryGroupBy)
+    const grouping = !!groupField
+    if (groupField && isVirtual(groupField)) throw new Error('Consultar dados: não dá para agrupar por um campo calculado (use-o como valor a somar ou calcular).')
+    const aggFnName = AGG_FNS[d.queryAggregate] ? d.queryAggregate : 'count'
+    const aggField = grouping && aggFnName !== 'count' ? strictIdent(d.queryAggregateField) : null
+    const orderField = !grouping ? strictIdent(d.queryOrderBy) : null
+    const cols = !grouping ? (d.queryColumns || []).filter((c) => strictIdent(c && c.field)) : []
+
+    const used = new Set()
+    for (const c of cols) if (isVirtual(c.field)) used.add(c.field)
+    for (const f of d.queryFilters || []) if (isVirtual(strictIdent(f && f.field))) used.add(f.field)
+    if (aggField && isVirtual(aggField)) used.add(aggField)
+    if (orderField && isVirtual(orderField)) used.add(orderField)
+    const wrapped = used.size > 0
+    const outer = (f) => `"q"."${f}"` // coluna da camada externa (quando há campo calculado)
+    const plain = (f) => (wrapped ? `"t"."${f}"` : `"${f}"`) // coluna da tabela
+    const colRef = (f) => (wrapped ? outer(f) : `"${f}"`) // coluna já no nível do SELECT
+
+    // filtros (os de campo calculado vão para a camada externa)
+    const innerWhere = []
+    const outerWhere = []
     for (const f of d.queryFilters || []) {
       const field = strictIdent(f && f.field)
       if (!field) continue
@@ -570,40 +638,52 @@ class BpmCore {
       } else {
         value = await this.replaceVariables(f.value == null ? '' : String(f.value), triggerTable, triggerData)
       }
+      const virt = isVirtual(field)
+      const ref = virt ? outer(field) : plain(field)
+      let cond
       if (f.operator === 'contains') {
-        where.push(oracle ? `LOWER("${field}") LIKE LOWER(${bind('%' + String(value) + '%')})` : `CAST("${field}" AS text) ILIKE ${bind('%' + String(value) + '%')}`)
+        cond = oracle ? `LOWER(${ref}) LIKE LOWER(${bind('%' + String(value) + '%')})` : `CAST(${ref} AS text) ILIKE ${bind('%' + String(value) + '%')}`
       } else {
         const op = f.operator === '==' ? '=' : (f.operator || '=')
         if (!QUERY_OPS.has(String(op))) continue
-        where.push(`"${field}" ${op} ${bind(value)}`)
+        cond = `${ref} ${op} ${bind(value)}`
       }
+      ;(virt ? outerWhere : innerWhere).push(cond)
     }
-    const whereSql = where.length ? ` WHERE ${where.join(' AND ')}` : ''
 
     const limit = Math.max(1, Math.min(QUERY_MAX_ROWS, Math.floor(Number(d.queryLimit)) || QUERY_DEFAULT_ROWS))
     const limitSql = oracle ? ` FETCH FIRST ${limit} ROWS ONLY` : ` LIMIT ${limit}`
     const dir = String(d.queryOrderDir).toLowerCase() === 'desc' ? 'DESC' : 'ASC'
 
+    // origem: a tabela, ou (com campo calculado) a tabela com os cálculos como colunas extras
+    let from
+    if (wrapped) {
+      const extra = []
+      for (const key of used) extra.push(`${await this.virtualFieldSql(virtuals[key], 't')} AS "${key}"`)
+      const innerSql = `SELECT "t".*, ${extra.join(', ')} FROM "${table}" "t"${innerWhere.length ? ` WHERE ${innerWhere.join(' AND ')}` : ''}`
+      from = `(${innerSql}) "q"`
+    } else {
+      from = `"${table}"`
+    }
+    const whereSql = wrapped
+      ? (outerWhere.length ? ` WHERE ${outerWhere.join(' AND ')}` : '')
+      : (innerWhere.length ? ` WHERE ${innerWhere.join(' AND ')}` : '')
+
     let sql
     let columns
-    const groupField = strictIdent(d.queryGroupBy)
-    if (groupField) {
+    if (grouping) {
       // agrupar e calcular: uma linha por grupo
-      const fn = AGG_FNS[d.queryAggregate] ? d.queryAggregate : 'count'
-      const aggField = fn === 'count' ? null : strictIdent(d.queryAggregateField)
-      if (fn !== 'count' && !aggField) throw new Error('Consultar dados: escolha o campo a somar, calcular a média ou comparar.')
-      const expr = fn === 'count' ? 'COUNT(*)' : `${AGG_FNS[fn]}("${aggField}")`
-      sql = `SELECT "${groupField}" AS "grupo", ${expr} AS "valor" FROM "${table}"${whereSql} GROUP BY "${groupField}" ORDER BY "valor" ${dir === 'ASC' && d.queryOrderDir ? 'ASC' : 'DESC'}${limitSql}`
+      if (aggFnName !== 'count' && !aggField) throw new Error('Consultar dados: escolha o campo a somar, calcular a média ou comparar.')
+      const expr = aggFnName === 'count' ? 'COUNT(*)' : `${AGG_FNS[aggFnName]}(${colRef(aggField)})`
+      sql = `SELECT ${colRef(groupField)} AS "grupo", ${expr} AS "valor" FROM ${from}${whereSql} GROUP BY ${colRef(groupField)} ORDER BY "valor" ${dir === 'ASC' && d.queryOrderDir ? 'ASC' : 'DESC'}${limitSql}`
       columns = [
         { key: 'grupo', label: d.queryGroupTitle || 'Grupo', type: 'text' },
-        { key: 'valor', label: d.queryValueTitle || (fn === 'count' ? 'Quantidade' : 'Total'), type: fn === 'count' ? 'integer' : (d.queryValueType || 'numeric') },
+        { key: 'valor', label: d.queryValueTitle || (aggFnName === 'count' ? 'Quantidade' : 'Total'), type: aggFnName === 'count' ? 'integer' : (d.queryValueType || 'numeric') },
       ]
     } else {
-      const cols = (d.queryColumns || []).filter((c) => strictIdent(c && c.field))
       if (cols.length === 0) throw new Error('Consultar dados: escolha ao menos uma coluna.')
-      const orderField = strictIdent(d.queryOrderBy)
-      sql = `SELECT ${cols.map((c) => `"${c.field}"`).join(', ')} FROM "${table}"${whereSql}${orderField ? ` ORDER BY "${orderField}" ${dir}` : ''}${limitSql}`
-      columns = cols.map((c) => ({ key: c.field, label: c.label || c.field, type: c.type || 'text' }))
+      sql = `SELECT ${cols.map((c) => colRef(c.field)).join(', ')} FROM ${from}${whereSql}${orderField ? ` ORDER BY ${colRef(orderField)} ${dir}` : ''}${limitSql}`
+      columns = cols.map((c) => ({ key: c.field, label: c.label || c.field, type: isVirtual(c.field) ? 'numeric' : (c.type || 'text') }))
     }
 
     this.log.sql(`[BPM] Consultando dados: ${sql} | Parametros: ${this.show(params)}`)
@@ -611,7 +691,7 @@ class BpmCore {
     const rows = raw.map((r) => (oracle ? Object.fromEntries(Object.entries(r).map(([k, v]) => [k.toLowerCase(), v])) : r))
 
     // mostra o nome (em vez do id) quando o grupo é uma chave estrangeira
-    if (groupField && d.queryGroupLabelModelId && strictIdent(d.queryGroupLabelField)) {
+    if (grouping && d.queryGroupLabelModelId && strictIdent(d.queryGroupLabelField)) {
       const labelTable = await this.getModelTable(d.queryGroupLabelModelId)
       const ids = [...new Set(rows.map((r) => r.grupo).filter((v) => v !== null && v !== undefined))]
       if (labelTable && strictIdent(labelTable) && (await this.isKnownTable(labelTable)) && ids.length > 0) {
@@ -650,7 +730,7 @@ class BpmCore {
       this.noteIssue(`Anexo: resultado "${name}" não encontrado.`)
       return []
     }
-    const format = data.emailAttachFormat === 'csv' ? 'csv' : 'xlsx'
+    const format = ['csv', 'pdf'].includes(data.emailAttachFormat) ? data.emailAttachFormat : 'xlsx'
     const now = new Date()
     const p = (n) => String(n).padStart(2, '0')
     return [{ format, filename: `${name}-${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}.${format}`, dataset }]
