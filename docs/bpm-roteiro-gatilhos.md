@@ -30,7 +30,33 @@ Três blocos curtos, do mais simples ao mais avançado:
 
 ---
 
+## Acompanhamento
+
+Marque `[x]` ao concluir cada teste (e anote a data). Os casos de borda têm a coluna ✔ nas próprias tabelas, mais abaixo.
+
+| ✔ | # | Gatilho | Resultado | Data |
+|---|---|---|---|---|
+| [x] | 1 | Ao inserir · Pedidos | E-mail de confirmação chegou, com a data formatada (`25/11/2026`) | 25/11/2026 |
+| [x] | 2 | Antes de Salvar (novo) · Pedidos | Pedido Cancelado barrado com a mensagem, nada gravado | 25/11/2026 |
+| [x] | 3 | Ao atualizar · Pedidos (De/Para) | Dispara só na mudança para Enviado, com **De** vazio e preenchido; e-mail e mensagem na tela chegaram | 25/11/2026 |
+| [ ] | 4 | Antes de Salvar (edição) · Pedidos | | |
+| [ ] | 5 | Ao excluir · Pedidos | | |
+| [ ] | 6 | Antes de Excluir · Pedidos | | |
+| [ ] | 7 | Ao Carregar Formulário · Pedidos | | |
+| [ ] | 8 | Agendado · Clientes | | |
+| [ ] | 9 | Webhook de entrada · Tarefas | | |
+
+**Também conferido nesta rodada** (além dos 9 gatilhos):
+- [x] **Data legível** nos e-mails: `25/11/2026` (e `26/11/2026 00:12`, quando o campo tem hora).
+- [x] **Enum no De/Para** do gatilho "Ao atualizar" (*Restringir a um campo* → *Usar Enum?* → `StatusPedido`).
+- [x] **Estado de cada fluxo** no combo do Studio: 🟢 publicado, 🟡 publicado com alterações não publicadas, ⚪ rascunho.
+- [x] **Aba Mensagem** simplificada (campo único + tipo do aviso): o aviso aparece na tela de quem salvou, junto do e-mail.
+- [x] **Publicar recarrega o CLI** sem reiniciar o túnel (`Sincronização forçada dos fluxos recebida`).
+- [x] **Bloqueio "Antes de Salvar"** chega antes da gravação (nenhum `INSERT` no log do pedido barrado).
+
+---
 ## 1. Ao inserir · Pedidos (item 3)
+**Status:** [x] validado em 25/11/2026: o e-mail chegou (data formatada).
 **Objetivo:** o cliente recebe um e-mail de confirmação ao criar um pedido.
 1. Fluxo "Confirmação de Pedido". Gatilho: **Ao inserir**, tabela **Pedidos**.
 2. Ação **Enviar e-mail**: destinatário **Tabela dinâmica**, tabela **Clientes**, campo `email_contato`, filtro `id` igual a `{{pedidos.cliente_id}}`.
@@ -40,6 +66,7 @@ Três blocos curtos, do mais simples ao mais avançado:
 **Resultado:** o e-mail chega na sua caixa. Não use o valor total no e-mail: em mestre-detalhe os itens ainda não existem nesse momento.
 
 ## 2. Antes de Salvar (novo) · Pedidos (item 3)
+**Status:** [x] validado em 25/11/2026: a mensagem de bloqueio aparece e nada é gravado.
 **Objetivo:** barrar um pedido que já nasce cancelado.
 1. Gatilho: **Antes de Salvar (Novo)**, tabela **Pedidos**.
 2. **Condição:** `status` `==` `Cancelado`. No ramo **verdadeiro**, ligue um nó de **Resposta** com a ação **bloqueada** e a mensagem "Um novo pedido não pode começar como Cancelado".
@@ -47,13 +74,18 @@ Três blocos curtos, do mais simples ao mais avançado:
 
 **Resultado:** aparece a mensagem de erro e **nada é gravado**. Em seguida salve com status Pendente e mostre que passa.
 
+**Dicas:** na Condição dá para marcar **Usar Enum?** e escolher o valor na lista (`StatusPedido` → `Cancelado`). Ao publicar, o CLI recarrega sozinho; confira `Sincronização forçada dos fluxos recebida` no log.
+
 ## 3. Ao atualizar · Pedidos (itens 3 e 6) — **De/Para corrigido nesta versão**
+**Status:** [x] validado em 25/11/2026: dispara só na mudança para Enviado; **De** vazio e preenchido; e-mail e mensagem na tela.
 **Objetivo:** avisar o cliente só quando o pedido **virar** "Enviado".
 1. Gatilho: **Ao atualizar**, tabela **Pedidos**. Marque **Restringir a um campo**: campo `status`, **De:** (vazio), **Para:** `Enviado`.
 2. Ação **Enviar e-mail** igual à do teste 1, com assunto "Seu pedido #{{pedidos.id}} foi enviado".
 3. Edite um pedido Pendente e mude o status para Enviado.
 4. Edite o **mesmo** pedido de novo, mexendo só em outro campo (status continua Enviado).
 5. Opcional, para mostrar o **De**: preencha **De:** `Pendente`, salve o fluxo, mude um pedido **Aberto** para Enviado (não dispara) e depois um **Pendente** para Enviado (dispara).
+6. Opcional: no gatilho, marque **Usar Enum?** e escolha `StatusPedido`: **De** e **Para** viram listas com os valores do enum.
+7. Opcional: na aba **Mensagem** da ação de e-mail, escreva um texto (com `+ Variável`) e o tipo do aviso (Sucesso, Informação ou Aviso). Ele aparece na tela de quem salvou, junto do e-mail.
 
 **Resultado:** o e-mail sai na mudança para Enviado e **não sai** na segunda edição (o status não mudou). No CLI, quando não dispara, a linha `[BPM] Disparando fluxo...` não aparece.
 
@@ -65,6 +97,7 @@ Três blocos curtos, do mais simples ao mais avançado:
 - Também vale para **Antes de Salvar (edição)**: o painel mostra a restrição nos dois gatilhos de edição.
 
 ## 4. Antes de Salvar (edição) · Pedidos (item 3)
+**Status:** [ ] a fazer
 **Objetivo:** pedido entregue não pode mais ser alterado.
 1. Gatilho: **Antes de Salvar (Edição)**, tabela **Pedidos**.
 2. **Condição:** `status` `==` `Entregue`, ramo verdadeiro com **Resposta** bloqueando: "Pedido entregue não pode ser editado".
@@ -73,6 +106,7 @@ Três blocos curtos, do mais simples ao mais avançado:
 **Resultado:** a edição é barrada. A condição avalia os dados do formulário, então mudar o status para outro valor passa. Isso é útil para explicar o comportamento no vídeo.
 
 ## 5. Ao excluir · Pedidos (item 3)
+**Status:** [ ] a fazer
 **Objetivo:** avisar o gestor quando um pedido for apagado.
 1. Gatilho: **Ao excluir**, tabela **Pedidos**.
 2. Ação **Enviar e-mail**, aba Grupos/Usuários, em **e-mails específicos** o seu endereço. Assunto "Pedido #{{pedidos.id}} excluído".
@@ -83,6 +117,7 @@ Três blocos curtos, do mais simples ao mais avançado:
 **Atenção:** no PostgreSQL o fluxo recebe a linha inteira que foi apagada. No Oracle recebe só o `id`, então use apenas `{{pedidos.id}}` ali.
 
 ## 6. Antes de Excluir · Pedidos (item 3)
+**Status:** [ ] a fazer
 **Objetivo:** pedido enviado não pode ser excluído.
 1. Gatilho: **Antes de Excluir**, tabela **Pedidos**.
 2. **Condição:** `status` `==` `Enviado`, ramo verdadeiro com **Resposta** bloqueando: "Pedido enviado não pode ser excluído".
@@ -91,6 +126,7 @@ Três blocos curtos, do mais simples ao mais avançado:
 **Resultado:** o primeiro é barrado e continua na grid. O segundo é apagado normalmente. O CLI lê o registro antes de apagar, e o bloqueio vale em qualquer tela que exclua pedidos.
 
 ## 7. Ao Carregar Formulário · Pedidos (item 3)
+**Status:** [ ] a fazer
 **Objetivo:** todo pedido novo já abre com status "Pendente".
 1. Gatilho: **Ao Carregar Formulário**, tabela **Pedidos**.
 2. Ação **Atualizar Dados do Formulário**: campo `status` com valor `Pendente`.
@@ -101,6 +137,7 @@ Três blocos curtos, do mais simples ao mais avançado:
 **Atenção:** o fluxo roda também ao **abrir um pedido para editar** e sobrescreveria o status. Grave só a criação, ou use uma Resposta com mensagem de aviso no lugar da alteração. Este gatilho **não vai para o app exportado** (o selo do Studio avisa).
 
 ## 8. Agendado · Clientes (item 4)
+**Status:** [ ] a fazer
 **Objetivo:** receber um resumo por e-mail num horário marcado.
 1. Gatilho: **Agendado**. Para o vídeo use o tipo **uma vez** e uma data e hora **2 minutos à frente**. O horário vale pelo relógio da máquina onde o CLI roda.
 2. Ação **Enviar e-mail**, em **e-mails específicos** o seu endereço, assunto "Resumo diário do MetaBuilder".
@@ -113,6 +150,7 @@ Três blocos curtos, do mais simples ao mais avançado:
 - O tipo **uma vez** não é uma vez só: o motor agenda "dia e hora de todo ano", então repete no **mesmo dia do ano seguinte**. Depois de gravar, desative o fluxo ou apague-o. Para o uso real, troque por **recorrente** (dias da semana e horário).
 
 ## 9. Webhook de entrada · Tarefas (item 7)
+**Status:** [ ] a fazer
 **Objetivo:** um sistema externo cria uma tarefa que aparece no Kanban.
 1. Gatilho: **Webhook de entrada**, método **POST**. Clique em **Gerar segredo**, copie na hora (ele só aparece uma vez) e salve o fluxo.
 2. Ação **Inserir registro** na tabela **Tarefas**: `titulo` = `{{webhook.titulo}}` (use os nomes reais das suas colunas).
