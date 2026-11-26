@@ -149,9 +149,8 @@ class Logger {
 
     const text = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' ');
     const clean = stripAnsi(text);
-    const lang = getLanguage();
-    const translated = lang === 'pt' ? clean : translateLogFallback(clean, lang);
-    const line = `[${getTimeStr()}] [${level}] ${translated}\n`;
+    // o arquivo guarda a linha como foi emitida: a janela do log a traduz para o idioma da tela na hora de exibir
+    const line = `[${getTimeStr()}] [${level}] ${clean}\n`;
     try {
       fs.appendFileSync(this._filepath, line, 'utf8');
     } catch (e) {}

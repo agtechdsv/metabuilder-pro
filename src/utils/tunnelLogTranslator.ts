@@ -1,4 +1,8 @@
-type SupportedLang = 'pt' | 'en' | 'es'
+import { translateWithCatalog, translateLogLevel, type LogLang } from './tunnelLogCatalog'
+
+export { translateLogLevel }
+
+type SupportedLang = LogLang
 
 interface LogPattern {
   regex: RegExp
@@ -339,16 +343,45 @@ const patterns: LogPattern[] = [
   }
 ]
 
-export function translateTunnelLog(log: string, lang: SupportedLang = 'pt'): string {
-  if (lang === 'pt' || !log) return log
+// ── catálogo nos três idiomas (qualquer idioma de origem → idioma da tela) ──────────────────────────────────────────
+const TAG_RE = /^(\s*)\[(\s*)([^\]]+?)(\s*)\](\s*)([\s\S]*)$/
+const cache = new Map<string, string>()
 
-  let text = log
-  for (const pattern of patterns) {
-    const match = text.match(pattern.regex)
-    if (match) {
-      const translation = lang === 'en' ? pattern.en : pattern.es
-      text = typeof translation === 'function' ? translation(match) : translation
-      break
+/** Linha pelo catálogo (com ou sem a etiqueta de nível na frente). null se nada casou. */
+function viaCatalog(log: string, lang: LogLang): string | null {
+  const whole = translateWithCatalog(log, lang)
+  if (whole !== null) return whole
+  const m = TAG_RE.exec(log)
+  if (!m) return null
+  const [, lead, sp1, tag, sp2, gap, body] = m
+  const tagT = translateLogLevel(tag, lang)
+  const bodyT = translateWithCatalog(body, lang)
+  if (bodyT === null && tagT === tag) return null
+  return `${lead}[${sp1}${tagT}${sp2}]${gap}${bodyT ?? body}`
+}
+
+/**
+ * Traduz uma linha do log para o idioma da tela, na hora de exibir. Entende a linha em português, inglês ou espanhol (o CLI pode tê-la
+ * gravado em outro idioma que o da tela). Linhas fora do catálogo passam pelos padrões antigos (português → inglês/espanhol).
+ */
+export function translateTunnelLog(log: string, lang: SupportedLang = 'pt'): string {
+  if (!log) return log
+  const key = `${lang}\u0000${log}`
+  const hit = cache.get(key)
+  if (hit !== undefined) return hit
+
+  let text = viaCatalog(log, lang)
+  if (text === null) {
+    text = log
+    if (lang !== 'pt') {
+      for (const pattern of patterns) {
+        const match = text.match(pattern.regex)
+        if (match) {
+          const translation = lang === 'en' ? pattern.en : pattern.es
+          text = typeof translation === 'function' ? translation(match) : translation
+          break
+        }
+      }
     }
   }
 
@@ -365,5 +398,7 @@ export function translateTunnelLog(log: string, lang: SupportedLang = 'pt'): str
     text = text.replace(/\[ AVISO \]/g, '[ AVISO ]')
   }
 
+  if (cache.size > 5000) cache.clear()
+  cache.set(key, text)
   return text
 }

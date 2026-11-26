@@ -5,7 +5,7 @@ import { X, Trash2, Copy, Calendar, RefreshCw, Lock, Unlock, ArrowDownToLine } f
 import { isTauri } from '@/utils/tauriUtils'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/i18n/I18nContext'
-import { translateTunnelLog } from '@/utils/tunnelLogTranslator'
+import { translateTunnelLog, translateLogLevel } from '@/utils/tunnelLogTranslator'
 
 interface TunnelLogConsoleModalProps {
   isOpen: boolean
@@ -332,8 +332,9 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
         if (l.isSeparator) return l.text
         const trans = translateTunnelLog(l.text, language)
         const timePart = l.time ? `[${l.time}] ` : ''
+        const levelShown = l.level ? translateLogLevel(l.level, language) : ''
         const levelPart = l.level && !['LOG'].includes(l.level)
-          ? (l.level.length <= 4 ? `[ ${l.level} ] ` : `[${l.level}] `)
+          ? (levelShown.length <= 4 ? `[ ${levelShown} ] ` : `[${levelShown}] `)
           : ''
         let body = trans
         if (l.level) {
@@ -735,7 +736,7 @@ export function TunnelLogConsoleModal({ isOpen, onClose, isWindow = false }: Tun
                   )}
                   {item.level && !['LOG'].includes(item.level) && (
                     <span className={`font-mono mr-1.5 select-none ${tagBadgeColor}`}>
-                      {item.level.length <= 4 ? `[ ${item.level} ]` : `[${item.level}]`}
+                      {(() => { const shown = translateLogLevel(item.level, language); return shown.length <= 4 ? `[ ${shown} ]` : `[${shown}]` })()}
                     </span>
                   )}
                   <span>{displayText}</span>
