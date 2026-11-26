@@ -110,6 +110,7 @@ class BpmCore {
 
           for (const sched of rawSchedules) {
             let cronStr = ''
+            let runOnce = false
 
             if (sched.type === 'recurring') {
               // days: [0, 1, 2] (Dom, Seg, Ter)
@@ -118,10 +119,15 @@ class BpmCore {
               const [hour, min] = time.split(':')
               cronStr = `${min || '0'} ${hour || '0'} * * ${days}`
             } else if (sched.type === 'once') {
-              // dateTime: "2026-06-04T18:30"
+              // dateTime: "2026-06-04T18:30" (só este campo vale para "Apenas uma vez"; dia da semana e horário são do recorrente)
               const dt = new Date(sched.dateTime)
-              if (!isNaN(dt.getTime())) {
+              if (isNaN(dt.getTime())) {
+                this.log.warn(`[BPM] Fluxo "${flow.name}": o agendamento "Apenas uma vez" está sem data e hora específicas: ignorado. Informe a data e a hora.`)
+              } else if (dt.getTime() <= Date.now()) {
+                this.log.warn(`[BPM] Fluxo "${flow.name}": o agendamento "Apenas uma vez" (${sched.dateTime}) já passou: ignorado.`)
+              } else {
                 cronStr = `${dt.getMinutes()} ${dt.getHours()} ${dt.getDate()} ${dt.getMonth() + 1} *`
+                runOnce = true
               }
             }
 
@@ -130,7 +136,10 @@ class BpmCore {
                 this.log.warn(`[BPM] Fluxo "${flow.name}" tem agendamento, mas este ambiente não tem agendador: ignorado.`)
                 continue
               }
-              const job = scheduler.schedule(cronStr, async () => {
+              let job = null
+              job = scheduler.schedule(cronStr, async () => {
+                // "Apenas uma vez" é uma vez só: o cron de data fixa repetiria no mesmo dia do ano seguinte
+                if (runOnce && job && typeof job.stop === 'function') job.stop()
                 this.log.info(`\n[BPM] ⏰ Agendamento disparado para o fluxo "${flow.name}"!`)
                 const triggerTable = await this.getModelTable(triggerNode.data?.triggerModelId)
                 await this.runFlow(flow, triggerNode, triggerTable || 'global', {}, 'agendamento')

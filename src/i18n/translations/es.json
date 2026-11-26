@@ -3514,6 +3514,8 @@
       "executes_every_day": "* Se ejecuta todos los días.",
       "time_hh_mm": "Horario (HH:mm)",
       "or_specific_datetime": "O defina Fecha y Hora Específica",
+      "once_datetime": "Fecha y hora de ejecución",
+      "once_hint": "Se ejecuta una sola vez, en la fecha y hora elegidas (reloj de la máquina donde corre el Agente).",
       "and_gate": "Y (AND)",
       "or_gate": "O (OR)",
       "add_rule": "Agregar Regla",

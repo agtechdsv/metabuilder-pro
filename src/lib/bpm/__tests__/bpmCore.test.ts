@@ -242,6 +242,56 @@ describe('núcleo do BPM: comportamento extra', () => {
     })
   })
 
+  describe('agendamento "Apenas uma vez"', () => {
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const local = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+    const setup = (schedule: any) => {
+      const jobs: { expr: string; fn: () => Promise<void>; stopped: boolean }[] = []
+      const warns: string[] = []
+      const core = new BpmCore({
+        db: { dialect: 'postgres', query: async () => [] },
+        models: { tableOf: async () => null },
+        log: { warn: (m: string) => warns.push(m) },
+        scheduler: { schedule: (expr: string, fn: () => Promise<void>) => { const j = { expr, fn, stopped: false }; jobs.push(j); return { stop() { j.stopped = true } } } },
+      })
+      core.setWorkflows([{ id: 'f', name: 'Agendado', flow_data: { nodes: [
+        { id: 't', type: 'trigger', data: { triggerType: ['SCHEDULED'], triggerSchedules: [schedule] } },
+      ], edges: [] } } as any])
+      return { jobs, warns }
+    }
+
+    it('data e hora futuras: agenda; ao disparar, o agendamento é encerrado (uma vez só, sem repetir no ano seguinte)', async () => {
+      const future = new Date(Date.now() + 2 * 3600_000)
+      const { jobs, warns } = setup({ id: '1', type: 'once', days: [], time: '', dateTime: local(future) })
+      expect(jobs).toHaveLength(1)
+      expect(jobs[0].expr).toBe(`${future.getMinutes()} ${future.getHours()} ${future.getDate()} ${future.getMonth() + 1} *`)
+      expect(warns).toEqual([])
+      expect(jobs[0].stopped).toBe(false)
+      await jobs[0].fn()
+      expect(jobs[0].stopped).toBe(true)
+    })
+
+    it('sem data e hora específicas (só dia da semana e horário): não agenda e AVISA, em vez de ignorar em silêncio', () => {
+      const { jobs, warns } = setup({ id: '1', type: 'once', days: ['4'], time: '01:45', dateTime: '' })
+      expect(jobs).toHaveLength(0)
+      expect(warns.join(' ')).toContain('sem data e hora')
+    })
+
+    it('data que já passou: não agenda e avisa', () => {
+      const { jobs, warns } = setup({ id: '1', type: 'once', days: [], time: '', dateTime: local(new Date(Date.now() - 3600_000)) })
+      expect(jobs).toHaveLength(0)
+      expect(warns.join(' ')).toContain('já passou')
+    })
+
+    it('recorrente continua como antes (não é encerrado ao disparar)', async () => {
+      const { jobs, warns } = setup({ id: '1', type: 'recurring', days: ['4'], time: '01:45', dateTime: '' })
+      expect(jobs.map(j => j.expr)).toEqual(['45 01 * * 4'])
+      expect(warns).toEqual([])
+      await jobs[0].fn()
+      expect(jobs[0].stopped).toBe(false)
+    })
+  })
+
   it('agendamento recorrente vira cron e usa o agendador injetado', () => {
     const crons: string[] = []
     const core = new BpmCore({

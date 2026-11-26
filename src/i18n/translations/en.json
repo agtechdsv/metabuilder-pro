@@ -3427,6 +3427,8 @@
       "executes_every_day": "* Executes every day.",
       "time_hh_mm": "Time (HH:mm)",
       "or_specific_datetime": "Or define Specific Date and Time",
+      "once_datetime": "Run date and time",
+      "once_hint": "Runs only once, on the chosen date and time (clock of the machine where the Agent runs).",
       "and_gate": "AND",
       "or_gate": "OR",
       "add_rule": "Add Rule",

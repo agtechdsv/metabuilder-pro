@@ -396,6 +396,8 @@ export function TriggerPropertiesPanel(props: any) {
                                 </button>
                               </div>
 
+                              {sched.type !== 'once' && (
+                                <>
                               <div className="mb-3">
                                 <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-2">{t('bpm.canvas.days_of_week')}</label>
                                 <div className="flex flex-wrap gap-2">
@@ -439,16 +441,19 @@ export function TriggerPropertiesPanel(props: any) {
                                   className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500 font-mono"
                                 />
                               </div>
+                                </>
+                              )}
 
                               {sched.type === 'once' && (
-                                <div className="pt-3 mt-3 border-t border-emerald-100 dark:border-emerald-900/30">
-                                  <label className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest block mb-1">{t('bpm.canvas.or_specific_datetime')}</label>
+                                <div>
+                                  <label className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest block mb-1">{t('bpm.canvas.once_datetime', 'Data e hora da execução')}</label>
                                   <input 
                                     type="datetime-local" 
                                     value={sched.dateTime} 
                                     onChange={(e) => updateSchedule(sched.id, { dateTime: e.target.value })}
                                     className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500 font-mono"
                                   />
+                                  <p className="text-[9px] text-neutral-400 mt-2 italic">{t('bpm.canvas.once_hint', 'Executa uma única vez, na data e hora escolhidas (relógio da máquina onde o Agente roda).')}</p>
                                 </div>
                               )}
                             </div>
