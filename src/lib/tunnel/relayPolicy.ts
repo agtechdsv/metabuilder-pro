@@ -23,6 +23,19 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export type RelayActorKind = 'member' | 'end_user'
 
+/** Quem agiu, tirado da sessão assinada (as variáveis {{usuario.*}} do BPM). Nunca vem do corpo do pedido. */
+export interface ActorIdentity { id: string; email?: string; name?: string }
+
+/** Identidade enxuta e segura (textos curtos) a partir da sessão do usuário final; null se a sessão não tiver identificador. */
+export function actorFromSession(session: { sub?: unknown; email?: unknown; name?: unknown } | null | undefined): ActorIdentity | undefined {
+  if (!session || typeof session.sub !== 'string' || !session.sub) return undefined
+  const clip = (v: unknown) => (typeof v === 'string' && v ? v.slice(0, 200) : undefined)
+  const actor: ActorIdentity = { id: session.sub.slice(0, 200) }
+  const email = clip(session.email); if (email) actor.email = email
+  const name = clip(session.name); if (name) actor.name = name
+  return actor
+}
+
 export interface RelayRequest {
   projectId: string
   event: string
@@ -53,10 +66,11 @@ export function actionAllowed(kind: RelayActorKind, action: unknown): { ok: true
  * O comando vai sempre assinado e SEM token; `replyTo` (tópico privado da aba) é mantido só se for
  * um tópico válido deste projeto.
  */
-export function buildCommand(req: RelayRequest, secretToken: string, access?: Record<string, any>): Record<string, any> {
-  // `access` (permissões e regras por linha do usuário final) só o servidor define: o que o navegador mandar com esse nome é descartado
-  const { token: _fromBrowser, replyTo, access: _forged, ...rest } = req.payload
-  return authenticateCommand(secretToken, req.event, req.projectId, { ...rest, projectId: req.projectId, ...(access ? { access } : {}) }, {
+export function buildCommand(req: RelayRequest, secretToken: string, access?: Record<string, any>, actor?: ActorIdentity): Record<string, any> {
+  // `access` (permissões e regras por linha do usuário final) e `actor` (quem agiu) só o servidor define: o que o navegador mandar com
+  // esses nomes é descartado
+  const { token: _fromBrowser, replyTo, access: _forged, actor: _forgedActor, ...rest } = req.payload
+  return authenticateCommand(secretToken, req.event, req.projectId, { ...rest, projectId: req.projectId, ...(access ? { access } : {}), ...(actor ? { actor } : {}) }, {
     replyTo: typeof replyTo === 'string' ? replyTo : undefined,
   })
 }

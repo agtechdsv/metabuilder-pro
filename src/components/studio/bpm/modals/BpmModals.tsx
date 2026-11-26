@@ -3,6 +3,7 @@ import { Loader2, Search, Users, X, Info, Check, Trash2 } from "lucide-react";
 import { wrapEmailInTemplate, EmailTemplateType } from "@/utils/emailTemplates";
 import RichTextEditor from "../RichTextEditor";
 import { Modal } from "@/components/ui/Modal";
+import { SystemVariableOptions } from "../SystemVariableOptions";
 
 export function BpmModals(props: any) {
   const {
@@ -197,6 +198,7 @@ export function BpmModals(props: any) {
                 className="bg-transparent border-none text-[10px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-28 text-right p-0"
               >
                 <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">{t('bpm.canvas.plus_variable')}</option>
+                <SystemVariableOptions t={t} />
                 {[...dbModels].sort((a, b) => (a.display_name || a.db_table_name || a.name).localeCompare(b.display_name || b.db_table_name || b.name)).map(m => {
                   const tableName = m.display_name || m.db_table_name || m.name;
                   const fields = dbFields.filter((f: any) => f.model_id === m.id);
@@ -239,6 +241,7 @@ export function BpmModals(props: any) {
                 className="bg-transparent border-none text-[10px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-28 text-right p-0"
               >
                 <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">{t('bpm.canvas.plus_variable')}</option>
+                <SystemVariableOptions t={t} />
                 {[...dbModels].sort((a, b) => (a.display_name || a.db_table_name || a.name).localeCompare(b.display_name || b.db_table_name || b.name)).map(m => {
                   const tableName = m.display_name || m.db_table_name || m.name;
                   const fields = dbFields.filter((f: any) => f.model_id === m.id);

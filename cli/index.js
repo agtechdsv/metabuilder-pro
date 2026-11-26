@@ -349,6 +349,13 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
       // Comando de USUÁRIO FINAL: o servidor o assinou (v2) com as permissões das tabelas e as regras de acesso por linha
       // (`access`), que valem para qualquer SQL abaixo. Comando sem `access` é de membro do projeto (desenvolvedor).
       const access = payload.payload.access;
+      // quem agiu: o servidor o põe DENTRO do comando assinado (a partir da sessão do usuário final); alimenta {{usuario.*}} do BPM
+      const bpmActor = (() => {
+        const a = payload.payload.actor;
+        if (!a || typeof a !== 'object' || typeof a.id !== 'string' || !a.id) return null;
+        const clip = (v) => (typeof v === 'string' && v ? v.slice(0, 200) : undefined);
+        return { id: a.id.slice(0, 200), email: clip(a.email), name: clip(a.name) };
+      })();
       const endUser = access !== undefined;
       
       // Isolamento: Se o comando for para outro schema, este túnel o ignora silenciosamente
@@ -1239,7 +1246,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           }
 
           if (bpmEngine && result.rows && result.rows.length > 0) {
-            bpmEngine.processEvent(safeTable, 'INSERT', result.rows[0]).then(async (bpmMessages) => {
+            bpmEngine.processEvent(safeTable, 'INSERT', result.rows[0], null, bpmActor).then(async (bpmMessages) => {
               let finalData = result.rows[0];
               try {
                 if (dbType === 'postgres' && result.rows[0].id) {
@@ -1343,7 +1350,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
               }
               result = updateResult;
               if (bpmEngine && result.rows && result.rows.length > 0) {
-                bpmEngine.processEvent(safeTable, 'UPDATE', result.rows[0], bpmOldRow).then(async (bpmMessages) => {
+                bpmEngine.processEvent(safeTable, 'UPDATE', result.rows[0], bpmOldRow, bpmActor).then(async (bpmMessages) => {
                   let finalData = result.rows[0];
                   try {
                     if (dbType === 'postgres') {
@@ -1424,7 +1431,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             } catch (selErr) {
               console.error(chalk.yellow(`[BPM] Não foi possível ler o registro antes de excluir: ${selErr.message}`));
             }
-            const syncResult = await bpmEngine.processSyncEvent(safeTable, 'BEFORE_DELETE', currentRow);
+            const syncResult = await bpmEngine.processSyncEvent(safeTable, 'BEFORE_DELETE', currentRow, null, bpmActor);
             if (!syncResult.success) {
               throw new Error(syncResult.error || 'Exclusão bloqueada pelo fluxo BPM.');
             }
@@ -1456,7 +1463,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           cliDbLogger.logDelete(safeTable, sql, null);
 
           if (bpmEngine) {
-            bpmEngine.processEvent(safeTable, 'DELETE', deletedRowData).then((bpmMessages) => {
+            bpmEngine.processEvent(safeTable, 'DELETE', deletedRowData, null, bpmActor).then((bpmMessages) => {
               if (replyTo && bpmMessages && bpmMessages.length) router.reply(replyTo, 'bpm_user_message', { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, messages: bpmMessages });
             }).catch(err => {
               console.error(chalk.red(`[BPM] Erro ao processar DELETE:`), err);
@@ -1494,7 +1501,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           let customBpmMessages = [];
 
           if (workflows && workflows.length > 0 && bpmEngine) {
-             customBpmMessages = await bpmEngine.processCustomAction(workflows, safeTable, rowData);
+             customBpmMessages = await bpmEngine.processCustomAction(workflows, safeTable, rowData, bpmActor);
           }
           
           let finalData = rowData;
@@ -1539,7 +1546,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
             } catch (e) {
               console.error('[BPM] Falha ao ler o registro anterior à edição:', e.message);
             }
-            const syncResult = await bpmEngine.processSyncEvent(safeTable, eventType, rowData, syncOldRow);
+            const syncResult = await bpmEngine.processSyncEvent(safeTable, eventType, rowData, syncOldRow, bpmActor);
             if (!syncResult.success) {
               // Bloqueio
               throw new Error(syncResult.error || 'Ação bloqueada pelo fluxo BPM.');

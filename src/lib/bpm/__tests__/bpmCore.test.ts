@@ -145,6 +145,46 @@ describe('núcleo do BPM: comportamento extra', () => {
     expect(allowed.message).toBe('Pedido 42 não pode ser editado')
   })
 
+  describe('variáveis do sistema e do usuário que agiu', () => {
+    const mk = () => new BpmCore({ db: { dialect: 'postgres', query: async () => [] }, models: { tableOf: async () => null } }) as any
+    const actor = { id: 'u7', email: 'maria@x.com', name: 'Maria Souza' }
+
+    it('{{sistema.*}}: em texto lido por gente sai dd/MM/aaaa; nos demais usos (filtro, valor gravado) sai ISO', async () => {
+      const core = mk()
+      const human = await core.replaceVariables('{{sistema.data}}|{{sistema.hora}}|{{sistema.data_hora}}', 'x', {}, null, null, true)
+      expect(human).toMatch(/^\d{2}\/\d{2}\/\d{4}\|\d{2}:\d{2}\|\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/)
+      const tech = await core.replaceVariables('{{sistema.data}}|{{sistema.hora}}|{{sistema.data_hora}}', 'x', {})
+      expect(tech).toMatch(/^\d{4}-\d{2}-\d{2}\|\d{2}:\d{2}:\d{2}\|\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
+    })
+
+    it('{{usuario.*}}: vale durante o evento do usuário; sem usuário (agendado, webhook) fica literal', async () => {
+      const core = mk()
+      const t = 'por {{usuario.nome}} <{{usuario.email}}> id {{usuario.id}}'
+      expect(await core.actorCtx.run(actor, () => core.replaceVariables(t, 'x', {}))).toBe('por Maria Souza <maria@x.com> id u7')
+      expect(await core.replaceVariables(t, 'x', {})).toBe(t)
+      // desconhecidos continuam literais
+      expect(await core.actorCtx.run(actor, () => core.replaceVariables('{{usuario.cpf}} {{sistema.mes}}', 'x', {}))).toBe('{{usuario.cpf}} {{sistema.mes}}')
+    })
+
+    it('o usuário que agiu chega aos fluxos pelo processEvent (e o actor mal formado é ignorado)', async () => {
+      const mails: any[] = []
+      const core = new BpmCore({
+        db: { dialect: 'postgres', query: async (s: string) => (/FROM "clientes"/.test(s) ? [{ email_contato: 'c@x.com' }] : []) },
+        models: { tableOf: async (id: string) => (fixtures.models as any)[id], isKnownTable: async () => true },
+        mail: { async send(m: any) { mails.push(m) } },
+      })
+      core.setWorkflows([{ id: 'f', name: 'F', flow_data: { nodes: [
+        { id: 't', type: 'trigger', data: { triggerType: ['INSERT'], triggerModelId: 'm_orders' } },
+        { id: 'a', type: 'action', data: { actionType: 'email', emailRecipientType: 'custom', customEmailField: 'c@x.com', actionSubject: 'Feito por {{usuario.nome}}', actionBody: 'Em {{sistema.data}} por {{usuario.email}}' } },
+      ], edges: [{ source: 't', target: 'a' }] } } as any])
+      await core.processEvent('orders', 'INSERT', { id: 1 }, null, actor)
+      expect(mails[0].subject).toBe('Feito por Maria Souza')
+      expect(mails[0].body).toMatch(/^Em \d{2}\/\d{2}\/\d{4} por maria@x.com$/)
+      await core.processEvent('orders', 'INSERT', { id: 2 }, null, { nome: 'sem id' } as any)
+      expect(mails[1].subject).toBe('Feito por {{usuario.nome}}')
+    })
+  })
+
   describe('aba Mensagem da ação (aviso na tela de quem gravou)', () => {
     const flow = (data: any = {}) => ({ id: 'f', name: 'F', flow_data: { nodes: [
       { id: 't', type: 'trigger', data: { triggerType: ['INSERT'], triggerModelId: 'm_orders' } },

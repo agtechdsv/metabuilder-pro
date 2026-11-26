@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Check, Info, Loader2, X, Edit2, MessageSquare, Settings2 } from "lucide-react";
 import RichTextEditor from "../RichTextEditor";
+import { SystemVariableOptions } from "../SystemVariableOptions";
 
 // Fluxos antigos guardavam a mensagem como assunto + corpo em HTML (editor de texto rico). O campo novo é texto simples:
 // ao mostrá-los, tira as marcas (<br>, <p>, &nbsp;...) para não aparecer "&nbsp;" na caixa.
@@ -114,6 +115,7 @@ export function ActionPropertiesPanel(props: any) {
                   title={t('bpm.canvas.insert_variable')}
                 >
                   <option value="" className="text-neutral-900 dark:text-neutral-100">{t('bpm.canvas.plus_var')}</option>
+                  <SystemVariableOptions t={t} />
                   {[...dbModels].map((m: any) => {
                     const fields = dbFields.filter((f: any) => f.model_id === m.id);
                     if (fields.length === 0) return null;
@@ -333,6 +335,7 @@ export function ActionPropertiesPanel(props: any) {
                                         title={t('bpm.canvas.insert_variable')}
                                       >
                                         <option value="" className="text-neutral-900 dark:text-neutral-100">{t('bpm.canvas.plus_var')}</option>
+                                        <SystemVariableOptions t={t} />
                                         {[...dbModels].map((m: any) => {
                                           const fields = dbFields.filter((f: any) => f.model_id === m.id);
                                           if (fields.length === 0) return null;
@@ -549,6 +552,7 @@ export function ActionPropertiesPanel(props: any) {
                                 className="bg-transparent border-none text-[9px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-24 text-right p-0"
                               >
                                 <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">{t('bpm.canvas.plus_variable')}</option>
+                                <SystemVariableOptions t={t} />
                                 {[...dbModels]
                                   .sort((a, b) => {
                                     const nameA = a.display_name || a.db_table_name || a.name;
@@ -616,6 +620,7 @@ export function ActionPropertiesPanel(props: any) {
                 className="bg-transparent border-none text-[9px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-28 text-right p-0"
               >
                 <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">{t('bpm.canvas.plus_variable') || '+ Variável'}</option>
+                <SystemVariableOptions t={t} />
                 {[...dbModels].sort((a, b) => (a.display_name || a.db_table_name || a.name).localeCompare(b.display_name || b.db_table_name || b.name)).map((m: any) => {
                   const tableName = m.display_name || m.db_table_name || m.name;
                   const fields = dbFields.filter((f: any) => f.model_id === m.id);

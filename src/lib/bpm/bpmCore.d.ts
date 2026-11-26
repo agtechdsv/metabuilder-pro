@@ -50,18 +50,25 @@ export interface BpmSyncResult {
   error: string | null
 }
 
+/** Quem agiu (vem da sessão assinada do usuário final). */
+export interface BpmActor { id: string; email?: string; name?: string }
+
+/** Mensagem da aba Mensagem de uma ação: texto pronto e o tipo do aviso. */
+export interface BpmUserMessage { text: string; type: 'success' | 'info' | 'warning' }
+
 export class BpmCore {
   constructor(ports: BpmPorts)
   workflows: BpmFlow[]
   setWorkflows(list: BpmFlow[]): void
   clearScheduledJobs(): void
   /** `oldRow`: o registro antes da edição (só para o gatilho de edição restrito a um campo, De/Para). */
-  processEvent(table: string, actionType: string, row: Record<string, any>, oldRow?: Record<string, any> | null): Promise<void>
-  processSyncEvent(table: string, actionType: string, row: Record<string, any>, oldRow?: Record<string, any> | null): Promise<BpmSyncResult>
+  /** `actor` = quem agiu (sessão assinada), para {{usuario.*}}. Devolve as mensagens de sucesso das ações (aba Mensagem). */
+  processEvent(table: string, actionType: string, row: Record<string, any>, oldRow?: Record<string, any> | null, actor?: BpmActor | null): Promise<BpmUserMessage[]>
+  processSyncEvent(table: string, actionType: string, row: Record<string, any>, oldRow?: Record<string, any> | null, actor?: BpmActor | null): Promise<BpmSyncResult>
   /** Algum fluxo ativo escuta a edição desta tabela restrita a um campo (precisa do registro anterior)? */
   needsOldRow(table: string): Promise<boolean>
   processWebhook(workflowId: string, data: Record<string, any>): Promise<void>
-  processCustomAction(workflowIds: string[], table: string, row: Record<string, any>): Promise<void>
+  processCustomAction(workflowIds: string[], table: string, row: Record<string, any>, actor?: BpmActor | null): Promise<BpmUserMessage[]>
 }
 
 export const MAX_STEPS: number

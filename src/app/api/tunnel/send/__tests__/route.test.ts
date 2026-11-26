@@ -87,6 +87,15 @@ describe('POST /api/tunnel/send', () => {
     expect((await call(cmd({ action: 'validate_login' }))).status).toBe(403)
   })
 
+  it('usuário final: quem agiu (id, e-mail, nome) vai no comando assinado; o `actor` do navegador é descartado; membro não leva actor', async () => {
+    authorize.mockResolvedValue({ kind: 'end_user', session: { pid: PID, sub: '5', email: 'maria@x.com', name: 'Maria Souza' } })
+    await call(cmd({ actor: { id: 'falso', name: 'Fulano Falso' } }))
+    expect(tunnelSend.mock.calls[0][2].actor).toEqual({ id: '5', email: 'maria@x.com', name: 'Maria Souza' })
+    authorize.mockResolvedValue({ kind: 'member', userId: 'u1' })
+    await call(cmd({ actor: { id: 'falso' } }))
+    expect(tunnelSend.mock.calls[1][2].actor).toBeUndefined()
+  })
+
   describe('acesso por tabela do usuário final (permissões e regras por linha)', () => {
     const session = { pid: PID, sub: '5', email: 'maria@x.com' }
 

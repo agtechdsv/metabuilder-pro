@@ -44,6 +44,13 @@ const htmlToText = (html) => String(html == null ? '' : html)
   .replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n')
   .trim()
 
+/** Quem agiu (vindo da sessão assinada): só textos curtos; sem id, não há usuário. */
+const cleanActor = (a) => {
+  if (!a || typeof a !== 'object' || typeof a.id !== 'string' || !a.id) return null
+  const clip = (v) => (typeof v === 'string' && v ? v.slice(0, 200) : undefined)
+  return { id: a.id.slice(0, 200), email: clip(a.email), name: clip(a.name) }
+}
+
 class BpmCore {
   constructor(ports) {
     if (!ports || !ports.db || typeof ports.db.query !== 'function') throw new Error('BpmCore: a porta "db" é obrigatória.')
@@ -53,6 +60,7 @@ class BpmCore {
     this.log = { debug: noop, info: noop, ok: noop, warn: noop, error: noop, sql: noop, danger: noop, mail: noop, ...(ports.log || {}) }
     this.verbose = ports.verbose !== false
     this.runCtx = new AsyncLocalStorage()
+    this.actorCtx = new AsyncLocalStorage() // quem agiu, durante o processamento de um evento
     this.workflows = []
     this.scheduledJobs = []
   }
@@ -211,6 +219,34 @@ class BpmCore {
     return v.getHours() || v.getMinutes() || v.getSeconds() ? `${date} ${p(v.getHours())}:${p(v.getMinutes())}` : date
   }
 
+  /**
+   * Variáveis do sistema (não vêm de tabela): {{sistema.data}}, {{sistema.hora}}, {{sistema.data_hora}} e do usuário que agiu:
+   * {{usuario.id}}, {{usuario.nome}}, {{usuario.email}}. Em texto lido por gente (e-mail, mensagem) a data sai dd/MM/aaaa;
+   * nos demais usos (filtro, valor gravado) sai ISO (aaaa-MM-dd), que o banco entende. Desconhecida ou sem usuário: undefined (fica literal).
+   */
+  specialVariable(table, field, human) {
+    if (table === 'sistema') {
+      const now = new Date()
+      const p = (n) => String(n).padStart(2, '0')
+      const iso = `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`
+      const br = `${p(now.getDate())}/${p(now.getMonth() + 1)}/${now.getFullYear()}`
+      const hm = `${p(now.getHours())}:${p(now.getMinutes())}`
+      const hms = `${hm}:${p(now.getSeconds())}`
+      if (field === 'data') return human ? br : iso
+      if (field === 'hora') return human ? hm : hms
+      if (field === 'data_hora') return human ? `${br} ${hm}` : `${iso} ${hms}`
+      return undefined
+    }
+    if (table === 'usuario') {
+      const actor = this.actorCtx.getStore()
+      if (!actor) return undefined
+      if (field === 'id') return actor.id
+      if ((field === 'nome' || field === 'name') && actor.name) return actor.name
+      if (field === 'email' && actor.email) return actor.email
+    }
+    return undefined
+  }
+
   async replaceVariables(text, triggerTable, triggerData, actionTable = null, actionData = null, human = false) {
     if (typeof text !== 'string') return text
 
@@ -222,7 +258,7 @@ class BpmCore {
       const parts = match[1].split('.')
       if (parts.length === 2) {
         const table = parts[0]
-        if (table !== triggerTable && table !== actionTable && table !== 'webhook') {
+        if (table !== triggerTable && table !== actionTable && table !== 'webhook' && table !== 'sistema' && table !== 'usuario') {
           extraTables.add(table)
         }
       }
@@ -278,6 +314,8 @@ class BpmCore {
         const field = parts[1]
         if (table === triggerTable && triggerData && triggerData[field] !== undefined) return out(triggerData[field])
         if (table === actionTable && actionData && actionData[field] !== undefined) return out(actionData[field])
+        const special = this.specialVariable(table, field, human)
+        if (special !== undefined) return special
         if (extraData[table] && extraData[table][field] !== undefined) return out(extraData[table][field])
       }
       return m // Mantém original se não achar
@@ -722,7 +760,12 @@ class BpmCore {
     }
   }
 
-  async processEvent(tableName, actionType, rowData, oldRow = null) {
+  /** `actor` = quem agiu (sessão assinada): habilita {{usuario.*}} nos fluxos deste evento. */
+  processEvent(tableName, actionType, rowData, oldRow = null, actor = null) {
+    return this.actorCtx.run(cleanActor(actor), () => this._processEvent(tableName, actionType, rowData, oldRow))
+  }
+
+  async _processEvent(tableName, actionType, rowData, oldRow = null) {
     this.log.debug(`[BPM-DEBUG] processEvent chamado: tableName=${tableName}, actionType=${actionType}`)
 
     const messages = []
@@ -778,7 +821,11 @@ class BpmCore {
     await this.runFlow(flow, triggerNode, 'webhook', { ...(data || {}) }, 'WEBHOOK')
   }
 
-  async processCustomAction(workflowIds, tableName, rowData) {
+  processCustomAction(workflowIds, tableName, rowData, actor = null) {
+    return this.actorCtx.run(cleanActor(actor), () => this._processCustomAction(workflowIds, tableName, rowData))
+  }
+
+  async _processCustomAction(workflowIds, tableName, rowData) {
     this.log.debug(`[BPM-DEBUG] processCustomAction chamado para fluxos: ${workflowIds.join(', ')}`)
     const customMessages = []
 
@@ -913,7 +960,11 @@ class BpmCore {
     return { success: finalSuccess, data: currentData, error: finalError, message: finalMessage, steps: MAX_STEPS - maxSteps, loop: queue.length > 0 }
   }
 
-  async processSyncEvent(tableName, actionType, rowData, oldRow = null) {
+  processSyncEvent(tableName, actionType, rowData, oldRow = null, actor = null) {
+    return this.actorCtx.run(cleanActor(actor), () => this._processSyncEvent(tableName, actionType, rowData, oldRow))
+  }
+
+  async _processSyncEvent(tableName, actionType, rowData, oldRow = null) {
     this.log.debug(`[BPM-DEBUG] processSyncEvent chamado: tableName=${tableName}, actionType=${actionType}`)
 
     let currentData = { ...rowData }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authorizeProjectActor, authorizeProjectMember } from '@/lib/tunnel/authorize'
-import { MAX_RELAY_BYTES, RateLimiter, actionAllowed, buildCommand, parseRelayRequest } from '@/lib/tunnel/relayPolicy'
+import { MAX_RELAY_BYTES, RateLimiter, actionAllowed, actorFromSession, buildCommand, parseRelayRequest } from '@/lib/tunnel/relayPolicy'
 import { getProjectSecretToken, tunnelSend } from '@/lib/tunnel/server'
 import { evaluateEndUserAccess, guardMode, loadAccessContext } from '@/lib/tunnel/tableAccess'
 import { accessForSession } from '@/lib/rowPolicy/server'
@@ -78,7 +78,9 @@ export async function POST(request: NextRequest) {
   if (!token) return NextResponse.json({ error: 'Projeto sem token de túnel.' }, { status: 404 })
 
   try {
-    await tunnelSend(req.projectId, req.event, buildCommand(req, token, access), undefined, token)
+    // quem agiu (nome, e-mail e id) segue DENTRO do comando assinado, para as variáveis {{usuario.*}} dos fluxos; só de usuário final
+    const appUser = actor.kind === 'end_user' ? actorFromSession(actor.session) : undefined
+    await tunnelSend(req.projectId, req.event, buildCommand(req, token, access, appUser), undefined, token)
     return NextResponse.json({ ok: true }, { status: 202 })
   } catch (error: any) {
     console.error('[tunnel/send] falha ao enviar:', error?.message)
