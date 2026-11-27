@@ -5,6 +5,7 @@ import { DynamicDashboard } from '@/components/runtime/DynamicDashboard'
 import { findBreadcrumbPath } from '@/lib/navigation-utils'
 import { clientSessionCookie } from '@/lib/tunnel/runtimeServer'
 import { endUserMayOpenAutomations } from '@/lib/automationsAccess'
+import { authorizeProjectMember } from '@/lib/tunnel/authorize'
 import { withAutomationsMenu } from '@/lib/automationsMenu'
 
 interface WorkspacePageProps {
@@ -78,7 +79,8 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
     .select('id, slug, layout_config')
     .eq('project_id', project.id)
 
-  const isPreview = resolvedSearchParams?.preview === 'draft'
+  // ?preview=draft mostra também as telas ainda não publicadas: só para quem é MEMBRO deste projeto (antes bastava digitar o parâmetro)
+  const isPreview = resolvedSearchParams?.preview === 'draft' && !!(await authorizeProjectMember(project.id))
   const viewSlugToIdMap = new Map<string, string>()
   // Mesmo critério do menu lateral (layout.tsx): view sem layout publicado = nunca publicada
   const unpublishedViewIds: string[] = []

@@ -15,6 +15,16 @@ export function publicProject<T extends Record<string, any>>(project: T): T {
   return rest as T
 }
 
+/**
+ * O projeto como vai ao navegador das telas do app: sem o secret_token (relay) e SEM o menu bruto (`navigation`). O menu que o app usa
+ * vai à parte, já filtrado pelas permissões de quem está vendo; o bruto entregava o nome de todas as telas até a quem ainda nem tinha
+ * entrado, ou a quem não tem permissão nelas.
+ */
+export function browserProject<T extends Record<string, any>>(project: T): Omit<T, 'navigation'> {
+  const { navigation: _menu, ...rest } = publicProject(project) as any
+  return rest
+}
+
 /** Token que pode ser entregue a componentes do navegador ('' com o relay: o servidor coloca o token nos comandos). */
 export const browserToken = (project: { secret_token?: string | null }): string => (relayEnabled() ? '' : project.secret_token || '')
 

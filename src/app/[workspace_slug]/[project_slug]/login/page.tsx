@@ -5,8 +5,8 @@ import { getTranslations } from '@/i18n/get-translations'
 import { LoginPortalClient } from '@/components/auth/LoginPortalClient'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
-import { publicProject } from '@/lib/tunnel/runtimeServer'
 import { relayEnabled } from '@/lib/tunnel/server'
+import { publicLoginAuth, publicLoginProject, publicLoginVisual } from '@/lib/auth/loginPublic'
 
 export default async function LoginPage({ params, searchParams }: any) {
   const { workspace_slug, project_slug } = await params
@@ -112,10 +112,11 @@ export default async function LoginPage({ params, searchParams }: any) {
 
   return (
     <LoginPortalClient
-      project={publicProject(project)}
+      // só o que a tela de login usa: ela é pública, e a página monta tudo com a chave de serviço (ver lib/auth/loginPublic.ts)
+      project={publicLoginProject(project, relayEnabled()) as any}
       relay={relayEnabled()}
-      authConfig={auth}
-      visualConfig={visual}
+      authConfig={publicLoginAuth(auth, relayEnabled())}
+      visualConfig={publicLoginVisual(visual)}
       locale={locale}
       workspaceSlug={workspace_slug}
       projectSlug={project_slug}

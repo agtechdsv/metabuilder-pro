@@ -13,7 +13,8 @@ import { RuntimeHeader } from '@/components/runtime/RuntimeHeader'
 import { findBreadcrumbPath, findNavigationItem } from '@/lib/navigation-utils'
 import { RuntimeBreadcrumbs } from '@/components/runtime/RuntimeBreadcrumbs'
 import { AIGeneratedViewRenderer } from '@/components/runtime/AIGeneratedViewRenderer'
-import { clientSessionCookie, publicProject, browserToken } from '@/lib/tunnel/runtimeServer'
+import { clientSessionCookie, browserProject, browserToken } from '@/lib/tunnel/runtimeServer'
+import { authorizeProjectMember } from '@/lib/tunnel/authorize'
 import { projectHasApprovals } from '@/lib/approvalsFlag'
 import { accessLevelOf, readOnlyButtons, type AccessLevel } from '@/lib/viewAccess'
 
@@ -95,6 +96,10 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
     console.error('Project not found:', project_slug, projectError)
     notFound()
   }
+
+  // ?preview=draft mostra o que ainda NÃO foi publicado: só para quem é membro DESTE projeto (antes bastava ter qualquer login do MetaBuilder,
+  // e em um projeto sem login o rascunho de qualquer app ficava aberto a esse visitante)
+  if (isPreview && !(await authorizeProjectMember(project.id))) isPreview = false
 
   // Exportar só aparece com a Central de Downloads ativa (estado da view 'downloads' + flag legada)
   const { data: downloadsViewRow } = await supabase
@@ -1025,7 +1030,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
         <ViewPageContent 
           isCustomDomain={isCustomDomain}
           workspace={workspace}
-          project={{ ...publicProject(project), theme_config: { ...((project as any).theme_config || {}), enable_downloads: isDownloadsEnabled }, models: allModels, hasApprovals }}
+          project={{ ...browserProject(project), theme_config: { ...((project as any).theme_config || {}), enable_downloads: isDownloadsEnabled }, models: allModels, hasApprovals }}
           canExport={canExport}
           viewName={viewName}
           modelName={modelName}

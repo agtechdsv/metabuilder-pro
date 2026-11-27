@@ -44,6 +44,8 @@ export async function POST(req: Request) {
         .select('*')
         .eq('id', contextId)
         .single()
+      // a leitura passa pela regra de acesso do banco: sem acesso, o projeto não vem. Não dá para gerar o app de um projeto que não é seu.
+      if (!project) return NextResponse.json({ error: 'Projeto não encontrado ou sem permissão' }, { status: 403 })
       schemaPayload = { project_schema: project?.schema || {} }
     } else {
       const { data: workspace } = await supabase
@@ -51,6 +53,7 @@ export async function POST(req: Request) {
         .select('*')
         .eq('id', contextId)
         .single()
+      if (!workspace) return NextResponse.json({ error: 'Workspace não encontrado ou sem permissão' }, { status: 403 })
       schemaPayload = { workspace_theme: workspace?.theme_config || {} }
     }
 

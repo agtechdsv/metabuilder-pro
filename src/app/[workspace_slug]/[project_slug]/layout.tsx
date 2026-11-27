@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { RuntimeLayoutClient } from '@/components/runtime/RuntimeLayoutClient'
 import { I18nProvider } from '@/i18n/I18nContext'
 import { Metadata } from 'next'
-import { clientSessionCookie, publicProject } from '@/lib/tunnel/runtimeServer'
+import { clientSessionCookie, browserProject } from '@/lib/tunnel/runtimeServer'
 import { relayEnabled } from '@/lib/tunnel/server'
 import { signingEnabled } from '@/lib/tunnel/commandSigning'
 import { collectHelpCenter, withHelpCenterMenu } from '@/lib/helpText'
@@ -330,7 +330,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   return (
     <I18nProvider initialLocale={locale as any}>
       <RuntimeLayoutClient
-        project={{ ...publicProject(project), approvalsHref }}
+        project={{ ...browserProject(project), approvalsHref }}
         relay={relayEnabled()}
         privateTunnel={relayEnabled() && signingEnabled()}
         serverSession={!!sessionCookie}
