@@ -144,7 +144,7 @@ Princípio: tudo é **aditivo**; fluxos sem o nó de aprovação seguem o mesmo 
 
 ## 11. Estado da implementação (atualizado em 2026-11-27)
 
-**Etapa A:** já existia (ver §1). **Etapa B: codada e verificada, sem commit.** Etapa C (prazo) e o roteiro de testes: pendentes.
+**Etapa A:** já existia (ver §1). **Etapa B: codada e commitada (ea04251c).** **Etapa C (prazo e lembrete): codada e verificada, sem commit.** Roteiro de testes: `docs/automacao-aprovacao-roteiro-teste.md`.
 
 O que foi feito e onde:
 - **Motor** (`cli/bpmCore.js`, embutido por `npm run gen:bpm`): nó `approval` (pausa em `requestApproval`, retomada em `decideApproval` pela saída `approved`/`rejected`), tabelas `mb_approval_tasks` e `mb_approval_history` (`approvalDdl`, PG e Oracle), listas, histórico, cancelamento, variáveis `{{aprovacao.decisao|comentario|por}}`. Ligado só no Agente (`ports.features.approvals`); no app exportado o nó para o fluxo com aviso. Fluxo "antes de salvar" recusa o nó.
@@ -157,3 +157,11 @@ Achados que mudam o que foi dito antes:
 - **O motor do CLI só liga em PostgreSQL** (`cli/index.js`: `if (dbType === 'postgres')`). Em Oracle o DDL e o SQL existem e foram testados só como texto; na prática as aprovações só funcionam em PostgreSQL hoje.
 - Como `help_feedback`, as ações não estão em `META_ACTIONS`: em projeto com **várias conexões**, o filtro de schema pode ignorar o comando e a tela dá tempo esgotado.
 - **Sem testar:** CLI real contra banco, e-mail real, navegador (telas), Oracle, app ejetado.
+
+### Etapa C (prazo e lembrete)
+
+- O bloco ganhou **Lembrar após (horas)** e **Repetir a cada (horas)** (`approvalDueHours`, `approvalRepeatHours`). A tarefa guarda `due_at` (primeiro lembrete) e a repetição no `ctx`.
+- Um varredor (`sweepApprovalReminders`) roda a cada 15 minutos, **só quando algum fluxo ativo tem o bloco** e o recurso está ligado (Agente). Tarefa pendente com `due_at` vencido recebe o e-mail "Lembrete: aprovação pendente" e o histórico ganha `reminded`; depois, `due_at` passa a agora + repetição, até **3 lembretes**; sem repetição, só 1.
+- Dois agentes no mesmo banco mandam um lembrete só (gravação condicionada ao `due_at` e marca única; um teste pegou uma falha da primeira versão dessa conferência).
+- Só avisa: **não escala** nem decide. Se todos os fluxos com o bloco forem removidos, tarefas pendentes antigas deixam de receber lembrete (o varredor não é agendado).
+- `reminded_at` ficou mais largo no DDL (Oracle: 60) por causa da marca; `scripts/mb-approvals.sql` foi regenerado.

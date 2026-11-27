@@ -89,6 +89,38 @@ export function ApprovalPropertiesPanel(props: any) {
         />
       </div>
 
+      <div>
+        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.approval.reminder_title', 'Lembrete por e-mail')}</label>
+        <p className="text-[9px] text-neutral-400 mb-2 leading-relaxed">
+          {t('bpm.approval.reminder_desc', 'Se ninguém decidir no prazo, os aprovadores recebem um lembrete (no máximo 3). Deixe em branco para não lembrar. A conferência roda a cada 15 minutos.')}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className="text-[9px] text-neutral-500 block mb-1">{t('bpm.approval.due_label', 'Lembrar após (horas)')}</span>
+            <input
+              type="number"
+              min={1}
+              max={8760}
+              value={selectedNode.data?.approvalDueHours ?? ''}
+              onChange={(e) => updateNodeData(selectedNode.id, { approvalDueHours: e.target.value === '' ? undefined : Math.max(1, Number(e.target.value)) })}
+              className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-violet-500"
+            />
+          </label>
+          <label className="block">
+            <span className="text-[9px] text-neutral-500 block mb-1">{t('bpm.approval.repeat_label', 'Repetir a cada (horas)')}</span>
+            <input
+              type="number"
+              min={1}
+              max={8760}
+              disabled={!selectedNode.data?.approvalDueHours}
+              value={selectedNode.data?.approvalRepeatHours ?? ''}
+              onChange={(e) => updateNodeData(selectedNode.id, { approvalRepeatHours: e.target.value === '' ? undefined : Math.max(1, Number(e.target.value)) })}
+              className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-violet-500 disabled:opacity-50"
+            />
+          </label>
+        </div>
+      </div>
+
       <label className="flex items-start gap-2 cursor-pointer">
         <input
           type="checkbox"

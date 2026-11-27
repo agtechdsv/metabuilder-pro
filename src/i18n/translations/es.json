@@ -3735,7 +3735,11 @@
       "title_placeholder": "Ej.: El pedido {{pedidos.id}} espera aprobación",
       "allow_self": "Quien lo solicitó también puede aprobar su propia solicitud",
       "after_save_only": "Use un disparador de después de guardar, programado o botón. No funciona en \"Antes de guardar\", que debe responder al instante.",
-      "vars_hint": "Después de la decisión, los textos de las acciones siguientes aceptan {{aprovacao.decisao}}, {{aprovacao.comentario}} y {{aprovacao.por}}."
+      "vars_hint": "Después de la decisión, los textos de las acciones siguientes aceptan {{aprovacao.decisao}}, {{aprovacao.comentario}} y {{aprovacao.por}}.",
+      "reminder_title": "Recordatorio por correo",
+      "reminder_desc": "Si nadie decide a tiempo, los aprobadores reciben un recordatorio (máximo 3). Déjelo en blanco para no recordar. La revisión se hace cada 15 minutos.",
+      "due_label": "Recordar tras (horas)",
+      "repeat_label": "Repetir cada (horas)"
     }
   },
   "auth": {
@@ -7294,6 +7298,7 @@
     "cancel_task": "Cancelar tarea",
     "cancel_confirm": "¿Cancelar esta tarea? El flujo no continuará.",
     "cancelled_ok": "Tarea cancelada.",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "event_reminded": "Recordatorio enviado"
   }
 }

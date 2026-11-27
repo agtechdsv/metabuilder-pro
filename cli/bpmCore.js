@@ -203,6 +203,8 @@ const APPROVAL_SNAPSHOT_BYTES = 40000 // tamanho máximo do registro guardado na
 const APPROVAL_CTX_BYTES = 60000 // tamanho máximo do que é guardado para retomar o fluxo (resultados de consultas)
 const APPROVAL_SENSITIVE = /(senha|password|passwd|pwd|hash|secret|totp|mfa|token)/i
 const APPROVAL_STATUSES = ['pending', 'approved', 'rejected', 'cancelled']
+const APPROVAL_SWEEP_CRON = '*/15 * * * *' // o varredor de lembretes roda a cada 15 minutos
+const APPROVAL_MAX_REMINDERS = 3 // lembretes por tarefa (o primeiro no prazo; os demais, se houver "repetir a cada")
 
 /**
  * Tabelas das aprovações, no banco do cliente. Uma instrução por item. Datas em texto ISO-8601 e ids em texto: assim o mesmo SQL de
@@ -239,7 +241,7 @@ function approvalDdl(dialect) {
   decided_at ${ts},
   decision_comment ${s(2000)},
   due_at ${ts},
-  reminded_at ${ts},
+  reminded_at ${o ? 'VARCHAR2(60)' : 'TEXT'},
   reminder_count ${count}
 )`,
     `CREATE INDEX ${ifNot}idx_mb_apr_tasks_st ON mb_approval_tasks (status, created_at)`,
@@ -413,6 +415,14 @@ class BpmCore {
     }
 
     if (cronCount > 0) this.log.ok(`[BPM] ${cronCount} gatilho(s) agendado(s) configurado(s) com sucesso.`)
+
+    // lembretes de aprovação (prazo): um varredor próprio, só quando algum fluxo ativo tem o bloco "Aguardar aprovação"
+    const hasApproval = this.workflows.some(w => w && w.flow_data && Array.isArray(w.flow_data.nodes) && w.flow_data.nodes.some(n => n.type === 'approval'))
+    if (hasApproval && this.approvalsEnabled() && scheduler && typeof scheduler.schedule === 'function') {
+      this.scheduledJobs.push(scheduler.schedule(APPROVAL_SWEEP_CRON, () => {
+        this.sweepApprovalReminders().catch(e => this.log.error(`[BPM] Erro ao enviar lembretes de aprovação: ${e.message}`))
+      }))
+    }
   }
 
   /** Valor de um campo do registro (o banco pode devolver a coluna em outra caixa, como no Oracle). */
@@ -1375,9 +1385,11 @@ class BpmCore {
     const title = String(htmlToText(rawTitle) || d.label || `Aprovação em ${table}`).slice(0, 500)
     const flow = store.flow || {}
     const hours = Number(d.approvalDueHours)
-    const dueAt = Number.isFinite(hours) && hours > 0 ? new Date(Date.now() + hours * 3600 * 1000).toISOString() : null
-    let ctx = JSON.stringify({ datasets: store.datasets || {} })
-    if (Buffer.byteLength(ctx) > APPROVAL_CTX_BYTES) ctx = '{}' // consulta grande demais para guardar: o fluxo retoma sem ela
+    const dueAt = Number.isFinite(hours) && hours > 0 ? new Date(Date.now() + Math.min(hours, 8760) * 3600 * 1000).toISOString() : null
+    const repeatHours = Number(d.approvalRepeatHours)
+    const repeat = Number.isFinite(repeatHours) && repeatHours > 0 ? { repeatHours: Math.min(repeatHours, 8760) } : {}
+    let ctx = JSON.stringify({ datasets: store.datasets || {}, ...repeat })
+    if (Buffer.byteLength(ctx) > APPROVAL_CTX_BYTES) ctx = JSON.stringify(repeat) // consulta grande demais para guardar: o fluxo retoma sem ela
     const task = {
       id: this.newId(), table_name: table, record_pk: pkOfRow(data),
     }
@@ -1392,8 +1404,47 @@ class BpmCore {
     await this.notifyApprovers(d, title, actor)
   }
 
+  /**
+   * Lembretes (prazo): tarefa pendente cujo `due_at` venceu volta a avisar os aprovadores. Depois de cada lembrete, `due_at` passa a
+   * ser agora + "repetir a cada N horas" (guardado em ctx.repeatHours), até APPROVAL_MAX_REMINDERS lembretes; sem repetição, `due_at`
+   * fica vazio e não há novo lembrete. Só avisa; não escala nem decide nada. Devolve quantos lembretes enviou.
+   */
+  async sweepApprovalReminders(now = new Date()) {
+    if (!this.approvalsEnabled()) return 0
+    const nowIso = now.toISOString()
+    const rows = await this.approvalRead(
+      () => this.executeQuery(`SELECT * FROM mb_approval_tasks WHERE status = 'pending' AND due_at IS NOT NULL AND due_at <= ${this.ph(1)} ORDER BY due_at ASC ${this.limitSql(100)}`, [nowIso]),
+      [],
+    )
+    let sent = 0
+    for (const r of rows) {
+      const t = await this.normRow(r)
+      const next = (Number(t.reminder_count) || 0) + 1
+      const repeat = Number(parseJson(t.ctx, {}).repeatHours)
+      const nextDue = repeat > 0 && next < APPROVAL_MAX_REMINDERS ? new Date(now.getTime() + repeat * 3600 * 1000).toISOString() : null
+      // atômico: se outro agente já lembrou (due_at mudou), esta linha não é nossa. A marca é única por tentativa (dois agentes no mesmo
+      // instante não se confundem) e logo vira só a data
+      const mark = `${nowIso}~${this.newId().slice(-8)}`
+      await this.executeQuery(
+        `UPDATE mb_approval_tasks SET reminded_at = ${this.ph(1)}, reminder_count = ${this.ph(2)}, due_at = ${this.ph(3)} WHERE id = ${this.ph(4)} AND status = 'pending' AND due_at = ${this.ph(5)}`,
+        [mark, next, nextDue, t.id, t.due_at],
+      )
+      const check = await this.executeQuery(`SELECT reminded_at, reminder_count FROM mb_approval_tasks WHERE id = ${this.ph(1)}`, [t.id])
+      const c = check.length ? await this.normRow(check[0]) : null
+      if (!c || c.reminded_at !== mark) continue
+      await this.executeQuery(`UPDATE mb_approval_tasks SET reminded_at = ${this.ph(1)} WHERE id = ${this.ph(2)} AND reminded_at = ${this.ph(3)}`, [nowIso, t.id, mark])
+      await this.addApprovalHistory(t, 'reminded', null, null)
+      const a = parseJson(t.assignees, { users: [], groups: [] })
+      // mesma escolha do bloco (perfis inteiros e usuários), remontada a partir da tarefa
+      const emailGroupsUsers = { ...Object.fromEntries((a.groups || []).map(g => [g, 'all'])), ...((a.users || []).length ? { __usuarios: a.users } : {}) }
+      await this.notifyApprovers({ emailGroupsUsers }, t.title, t.requested_by ? { id: t.requested_by, name: t.requested_by_name || undefined } : null, true)
+      sent++
+    }
+    return sent
+  }
+
   /** E-mail aos aprovadores (o mesmo seletor de usuários e grupos do nó de e-mail). Falha no envio não desfaz a tarefa. */
-  async notifyApprovers(d, title, actor) {
+  async notifyApprovers(d, title, actor, reminder = false) {
     try {
       const rec = this.ports.recipients
       const to = rec && typeof rec.resolveSystem === 'function' ? ((await rec.resolveSystem(d)) || '') : ''
@@ -1403,8 +1454,8 @@ class BpmCore {
       const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       await this.ports.mail.send({
         to,
-        subject: `Aprovação pendente: ${title}`.slice(0, 200),
-        body: `Há uma aprovação aguardando você: <b>${esc(title)}</b>.${esc(who)}<br/>Abra "Minhas tarefas" no aplicativo para aprovar ou rejeitar.`,
+        subject: `${reminder ? 'Lembrete: aprovação pendente' : 'Aprovação pendente'}: ${title}`.slice(0, 200),
+        body: `${reminder ? 'Esta aprovação ainda aguarda você' : 'Há uma aprovação aguardando você'}: <b>${esc(title)}</b>.${esc(who)}<br/>Abra "Minhas tarefas" no aplicativo para aprovar ou rejeitar.`,
         template: 'free',
       })
     } catch (e) {

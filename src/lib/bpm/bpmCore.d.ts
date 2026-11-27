@@ -75,6 +75,8 @@ export class BpmCore {
   processCustomAction(workflowIds: string[], table: string, row: Record<string, any>, actor?: BpmActor | null): Promise<BpmUserMessage[]>
   /** Ações approval_* do Agente CLI (aprovações): o `actor` vem da sessão assinada pelo servidor. */
   approvalOp(action: string, data: Record<string, any>, actor?: BpmActor | null): Promise<any>
+  /** Lembretes de aprovação vencidos (prazo do bloco); devolve quantos enviou. O Agente chama a cada 15 minutos. */
+  sweepApprovalReminders(now?: Date): Promise<number>
   decideApproval(args: { taskId: string; decision: 'approved' | 'rejected'; comment?: string; actor: BpmActor | null }): Promise<{ ok: boolean; resumed: boolean; messages: BpmUserMessage[]; warning?: string }>
 }
 

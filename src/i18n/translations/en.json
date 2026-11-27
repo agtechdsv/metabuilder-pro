@@ -3648,7 +3648,11 @@
       "title_placeholder": "E.g.: Order {{pedidos.id}} awaits approval",
       "allow_self": "The requester can also approve their own request",
       "after_save_only": "Use an after-save, scheduled or button trigger. It does not work in \"Before saving\", which must answer right away.",
-      "vars_hint": "After the decision, the texts of the next actions accept {{aprovacao.decisao}}, {{aprovacao.comentario}} and {{aprovacao.por}}."
+      "vars_hint": "After the decision, the texts of the next actions accept {{aprovacao.decisao}}, {{aprovacao.comentario}} and {{aprovacao.por}}.",
+      "reminder_title": "Email reminder",
+      "reminder_desc": "If nobody decides in time, the approvers get a reminder (up to 3). Leave blank for no reminder. The check runs every 15 minutes.",
+      "due_label": "Remind after (hours)",
+      "repeat_label": "Repeat every (hours)"
     }
   },
   "auth": {
@@ -7206,6 +7210,7 @@
     "cancel_task": "Cancel task",
     "cancel_confirm": "Cancel this task? The flow will not continue.",
     "cancelled_ok": "Task cancelled.",
-    "close": "Close"
+    "close": "Close",
+    "event_reminded": "Reminder sent"
   }
 }

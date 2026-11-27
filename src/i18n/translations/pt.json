@@ -3648,7 +3648,11 @@
       "title_placeholder": "Ex.: Pedido {{pedidos.id}} aguarda aprovação",
       "allow_self": "Quem pediu também pode aprovar o próprio pedido",
       "after_save_only": "Use um gatilho de depois de salvar, agendado ou botão. Não funciona em \"Antes de salvar\", que precisa responder na hora.",
-      "vars_hint": "Depois da decisão, os textos das ações seguintes aceitam {{aprovacao.decisao}}, {{aprovacao.comentario}} e {{aprovacao.por}}."
+      "vars_hint": "Depois da decisão, os textos das ações seguintes aceitam {{aprovacao.decisao}}, {{aprovacao.comentario}} e {{aprovacao.por}}.",
+      "reminder_title": "Lembrete por e-mail",
+      "reminder_desc": "Se ninguém decidir no prazo, os aprovadores recebem um lembrete (no máximo 3). Deixe em branco para não lembrar. A conferência roda a cada 15 minutos.",
+      "due_label": "Lembrar após (horas)",
+      "repeat_label": "Repetir a cada (horas)"
     }
   },
   "auth": {
@@ -7206,6 +7210,7 @@
     "cancel_task": "Cancelar tarefa",
     "cancel_confirm": "Cancelar esta tarefa? O fluxo não continuará.",
     "cancelled_ok": "Tarefa cancelada.",
-    "close": "Fechar"
+    "close": "Fechar",
+    "event_reminded": "Lembrete enviado"
   }
 }

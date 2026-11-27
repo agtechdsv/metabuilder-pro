@@ -74,7 +74,7 @@ CREATE TABLE mb_approval_tasks (
   decided_at VARCHAR2(30),
   decision_comment VARCHAR2(2000),
   due_at VARCHAR2(30),
-  reminded_at VARCHAR2(30),
+  reminded_at VARCHAR2(60),
   reminder_count NUMBER(10) DEFAULT 0 NOT NULL
 );
 

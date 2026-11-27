@@ -30,6 +30,8 @@ function fakeDb(records: Record<string, any[]> = {}) {
     if (/^INSERT INTO mb_approval_history/.test(sql)) { insert(sql, params, history); return [] }
     if (/^SELECT decided_by, decided_at FROM mb_approval_tasks/.test(sql)) return tasks.filter(t => t.id === params[0]).map(t => ({ decided_by: t.decided_by, decided_at: t.decided_at }))
     if (/^SELECT \* FROM mb_approval_tasks WHERE id =/.test(sql)) return tasks.filter(t => t.id === params[0]).map(t => ({ ...t }))
+    if (/^SELECT \* FROM mb_approval_tasks WHERE status = 'pending' AND due_at IS NOT NULL/.test(sql)) return tasks.filter(t => t.status === 'pending' && t.due_at && t.due_at <= params[0]).map(t => ({ ...t }))
+    if (/^SELECT reminded_at, reminder_count FROM mb_approval_tasks/.test(sql)) return tasks.filter(t => t.id === params[0]).map(t => ({ reminded_at: t.reminded_at, reminder_count: t.reminder_count }))
     const byStatus = /^SELECT \* FROM mb_approval_tasks WHERE status = '(\w+)'/.exec(sql)
     if (byStatus) return tasks.filter(t => t.status === byStatus[1]).map(t => ({ ...t }))
     if (/^SELECT \* FROM mb_approval_tasks WHERE requested_by =/.test(sql)) return tasks.filter(t => t.requested_by === params[0]).map(t => ({ ...t }))
@@ -40,6 +42,8 @@ function fakeDb(records: Record<string, any[]> = {}) {
       const id = params[Number(/WHERE id = \$(\d+)/.exec(sql)![1]) - 1]
       const t = tasks.find(x => x.id === id)
       if (!t || (/AND status = 'pending'/.test(sql) && t.status !== 'pending')) return []
+      const dueGuard = /AND due_at = \$(\d+)/.exec(sql)
+      if (dueGuard && t.due_at !== params[Number(dueGuard[1]) - 1]) return [] // outro agente já lembrou
       const set = /SET (.+) WHERE/.exec(sql)![1]
       for (const m of set.matchAll(/(\w+) = (\$\d+|'[^']*')/g)) t[m[1]] = m[2].startsWith('$') ? params[Number(m[2].slice(1)) - 1] : m[2].slice(1, -1)
       return []
@@ -63,21 +67,24 @@ const EDGES = [
   { id: 'e3', source: 'ap', target: 'no', sourceHandle: 'rejected' },
 ]
 
-function setup(opts: { features?: boolean; dialect?: 'postgres' | 'oracle'; nodes?: any[]; edges?: any[]; records?: Record<string, any[]>; trigger?: string } = {}) {
+function setup(opts: { scheduler?: boolean; features?: boolean; dialect?: 'postgres' | 'oracle'; nodes?: any[]; edges?: any[]; records?: Record<string, any[]>; trigger?: string } = {}) {
   const db = fakeDb(opts.records)
   const mails: any[] = []
   const runs: BpmRunReport[] = []
+  const resolved: any[] = []
+  const jobs: { cron: string; fn: () => void }[] = []
   const c = new BpmCore({
     db: { dialect: opts.dialect || 'postgres', query: db.query },
     models: { tableOf: async () => 'pedidos', isKnownTable: async () => true },
     mail: { async send(m: any) { mails.push(m) } },
-    recipients: { async resolveSystem() { return 'gerente@x.com' } },
+    recipients: { async resolveSystem(d: any) { resolved.push(d); return 'gerente@x.com' } },
+    ...(opts.scheduler ? { scheduler: { schedule(cron: string, fn: any) { const job = { cron, fn, stop() {} }; jobs.push(job); return job } } } : {}),
     runs: { async report(r: BpmRunReport) { runs.push(r) } },
     verbose: false,
     ...(opts.features === false ? {} : { features: { approvals: true } }),
   })
   c.setWorkflows([{ id: 'f1', name: 'Aprovar pedido', flow_data: { nodes: opts.nodes || NODES(), edges: opts.edges || EDGES } } as any])
-  return { c, db, mails, runs }
+  return { c, db, mails, runs, resolved, jobs }
 }
 
 const solic = { id: '10', name: 'Ana', roles: ['Vendas'] }
@@ -326,5 +333,103 @@ describe('aprovação: listas, histórico e cancelamento', () => {
     await denied.processEvent('pedidos', 'INSERT', { id: 1 }, null, solic)
     expect(runs[0].status).toBe('error')
     expect(runs[0].error_message).toMatch(/scripts\/mb-approvals\.sql/)
+  })
+})
+
+describe('aprovação: prazo e lembretes (Etapa C)', () => {
+  const HOUR = 3600 * 1000
+  const at = (base: Date, h: number) => new Date(base.getTime() + h * HOUR)
+
+  async function withDue(data: Record<string, any>, over: any = {}) {
+    const s = setup({ nodes: NODES(data), ...over })
+    await s.c.processEvent('pedidos', 'INSERT', { id: 7, valor: 500 }, null, solic)
+    s.mails.length = 0
+    return s
+  }
+
+  it('o bloco guarda o prazo (due_at) e a repetição (no ctx); sem prazo, due_at fica vazio', async () => {
+    const before = Date.now()
+    const a = await withDue({ approvalDueHours: 2, approvalRepeatHours: 1 })
+    const due = new Date(a.db.tasks[0].due_at).getTime()
+    expect(due).toBeGreaterThanOrEqual(before + 2 * HOUR - 1000)
+    expect(due).toBeLessThanOrEqual(Date.now() + 2 * HOUR + 1000)
+    expect(JSON.parse(a.db.tasks[0].ctx).repeatHours).toBe(1)
+    const b = await withDue({})
+    expect(b.db.tasks[0].due_at).toBeNull()
+    expect(await b.c.sweepApprovalReminders(at(new Date(), 1000))).toBe(0)
+  })
+
+  it('antes do prazo não lembra; no prazo lembra, registra o histórico e agenda o próximo', async () => {
+    const { c, db, mails, resolved } = await withDue({ approvalDueHours: 2, approvalRepeatHours: 1 })
+    const t0 = new Date(db.tasks[0].created_at)
+    expect(await c.sweepApprovalReminders(at(t0, 1))).toBe(0)
+    expect(mails).toHaveLength(0)
+    const t2 = at(t0, 2.01)
+    expect(await c.sweepApprovalReminders(t2)).toBe(1)
+    expect(mails).toHaveLength(1)
+    expect(mails[0].to).toBe('gerente@x.com')
+    expect(mails[0].subject).toMatch(/^Lembrete: aprovação pendente: Pedido 7/)
+    expect(db.tasks[0]).toMatchObject({ status: 'pending', reminder_count: 1, reminded_at: t2.toISOString(), due_at: at(t2, 1).toISOString() })
+    expect(db.history.map(h => h.event)).toEqual(['requested', 'reminded'])
+    // o aviso usa a mesma escolha do bloco: o perfil inteiro
+    expect(resolved.at(-1).emailGroupsUsers).toEqual({ Gerente: 'all' })
+  })
+
+  it('sem "repetir", lembra uma vez só; com repetição, no máximo 3 lembretes', async () => {
+    const once = await withDue({ approvalDueHours: 1 })
+    const t0 = new Date(once.db.tasks[0].created_at)
+    expect(await once.c.sweepApprovalReminders(at(t0, 1.1))).toBe(1)
+    expect(once.db.tasks[0].due_at).toBeNull()
+    expect(await once.c.sweepApprovalReminders(at(t0, 100))).toBe(0)
+
+    const rep = await withDue({ approvalDueHours: 1, approvalRepeatHours: 2 })
+    const r0 = new Date(rep.db.tasks[0].created_at)
+    let sent = 0
+    for (let i = 1; i <= 10; i++) sent += await rep.c.sweepApprovalReminders(at(r0, i * 3))
+    expect(sent).toBe(3)
+    expect(rep.db.tasks[0].reminder_count).toBe(3)
+    expect(rep.db.tasks[0].due_at).toBeNull()
+  })
+
+  it('tarefa decidida ou cancelada não recebe lembrete', async () => {
+    const { c, db, mails } = await withDue({ approvalDueHours: 1 })
+    await c.decideApproval({ taskId: db.tasks[0].id, decision: 'approved', actor: gerente })
+    mails.length = 0
+    expect(await c.sweepApprovalReminders(at(new Date(), 5))).toBe(0)
+    expect(mails).toHaveLength(0)
+  })
+
+  it('dois agentes varrendo ao mesmo tempo mandam UM lembrete só', async () => {
+    const { c, db, mails } = await withDue({ approvalDueHours: 1 })
+    const when = at(new Date(db.tasks[0].created_at), 2)
+    const [a, b] = await Promise.all([c.sweepApprovalReminders(when), c.sweepApprovalReminders(when)])
+    expect(a + b).toBe(1)
+    expect(mails).toHaveLength(1)
+  })
+
+  it('o varredor é agendado a cada 15 minutos só quando há bloco de aprovação e o recurso está ligado', async () => {
+    const on = setup({ scheduler: true })
+    expect(on.jobs.map(j => j.cron)).toEqual(['*/15 * * * *'])
+    const noNode = setup({ scheduler: true, nodes: NODES().filter(n => n.type !== 'approval'), edges: [] })
+    expect(noNode.jobs).toHaveLength(0)
+    const off = setup({ scheduler: true, features: false })
+    expect(off.jobs).toHaveLength(0)
+  })
+
+  it('sem as tabelas criadas, o varredor não faz nada nem falha', async () => {
+    const c = new BpmCore({ db: { dialect: 'postgres', query: async () => { const e: any = new Error('relation "mb_approval_tasks" does not exist'); e.code = '42P01'; throw e } }, models: { tableOf: async () => 'pedidos' }, features: { approvals: true }, verbose: false })
+    expect(await c.sweepApprovalReminders()).toBe(0)
+  })
+
+  it('o ciclo de vida do lembrete funciona no SQL de Oracle (placeholders :n e FETCH FIRST)', async () => {
+    const s = await withDue({ approvalDueHours: 1 }, { dialect: 'oracle' })
+    const when = at(new Date(s.db.tasks[0].created_at), 2)
+    s.db.log.length = 0
+    // o banco de mentira só entende $n: aqui só conferimos o SQL gerado para Oracle
+    await s.c.sweepApprovalReminders(when).catch(() => {})
+    const sweep = s.db.log.find(q => /due_at IS NOT NULL/.test(q))!
+    expect(sweep).toMatch(/due_at <= :1/)
+    expect(sweep).toMatch(/FETCH FIRST 100 ROWS ONLY/)
+    expect(sweep).not.toMatch(/\$1|LIMIT/)
   })
 })
