@@ -1,14 +1,14 @@
 {
-  "v1.0.14": {
+  "v1.0.15": {
     "date": "2026-11-26",
     "pt": [
-      "## 🚀 MetaBuilder PRO v1.0.14\n\n### 📊 Relatórios agendados (BPM)\n- **Tabela no corpo do e-mail:** o corpo mostra um resumo, e a planilha anexa leva todas as colunas. Marque \"No e-mail\" nas colunas que quer ver no corpo (sem escolha, aparecem as 6 primeiras, com um aviso). A tabela larga ganha barra de rolagem nos aplicativos de e-mail que a aceitam.\n- **Janela \"Escolher colunas\" mais organizada:** ela agora abre ocupando a tela, e \"criado por\" e \"atualizado por\" ficam junto dos campos de controle, fora da lista de tabelas relacionadas."
+      "## 🚀 MetaBuilder PRO v1.0.15\n\n### 📊 Relatórios agendados (BPM)\n- **Todas as colunas no corpo do e-mail:** a tabela do corpo agora mostra todas as colunas (até 12), em vez de só as 6 primeiras. Marque \"No e-mail\" nas colunas que quer ver no corpo; a planilha anexa leva tudo.\n- **E-mail que o Gmail não corta:** as linhas da tabela do corpo são limitadas pelo tamanho, e um aviso diz quantas linhas aparecem. A planilha anexa continua com todas as linhas."
     ],
     "en": [
-      "## 🚀 MetaBuilder PRO v1.0.14\n\n### 📊 Scheduled reports (BPM)\n- **Table in the email body:** the body shows a summary, and the attached spreadsheet carries all the columns. Tick \"In the email\" on the columns you want to see in the body (with no choice, the first 6 appear, with a notice). A wide table gets a scroll bar in the email apps that support it.\n- **Tidier \"Choose columns\" window:** it now opens using the whole screen, and \"created by\" and \"updated by\" sit with the control fields, out of the related tables list."
+      "## 🚀 MetaBuilder PRO v1.0.15\n\n### 📊 Scheduled reports (BPM)\n- **All columns in the email body:** the table in the body now shows all the columns (up to 12), instead of only the first 6. Tick \"In the email\" on the columns you want to see in the body; the attached spreadsheet carries everything.\n- **Emails Gmail does not cut:** the rows of the table in the body are limited by size, and a notice says how many rows appear. The attached spreadsheet still has all the rows."
     ],
     "es": [
-      "## 🚀 MetaBuilder PRO v1.0.14\n\n### 📊 Informes programados (BPM)\n- **Tabla en el cuerpo del correo:** el cuerpo muestra un resumen, y la hoja de cálculo adjunta lleva todas las columnas. Marque \"En el correo\" en las columnas que quiera ver en el cuerpo (sin elección, aparecen las 6 primeras, con un aviso). La tabla ancha gana barra de desplazamiento en las aplicaciones de correo que la admiten.\n- **Ventana \"Elegir columnas\" más ordenada:** ahora se abre ocupando la pantalla, y \"creado por\" y \"actualizado por\" quedan junto a los campos de control, fuera de la lista de tablas relacionadas."
+      "## 🚀 MetaBuilder PRO v1.0.15\n\n### 📊 Informes programados (BPM)\n- **Todas las columnas en el cuerpo del correo:** la tabla del cuerpo ahora muestra todas las columnas (hasta 12), en lugar de solo las 6 primeras. Marque \"En el correo\" en las columnas que quiera ver en el cuerpo; la hoja de cálculo adjunta lleva todo.\n- **Correo que Gmail no corta:** las filas de la tabla del cuerpo se limitan por tamaño, y un aviso dice cuántas filas aparecen. La hoja de cálculo adjunta sigue con todas las filas."
     ]
   },
   "v1.0.0": {
