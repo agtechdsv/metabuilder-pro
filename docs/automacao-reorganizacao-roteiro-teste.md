@@ -78,15 +78,15 @@ As telas no navegador (card, painel, editor, cadastro do botão), o clique real 
 |---|---|---|---|
 | 5.1 | Abrir um caso de uso (Pedidos, Pedidos - Timeline) como Administrador | O botão **"Automações" não existe mais** no cabeçalho | ☑ |
 | 5.2 | No Studio, editar um botão de ação e abrir a aba de automação | Mostra primeiro os fluxos **da tabela do caso de uso**; os de outras tabelas/gerais ficam em um segundo grupo | ☑ |
-| 5.3 | Clicar em "Abrir os fluxos desta tabela" | Abre o editor **na tabela certa**, em outra aba | 🔧 corrigido em 27/11 (abria sem `?table=`); retestar |
-| 5.4 | Criar o fluxo lá, voltar ao cadastro do botão, reabrir a aba | O fluxo novo aparece na lista para marcar | ☐ |
-| 5.5 | Abrir o endereço antigo `/automations?use_case=<id de um caso de uso de pedidos>` (link salvo, favorito) | Redireciona para o editor da **tabela pedidos** | ☐ |
-| 5.6 | Excluir um caso de uso de teste (depois do script SQL) | Os fluxos da tabela **continuam** no painel | ☐ |
+| 5.3 | Clicar em "Abrir os fluxos desta tabela" | Abre o editor **na tabela certa**, em outra aba | ☑ |
+| 5.4 | Criar o fluxo lá, voltar ao cadastro do botão, reabrir a aba | O fluxo novo aparece na lista para marcar | ☑ |
+| 5.5 | Abrir o endereço antigo `/automations?use_case=<id de um caso de uso de pedidos>` (link salvo, favorito) | Redireciona para o editor da **tabela pedidos** | ☑ |
+| 5.6 | Excluir um caso de uso de teste (depois do script SQL) | Os fluxos da tabela **continuam** no painel | ☑ |
 
 ## Parte 6: nada mudou no comportamento
 
 | # | O que fazer | Esperado | ✔ |
 |---|---|---|---|
-| 6.1 | Criar, editar e excluir pedidos nas **duas** telas (Pedidos e Pedidos - Timeline) | Os mesmos fluxos disparam nas duas (o fluxo é da tabela) | ☐ |
-| 6.2 | Rodar os itens de gatilhos, consulta, e-mail e agendamento de `bpm-roteiro-testes.md` | Continuam como estavam | ☐ |
-| 6.3 | Rodar o roteiro `automacao-aprovacao-roteiro-teste.md` | Continua valendo (o bloco de aprovação está nos fluxos de tabela) | ☐ |
+| 6.1 | Criar, editar e excluir pedidos nas **duas** telas (Pedidos e Pedidos - Timeline) | Os mesmos fluxos disparam nas duas (o fluxo é da tabela) | ☑ |
+| 6.2 | Rodar os itens de gatilhos, consulta, e-mail e agendamento de `bpm-roteiro-testes.md` | Continuam como estavam | ☑ |
+| 6.3 | Rodar o roteiro `automacao-aprovacao-roteiro-teste.md` | Continua valendo (o bloco de aprovação está nos fluxos de tabela) | ☑ |
