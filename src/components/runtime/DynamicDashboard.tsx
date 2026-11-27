@@ -102,7 +102,7 @@ export function DynamicDashboard({ items, workspaceSlug, projectSlug, title, sub
                     {isFolder ? t('runtime.dashboard_folder') : item.type === 'view' ? t('runtime.dashboard_use_case') : t('runtime.dashboard_external')}
                   </p>
                   {item.description && (
-                    <p className="text-[length:calc(10px*var(--card-scale,1))] text-neutral-400 dark:text-neutral-500 line-clamp-1 italic mt-1">
+                    <p title={item.description} className="text-[length:calc(10px*var(--card-scale,1))] text-neutral-400 dark:text-neutral-500 line-clamp-1 italic mt-1">
                       {item.description}
                     </p>
                   )}

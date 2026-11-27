@@ -25,6 +25,8 @@ interface MenuItem {
   type: 'view' | 'link' | 'folder'
   target: string
   show_dashboard?: boolean
+  description?: string
+  expand_on_hover?: boolean
   children?: MenuItem[]
 }
 
@@ -48,6 +50,8 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
   const finalBaseNavUrl = baseNavUrl ?? `/${workspaceSlug}/${projectSlug}`
   const router = useRouter()
   const [expandedFolders, setExpandedFolders] = useState<string[]>([])
+  // pasta marcada como "Expandir ao passar o mouse": abre enquanto o ponteiro está nela (ou nos filhos)
+  const [hoveredFolder, setHoveredFolder] = useState<string | null>(null)
   const [clientUser, setClientUser] = useState<any>(null)
 
   useEffect(() => {
@@ -91,12 +95,19 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
         : pathname === `${finalBaseNavUrl}/dashboard/${item.id}` || pathname.startsWith(`${finalBaseNavUrl}/dashboard/${item.id}/`)
     
     const isFolder = item.type === 'folder'
-    const isExpanded = expandedFolders.includes(item.id)
+    const isExpanded = expandedFolders.includes(item.id) || (item.expand_on_hover === true && hoveredFolder === item.id)
+    const tip = item.description?.trim() || undefined
 
     if (isFolder) {
       return (
-        <div key={item.id} className="space-y-1">
+        <div
+          key={item.id}
+          className="space-y-1"
+          onMouseEnter={item.expand_on_hover ? () => setHoveredFolder(item.id) : undefined}
+          onMouseLeave={item.expand_on_hover ? () => setHoveredFolder(prev => (prev === item.id ? null : prev)) : undefined}
+        >
           <button
+            title={tip}
             onClick={() => navigateToFolder(item.id)}
             className={cn(
               "w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group relative",
@@ -166,6 +177,7 @@ export function DynamicSidebar({ project, workspaceSlug, projectSlug, navigation
         key={item.id}
         href={item.type === 'view' ? withPreview(href, isPreview) : (href || '#')}
         target={item.type === 'link' ? '_blank' : undefined}
+        title={tip}
         className={cn(
           "flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group relative",
           isActive 

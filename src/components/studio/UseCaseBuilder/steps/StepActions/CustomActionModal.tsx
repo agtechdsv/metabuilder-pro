@@ -49,7 +49,7 @@ export function CustomActionModal({
   isDownloadsActive
 }: CustomActionModalProps) {
   // o fluxo é da TABELA: os fluxos da tabela deste caso de uso vêm primeiro; os de outras tabelas (ou Gerais) ficam em um segundo grupo
-  const masterModelId: string = config?.master_model_id || '';
+  const masterModelId: string = config?.layout_config?.master_model_id || config?.selected_models?.[0] || '';
   const flowsHref = automationsHref(`/${workspace_slug}/${project_slug}`, masterModelId ? { kind: 'table', modelId: masterModelId } : null);
 
   const sameTable = masterModelId ? bpmWorkflows.filter((w: any) => flowInScope(w, { kind: 'table', modelId: masterModelId })) : bpmWorkflows;

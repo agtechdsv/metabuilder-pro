@@ -598,6 +598,20 @@ function MenuNodeBase({ item, views, isDownloadsActive = true, onUpdate, onRemov
               </div>
             )}
 
+            {item.type === 'folder' && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800">
+                <input
+                  type="checkbox"
+                  checked={item.expand_on_hover === true}
+                  onChange={e => onUpdate?.(item.id, { expand_on_hover: e.target.checked })}
+                  disabled={isOverlay}
+                  className="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer disabled:opacity-50"
+                  id={`hover-${item.id}`}
+                />
+                <label htmlFor={`hover-${item.id}`} className="text-[9px] font-black tracking-widest text-neutral-400 cursor-pointer select-none">{t('dashboard.projects.studio.expand_on_hover', 'Expandir ao passar o mouse')}</label>
+              </div>
+            )}
+
             <div data-help-id="studio.nav_dash" className="flex items-center gap-2 px-3 py-1.5 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800">
               <input
                 type="checkbox"
