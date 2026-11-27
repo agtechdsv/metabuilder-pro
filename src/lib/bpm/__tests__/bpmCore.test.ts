@@ -355,6 +355,48 @@ describe('núcleo do BPM: comportamento extra', () => {
       expect(queries[0].params).toEqual(['Aprovado', '%An%'])
     })
 
+    describe('ordenação por vários critérios (queryOrders)', () => {
+      const cols = [{ field: 'id', label: 'Pedido', type: 'integer' }]
+      const run = async (over: Record<string, any>) => {
+        const { core, queries } = make(() => [], [trigger, queryNode({ queryColumns: cols, ...over })], [{ source: 't', target: 'q' }])
+        await core.processEvent('orders', 'INSERT', { id: 1 })
+        return queries[0].sql as string
+      }
+
+      it('Data desc + Cliente asc + Funcionário asc viram um ORDER BY composto, na ordem da lista', async () => {
+        const sql = await run({
+          queryJoins: { rel_client_id__name: { fk: 'client_id', modelId: 'm_clients', field: 'name', pk: 'codigo' } },
+          queryOrders: [{ field: 'created_at', dir: 'desc' }, { field: 'rel_client_id__name', dir: 'asc' }, { field: 'status', dir: 'asc' }],
+        })
+        expect(sql).toBe('SELECT "q"."id" FROM (SELECT "t".*, "j1"."name" AS "rel1" FROM "orders" "t" LEFT JOIN "clients" "j1" ON "j1"."codigo" = "t"."client_id") "q" ORDER BY "q"."created_at" DESC, "q"."rel1" ASC, "q"."status" ASC LIMIT 50')
+      })
+
+      it('sem campo relacionado ou calculado, o ORDER BY composto fica na própria tabela', async () => {
+        const sql = await run({ queryOrders: [{ field: 'created_at', dir: 'desc' }, { field: 'status', dir: 'asc' }] })
+        expect(sql).toBe('SELECT "id" FROM "orders" ORDER BY "created_at" DESC, "status" ASC LIMIT 50')
+      })
+
+      it('repetidos, vazios e nomes inválidos são ignorados; o limite é de 5 critérios; sentido inválido vira ASC', async () => {
+        const sql = await run({
+          queryOrders: [
+            { field: 'a', dir: 'desc' }, { field: 'a', dir: 'asc' }, { field: '', dir: 'asc' }, { field: 'x; DROP TABLE y', dir: 'asc' },
+            { field: 'b', dir: 'zzz' }, { field: 'c' }, { field: 'd' }, { field: 'e' }, { field: 'f' }, { field: 'g' },
+          ],
+        })
+        expect(sql).toBe('SELECT "id" FROM "orders" ORDER BY "a" DESC, "b" ASC, "c" ASC, "d" ASC, "e" ASC LIMIT 50')
+      })
+
+      it('lista vazia = sem ordem (mesmo que o formato antigo ainda esteja gravado); sem a lista, o formato antigo vale', async () => {
+        expect(await run({ queryOrders: [], queryOrderBy: 'status', queryOrderDir: 'desc' })).toBe('SELECT "id" FROM "orders" LIMIT 50')
+        expect(await run({ queryOrderBy: 'status', queryOrderDir: 'desc' })).toBe('SELECT "id" FROM "orders" ORDER BY "status" DESC LIMIT 50')
+      })
+
+      it('campo calculado na lista entra na camada externa, junto dos outros critérios', async () => {
+        const sql = await run({ queryVirtuals: { virt_tot: virtTotal }, queryOrders: [{ field: 'virt_tot', dir: 'desc' }, { field: 'status', dir: 'asc' }] })
+        expect(sql).toBe(`SELECT "q"."id" FROM (SELECT "t".*, ${SUBQ} FROM "orders" "t") "q" ORDER BY "q"."virt_tot" DESC, "q"."status" ASC LIMIT 50`)
+      })
+    })
+
     it('tabela do corpo do e-mail: todas as colunas até 12, escolha por coluna quando existe, e rolagem horizontal', () => {
       const mk = (n: number, flags: Record<number, boolean> = {}) => ({
         columns: Array.from({ length: n }, (_, i) => ({ key: 'c' + i, label: 'Col' + i, type: 'text', ...(i in flags ? { body: flags[i] } : {}) })),

@@ -58,6 +58,7 @@ const QUERY_BODY_COLS = 12 // teto de colunas na tabela do corpo do e-mail (o St
 const QUERY_BODY_BYTES = 90000 // tamanho máximo das linhas da tabela no corpo: o Gmail corta a mensagem perto de 100 KB
 const QUERY_BODY_ROWS = 1000 // teto de linhas da tabela no corpo do e-mail (o limite de verdade é o tamanho: QUERY_BODY_BYTES); o restante só vai na planilha anexa
 const QUERY_TIMEOUT_MS = 60000
+const QUERY_MAX_ORDERS = 5 // critérios de ordenação do "Consultar dados" (Data desc + Cliente asc + ...)
 const QUERY_MAX_JOIN_DEPTH = 4 // níveis de relacionamento encadeados (pedido > cliente > cidade...)
 const QUERY_OPS = new Set(['=', '==', '!=', '<>', '>', '<', '>=', '<='])
 const AGG_FNS = { count: 'COUNT', sum: 'SUM', avg: 'AVG', min: 'MIN', max: 'MAX' }
@@ -802,7 +803,18 @@ class BpmCore {
     if (groupField && isVirtual(groupField)) throw new Error('Consultar dados: não dá para agrupar por um campo calculado (use-o como valor a somar ou calcular).')
     const aggFnName = AGG_FNS[d.queryAggregate] ? d.queryAggregate : 'count'
     const aggField = grouping && aggFnName !== 'count' ? strictIdent(d.queryAggregateField) : null
-    const orderField = !grouping ? strictIdent(d.queryOrderBy) : null
+    // ordem do resultado: lista de critérios [{ field, dir }] (até QUERY_MAX_ORDERS, sem repetir campo). Fluxos antigos guardam um
+    // critério só (queryOrderBy + queryOrderDir): continuam valendo quando não há a lista.
+    const orderList = []
+    if (!grouping) {
+      const src = Array.isArray(d.queryOrders) ? d.queryOrders : [{ field: d.queryOrderBy, dir: d.queryOrderDir }]
+      for (const o of src) {
+        const f = strictIdent(o && o.field)
+        if (!f || orderList.some((x) => x.field === f)) continue
+        if (orderList.length >= QUERY_MAX_ORDERS) break
+        orderList.push({ field: f, dir: String(o.dir).toLowerCase() === 'desc' ? 'DESC' : 'ASC' })
+      }
+    }
     const cols = !grouping ? (d.queryColumns || []).filter((c) => strictIdent(c && c.field)) : []
 
     // campos de tabelas relacionadas (ex.: nome do cliente do pedido): LEFT JOIN pela chave estrangeira; vêm como colunas extras
@@ -813,13 +825,13 @@ class BpmCore {
     const noteJoin = (f) => { if (isJoined(f) && !usedJoins.has(f)) { usedJoins.add(f); joinAlias.set(f, 'rel' + usedJoins.size) } }
     for (const c of cols) noteJoin(c.field)
     for (const f of d.queryFilters || []) noteJoin(strictIdent(f && f.field))
-    noteJoin(orderField)
+    for (const o of orderList) noteJoin(o.field)
 
     const used = new Set()
     for (const c of cols) if (isVirtual(c.field)) used.add(c.field)
     for (const f of d.queryFilters || []) if (isVirtual(strictIdent(f && f.field))) used.add(f.field)
     if (aggField && isVirtual(aggField)) used.add(aggField)
-    if (orderField && isVirtual(orderField)) used.add(orderField)
+    for (const o of orderList) if (isVirtual(o.field)) used.add(o.field)
     const wrapped = used.size > 0 || usedJoins.size > 0
     const outer = (f) => `"q"."${joinAlias.get(f) || f}"` // coluna da camada externa (quando há campo calculado ou relacionado)
     const plain = (f) => (wrapped ? `"t"."${f}"` : `"${f}"`) // coluna da tabela
@@ -911,7 +923,7 @@ class BpmCore {
       ]
     } else {
       if (cols.length === 0) throw new Error('Consultar dados: escolha ao menos uma coluna.')
-      sql = `SELECT ${cols.map((c) => colRef(c.field)).join(', ')} FROM ${from}${whereSql}${orderField ? ` ORDER BY ${colRef(orderField)} ${dir}` : ''}${limitSql}`
+      sql = `SELECT ${cols.map((c) => colRef(c.field)).join(', ')} FROM ${from}${whereSql}${orderList.length ? ` ORDER BY ${orderList.map((o) => `${colRef(o.field)} ${o.dir}`).join(', ')}` : ''}${limitSql}`
       columns = cols.map((c) => ({ key: c.field, label: c.label || c.field, type: isVirtual(c.field) ? 'numeric' : (c.type || 'text'), ...(typeof c.body === 'boolean' ? { body: c.body } : {}) }))
     }
 

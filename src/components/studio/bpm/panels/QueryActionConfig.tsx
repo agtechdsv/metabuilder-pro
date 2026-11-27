@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
 import { virtualFieldsForTable } from "@/lib/bpm/virtualFields";
 import { describePath } from "@/lib/bpm/relationPaths";
 import { QueryColumnsModal } from "./QueryColumnsModal";
@@ -8,7 +8,7 @@ import { QueryColumnsModal } from "./QueryColumnsModal";
  * Configuração da ação "Consultar dados" (relatórios agendados): tabela, colunas (ou agrupar e calcular), filtros com data
  * relativa, ordem, limite e o nome do resultado. O motor (cli/bpmCore.js, runQueryAction) lê exatamente estes campos do nó:
  * queryModelId, queryColumns [{field,label,type}], queryFilters [{field,operator,valueType,value|relKind,relAmount,relUnit}],
- * queryOrderBy/queryOrderDir, queryLimit, queryGroupBy, queryAggregate, queryAggregateField, queryGroupLabelModelId,
+ * queryOrders [{field,dir}] (ou, nos fluxos antigos, queryOrderBy/queryOrderDir), queryLimit, queryGroupBy, queryAggregate, queryAggregateField, queryGroupLabelModelId,
  * queryGroupLabelField, queryGroupTitle, queryValueTitle, queryValueType, queryName, querySkipWhenEmpty.
  */
 
@@ -16,6 +16,7 @@ const INPUT = "w-full bg-white dark:bg-neutral-900 border border-neutral-200 dar
 const LABEL = "text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1";
 const CARD = "bg-white dark:bg-neutral-900 border border-indigo-200 dark:border-indigo-900 rounded-xl p-3 shadow-sm";
 
+const MAX_ORDERS = 5; // mesmo limite do motor (QUERY_MAX_ORDERS em cli/bpmCore.js)
 const NUMERIC_TYPE = /numeric|decimal|double|real|float|money|^(small|big)?int(eger)?\d*$|serial/i;
 const LABEL_FIELD_GUESS = ['nome', 'name', 'nome_empresa', 'razao_social', 'titulo', 'descricao'];
 
@@ -94,7 +95,20 @@ export function QueryActionConfig(props: any) {
   // o nó guarda só as junções usadas (colunas, filtros e ordem)
   const joinsMap: Record<string, any> = {};
   for (const c of columns) { const j = columnJoin(c); if (j) joinsMap[c.field] = j; }
-  for (const key of [...filters.map((fl) => fl.field), d.queryOrderBy]) { if (key && relatedJoinOf[key] && !joinsMap[key]) joinsMap[key] = relatedJoinOf[key]; }
+  // ordem: lista de critérios; fluxos antigos guardam um critério só (queryOrderBy + queryOrderDir)
+  const orders: { field: string; dir: string }[] = Array.isArray(d.queryOrders)
+    ? d.queryOrders
+    : (d.queryOrderBy ? [{ field: d.queryOrderBy, dir: d.queryOrderDir || 'asc' }] : []);
+  const setOrders = (next: { field: string; dir: string }[]) => set({ queryOrders: next, queryOrderBy: '' });
+  const setOrder = (i: number, patch: any) => setOrders(orders.map((o, k) => (k === i ? { ...o, ...patch } : o)));
+  const moveOrder = (i: number, delta: number) => {
+    const next = [...orders];
+    const j = i + delta;
+    if (j < 0 || j >= next.length) return;
+    [next[i], next[j]] = [next[j], next[i]];
+    setOrders(next);
+  };
+  for (const key of [...filters.map((fl) => fl.field), ...orders.map((o) => o.field)]) { if (key && relatedJoinOf[key] && !joinsMap[key]) joinsMap[key] = relatedJoinOf[key]; }
   const joinsSignature = JSON.stringify(joinsMap);
   useEffect(() => {
     if (JSON.stringify(d.queryJoins || {}) !== joinsSignature) set({ queryJoins: joinsMap });
@@ -128,7 +142,7 @@ export function QueryActionConfig(props: any) {
         <select
           value={modelId}
           onChange={(e) => set({
-            queryModelId: e.target.value, queryColumns: [], queryFilters: [], queryOrderBy: '',
+            queryModelId: e.target.value, queryColumns: [], queryFilters: [], queryOrderBy: '', queryOrders: [],
             queryGroupBy: '', queryGroupLabelModelId: '', queryGroupLabelField: '', queryAggregateField: '',
           })}
           className={INPUT}
@@ -398,24 +412,58 @@ export function QueryActionConfig(props: any) {
             <p className="text-[9px] text-neutral-400 mt-3 leading-relaxed">{t('bpm.canvas.query_filters_hint', 'Para "a semana passada": data >= início da semana passada E data < início desta semana (dois filtros).')}</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            {!grouping && (
-              <div>
-                <label className={LABEL}>{t('bpm.canvas.query_order_by', 'Ordenar por')}</label>
-                <select value={d.queryOrderBy || ''} onChange={(e) => set({ queryOrderBy: e.target.value })} className={INPUT}>
-                  <option value="">{t('bpm.canvas.query_order_none', '(sem ordem)')}</option>
-                  {fields.map((f) => <option key={f.field} value={f.field}>{f.label}</option>)}
-                </select>
+          {!grouping ? (
+            <div className={CARD}>
+              <div className="flex items-center justify-between mb-2">
+                <label className={`${LABEL} !mb-0`}>{t('bpm.canvas.query_order_by', 'Ordenar por')}</label>
+                {orders.length < MAX_ORDERS && (
+                  <button
+                    type="button"
+                    onClick={() => setOrders([...orders, { field: '', dir: 'asc' }])}
+                    className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:underline"
+                  >
+                    <Plus className="w-3 h-3" /> {t('bpm.canvas.query_order_add', 'Ordenação')}
+                  </button>
+                )}
               </div>
-            )}
+              {orders.length === 0 && <p className="text-[10px] text-neutral-400 italic">{t('bpm.canvas.query_order_none', '(sem ordem)')}</p>}
+              <div className="space-y-2">
+                {orders.map((o, i) => (
+                  <div key={i} className="flex items-center gap-1">
+                    <span className="text-[9px] font-black text-neutral-400 w-3">{i + 1}</span>
+                    <select value={o.field || ''} onChange={(e) => setOrder(i, { field: e.target.value })} className={`${INPUT} flex-1 min-w-0`}>
+                      <option value="">{t('bpm.canvas.query_order_pick', 'Escolha o campo...')}</option>
+                      {fields.map((f) => (
+                        <option key={f.field} value={f.field} disabled={f.field !== o.field && orders.some((x) => x.field === f.field)}>{f.label}</option>
+                      ))}
+                    </select>
+                    <select value={o.dir === 'desc' ? 'desc' : 'asc'} onChange={(e) => setOrder(i, { dir: e.target.value })} className={`${INPUT} !w-auto`}>
+                      <option value="asc">{t('bpm.canvas.query_dir_asc', 'Crescente')}</option>
+                      <option value="desc">{t('bpm.canvas.query_dir_desc', 'Decrescente')}</option>
+                    </select>
+                    <button type="button" disabled={i === 0} onClick={() => moveOrder(i, -1)} className="p-1 text-neutral-400 hover:text-indigo-600 disabled:opacity-30" title={t('bpm.canvas.query_order_up', 'Subir prioridade')}>
+                      <ArrowUp className="w-3 h-3" />
+                    </button>
+                    <button type="button" disabled={i === orders.length - 1} onClick={() => moveOrder(i, 1)} className="p-1 text-neutral-400 hover:text-indigo-600 disabled:opacity-30" title={t('bpm.canvas.query_order_down', 'Descer prioridade')}>
+                      <ArrowDown className="w-3 h-3" />
+                    </button>
+                    <button type="button" onClick={() => setOrders(orders.filter((_, k) => k !== i))} className="p-1 text-neutral-400 hover:text-red-500" title={t('bpm.canvas.query_order_remove', 'Remover')}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {orders.length > 1 && <p className="text-[9px] text-neutral-400 mt-2 leading-relaxed">{t('bpm.canvas.query_order_hint', 'O primeiro critério manda; os seguintes desempatam, na ordem da lista.')}</p>}
+            </div>
+          ) : (
             <div>
               <label className={LABEL}>{t('bpm.canvas.query_order_dir', 'Sentido')}</label>
-              <select value={d.queryOrderDir || (grouping ? 'desc' : 'asc')} onChange={(e) => set({ queryOrderDir: e.target.value })} className={INPUT}>
+              <select value={d.queryOrderDir || 'desc'} onChange={(e) => set({ queryOrderDir: e.target.value })} className={INPUT}>
                 <option value="asc">{t('bpm.canvas.query_dir_asc', 'Crescente')}</option>
                 <option value="desc">{t('bpm.canvas.query_dir_desc', 'Decrescente')}</option>
               </select>
             </div>
-          </div>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
             <div>
