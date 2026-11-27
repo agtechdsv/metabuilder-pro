@@ -225,7 +225,7 @@ function BpmCanvasContent({
           </div>
           <div>
             <h1 className="text-sm font-black dark:text-white uppercase tracking-wider">{title}</h1>
-            <p className="text-[10px] text-neutral-500">BPM Workflow Builder</p>
+            <p className="text-[10px] text-neutral-500">Editor de automações</p>
           </div>
         </div>
         

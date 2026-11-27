@@ -8,7 +8,7 @@ import { getTranslations } from '@/i18n/get-translations'
 import { publicProject } from '@/lib/tunnel/runtimeServer'
 
 export const metadata: Metadata = {
-  title: 'Automations & BPM | MetaBuilder PRO',
+  title: 'Automação de processos | MetaBuilder PRO',
   description: 'Visual Business Process Management',
 };
 
@@ -96,7 +96,7 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
           Módulo Desativado
         </h2>
         <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mb-8 leading-relaxed font-bold">
-          O módulo de Automações e BPM não está habilitado para este projeto. Entre em contato com o administrador do sistema.
+          O módulo de Automação de processos não está habilitado para este projeto. Entre em contato com o administrador do sistema.
         </p>
         <a
           href={`/${workspace_slug}/${project_slug}`}

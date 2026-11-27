@@ -608,7 +608,7 @@ export function StudioDashboardClient({
         .upsert({
           project_id: project.id,
           model_id: null,
-          name: 'Automações & BPM',
+          name: 'Automação de processos',
           slug: 'automations',
           logic_type: 'personalizado',
           view_type: 'system',

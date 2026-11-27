@@ -52,7 +52,7 @@ export function wrapEmailInTemplate(templateType: EmailTemplateType, bodyHtml: s
   </div>
   <div style="border-top: 1px solid #dddddd; padding-top: 15px; margin-top: 30px; font-size: 11px; color: #777777;">
     MetaBuilder PRO Enterprise Solutions<br>
-    Este e-mail foi gerado automaticamente pelo motor BPM.
+    Este e-mail foi gerado automaticamente pelo motor de automação.
   </div>
 </div>`;
   }

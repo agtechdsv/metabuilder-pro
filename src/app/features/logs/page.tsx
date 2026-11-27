@@ -26,7 +26,7 @@ export default function LogsFeaturePage() {
             <span className="text-indigo-500">{t('marketing_v2.features.logs.hero_title_highlight') || 'Transparência Total.'}</span>
           </h1>
           <p className="text-xl text-neutral-500 dark:text-neutral-400 leading-relaxed">
-            {t('marketing_v2.features.logs.hero_desc') || 'Monitore tudo em tempo real. Com suporte a logs locais no cliente ou direto no banco de dados, você tem controle total sobre o tráfego do túnel, execuções de BPM e mutações SQL.'}
+            {t('marketing_v2.features.logs.hero_desc') || 'Monitore tudo em tempo real. Com suporte a logs locais no cliente ou direto no banco de dados, você tem controle total sobre o tráfego do túnel, execuções de automações e mutações SQL.'}
           </p>
         </div>
         
@@ -80,7 +80,7 @@ export default function LogsFeaturePage() {
          <div className="relative z-10 text-center space-y-8">
             <h2 className="text-4xl md:text-6xl font-black tracking-tighter">{t('marketing_v2.features.logs.footer_title') || 'Controle absoluto sobre seus dados.'}</h2>
             <p className="text-indigo-100 max-w-2xl mx-auto text-lg leading-relaxed">
-               {t('marketing_v2.features.logs.footer_desc') || 'Seja depurando uma regra de negócio complexa no BPM, monitorando queries pesadas de escrita ou auditando o acesso de usuários finais, nossa engine de logs oferece a transparência necessária para operações robustas.'}
+               {t('marketing_v2.features.logs.footer_desc') || 'Seja depurando uma regra de negócio complexa em uma automação, monitorando queries pesadas de escrita ou auditando o acesso de usuários finais, nossa engine de logs oferece a transparência necessária para operações robustas.'}
             </p>
             <BottomCta />
          </div>

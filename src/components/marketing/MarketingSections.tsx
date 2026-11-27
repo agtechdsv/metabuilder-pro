@@ -601,7 +601,7 @@ export function MarketingSections() {
                 <div>
                    <h3 className="text-xl font-bold dark:text-white mb-2">{t('marketing_v2.navbar.logs') || 'Auditoria & Logs'}</h3>
                    <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed mb-4">
-                      {t('marketing_v2.features.logs.hero_desc') || 'Monitore o tráfego do túnel local em tempo real, execuções de processos BPM e mutações SQL de forma ultra rápida.'}
+                      {t('marketing_v2.features.logs.hero_desc') || 'Monitore o tráfego do túnel local em tempo real, execuções de automações e mutações SQL de forma ultra rápida.'}
                    </p>
                    <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity">
                       {t('marketing_v2.home.learn_more')} <ArrowRight className="w-3 h-3" />
