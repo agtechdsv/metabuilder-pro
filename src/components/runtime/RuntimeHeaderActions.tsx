@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { UserCheck } from 'lucide-react'
 import { useI18n } from '@/i18n/I18nContext'
+import { approvalsCall } from '@/lib/approvalsClient'
 
 interface RuntimeHeaderActionsProps {
   projectId: string
@@ -18,6 +19,26 @@ interface RuntimeHeaderActionsProps {
 export function RuntimeHeaderActions({ projectId, project }: RuntimeHeaderActionsProps) {
   const { t } = useI18n()
   const [user, setUser] = useState<any>(null)
+  const [pending, setPending] = useState(0)
+  const hasTasksLink = !!user && !!project?.approvalsHref
+
+  // contador de aprovações a decidir: só nos apps com o bloco "Aguardar aprovação" (os demais nem fazem a chamada);
+  // atualiza ao abrir, a cada 2 minutos e ao voltar para a aba. Falha (CLI desligado) só deixa o número como está.
+  useEffect(() => {
+    if (!hasTasksLink) return
+    let alive = true
+    const load = async () => {
+      if (document.visibilityState === 'hidden') return
+      try {
+        const d = await approvalsCall<{ count: number }>(projectId, { op: 'list', view: 'pending', countOnly: true })
+        if (alive) setPending(Number(d?.count) || 0)
+      } catch { /* sem contador */ }
+    }
+    void load()
+    const timer = setInterval(load, 120_000)
+    document.addEventListener('visibilitychange', load)
+    return () => { alive = false; clearInterval(timer); document.removeEventListener('visibilitychange', load) }
+  }, [hasTasksLink, projectId])
 
   useEffect(() => {
     const cookieName = `client_session_${projectId}`
@@ -63,6 +84,11 @@ export function RuntimeHeaderActions({ projectId, project }: RuntimeHeaderAction
         >
           <UserCheck className="w-4 h-4" />
           <span className="hidden md:inline">{t('approvals.title', 'Minhas tarefas')}</span>
+          {pending > 0 && (
+            <span className="min-w-5 h-5 px-1.5 rounded-full bg-violet-600 text-white text-[10px] font-black flex items-center justify-center" aria-label={`${pending}`}>
+              {pending > 99 ? '99+' : pending}
+            </span>
+          )}
         </Link>
       )}
 

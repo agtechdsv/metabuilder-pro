@@ -23,7 +23,7 @@ export interface ApprovalTask {
 export interface ApprovalEvent { event: 'requested' | 'approved' | 'rejected' | 'cancelled' | string; by: string; comment: string; at: string }
 
 export type ApprovalsBody =
-  | { op: 'list'; view?: 'pending' | 'requested' | 'decided' }
+  | { op: 'list'; view?: 'pending' | 'requested' | 'decided'; countOnly?: boolean }
   | { op: 'list'; taskId: string }
   | { op: 'decide'; taskId: string; decision: 'approved' | 'rejected'; comment?: string }
   | { op: 'history'; table: string; pk: string }

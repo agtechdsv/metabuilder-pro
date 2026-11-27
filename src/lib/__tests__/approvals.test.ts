@@ -11,6 +11,11 @@ describe('parseApprovalRequest', () => {
     expect(parseApprovalRequest({ projectId: PID, op: 'list', view: 'decided' })).toMatchObject({ ok: true, req: { view: 'decided' } })
     expect(parseApprovalRequest({ projectId: PID, op: 'list', taskId: TASK })).toMatchObject({ ok: true, req: { taskId: TASK } })
     expect(parseApprovalRequest({ projectId: PID, op: 'list', view: 'todas' }).ok).toBe(false)
+    // contador: só vale para pendentes; nas outras visões é ignorado
+    expect(parseApprovalRequest({ projectId: PID, op: 'list', view: 'pending', countOnly: true })).toMatchObject({ ok: true, req: { countOnly: true } })
+    const other = parseApprovalRequest({ projectId: PID, op: 'list', view: 'decided', countOnly: true })
+    expect(other.ok && other.req.countOnly).toBeUndefined()
+    expect(approvalCommandData({ projectId: PID, op: 'list', view: 'pending', countOnly: true })).toEqual({ view: 'pending', countOnly: true })
   })
 
   it('decidir exige tarefa e decisão válidas; o comentário é aparado e limitado', () => {

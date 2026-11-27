@@ -116,7 +116,8 @@ export function ApprovalsClientView({ projectId, backHref, isAdmin }: { projectI
     ...(isAdmin ? [{ id: 'all' as Tab, label: t('approvals.tab_all', 'Todas (administrador)') }] : []),
   ]
   const canDecide = detail?.status === 'pending' && tab === 'pending'
-  const canCancel = detail?.status === 'pending' && tab === 'all'
+  // o dono cancela qualquer tarefa pendente (aba Todas); quem pediu cancela o próprio pedido (aba Meus pedidos)
+  const canCancel = detail?.status === 'pending' && (tab === 'all' || tab === 'requested')
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4 md:p-8">

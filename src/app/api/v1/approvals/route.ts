@@ -29,10 +29,11 @@ export async function POST(req: NextRequest) {
     let actor = await authorizeProjectActor(req, r.projectId)
     if (!actor) return fail(401, 'Sessão inválida.')
     // dono que também entrou no app como usuário final: nas operações de administração vale como membro (como no relay do túnel)
-    if (actor.kind !== 'member' && MEMBER_ONLY_OPS.includes(r.op)) {
+    // Cancelar: o dono cancela qualquer tarefa; o usuário final só o próprio pedido (o Agente confere quem pediu).
+    if (actor.kind !== 'member' && (MEMBER_ONLY_OPS.includes(r.op) || r.op === 'cancel')) {
       const member = await authorizeProjectMember(r.projectId)
-      if (!member) return fail(403, 'Apenas membros do projeto.')
-      actor = member
+      if (member) actor = member
+      else if (MEMBER_ONLY_OPS.includes(r.op)) return fail(403, 'Apenas membros do projeto.')
     }
 
     // perfis do usuário (nomes dos grupos): só para quem é usuário final; falha ao ler = sem perfis (falha fechada: não aprova por perfil)
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
       r.projectId,
       'sql_query',
       { queryId: crypto.randomUUID(), action: APPROVAL_CLI_ACTION[r.op], data: approvalCommandData(r), actor: identity },
-      { secret: token, timeoutMs: 20000 },
+      { secret: token, timeoutMs: r.countOnly ? 8000 : 20000 }, // o contador do cabeçalho não pode segurar a página com o CLI desligado
     )
     if (reply?.success === false) return fail(422, reply.error || 'Não foi possível concluir a operação.')
     return NextResponse.json({ success: true, data: reply?.data?.[0] ?? null })

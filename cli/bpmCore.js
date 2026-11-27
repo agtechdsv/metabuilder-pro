@@ -1489,7 +1489,7 @@ class BpmCore {
     }
   }
 
-  async listApprovals({ view, taskId }, actor) {
+  async listApprovals({ view, taskId, countOnly }, actor) {
     if (!actor) throw new Error('Usuário não identificado.')
     return await this.approvalRead(async () => {
       if (taskId) {
@@ -1513,8 +1513,10 @@ class BpmCore {
         if (!Number(t.allow_self) && t.requested_by && t.requested_by === actor.id) continue // quem pediu não decide (sem a opção do bloco)
         out.push(this.taskView(t, false))
       }
+      // só a quantidade (o contador do cabeçalho): não leva as tarefas pela rede
+      if (countOnly) return { count: out.length }
       return { tasks: out }
-    }, { tasks: [] })
+    }, countOnly ? { count: 0 } : { tasks: [] })
   }
 
   async approvalHistory({ table, pk }) {
@@ -1542,6 +1544,9 @@ class BpmCore {
     if (!rows.length) throw new Error('Tarefa não encontrada.')
     const t = await this.normRow(rows[0])
     if (t.status !== 'pending') throw new Error('Só tarefas pendentes podem ser canceladas.')
+    // o dono do projeto (id "member:...", que só o servidor monta) cancela qualquer uma; o solicitante, só o próprio pedido
+    const isOwner = !!actor && String(actor.id).startsWith('member:')
+    if (!isOwner && !(actor && t.requested_by && t.requested_by === actor.id)) throw new Error('Só quem pediu a aprovação, ou o dono do projeto, pode cancelá-la.')
     await this.executeQuery(`UPDATE mb_approval_tasks SET status = 'cancelled', decided_by = ${this.ph(1)}, decided_by_name = ${this.ph(2)}, decided_at = ${this.ph(3)} WHERE id = ${this.ph(4)} AND status = 'pending'`,
       [actor ? actor.id : null, actor ? (actor.name || null) : null, new Date().toISOString(), t.id])
     await this.addApprovalHistory(t, 'cancelled', actor, null)

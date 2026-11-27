@@ -16,6 +16,8 @@ export interface ApprovalRequest {
   op: ApprovalOp
   /** list: pendentes (padrão), as que pedi ou as que decidi */
   view?: 'pending' | 'requested' | 'decided'
+  /** list (pendentes): devolve só a quantidade (contador do cabeçalho) */
+  countOnly?: boolean
   /** list (detalhe de uma), decide e cancel */
   taskId?: string
   /** decide */
@@ -38,7 +40,7 @@ export const APPROVAL_CLI_ACTION: Record<ApprovalOp, string> = {
 }
 
 /** Operações que só o membro do projeto (dono/desenvolvedor) faz. */
-export const MEMBER_ONLY_OPS: readonly ApprovalOp[] = ['admin_list', 'cancel']
+export const MEMBER_ONLY_OPS: readonly ApprovalOp[] = ['admin_list']
 
 export const APPROVAL_MAX_COMMENT = 1000
 
@@ -63,6 +65,7 @@ export function parseApprovalRequest(body: unknown): { ok: true; req: ApprovalRe
       const view = b.view === undefined || b.view === null || b.view === '' ? 'pending' : b.view
       if (view !== 'pending' && view !== 'requested' && view !== 'decided') return { ok: false, error: 'Lista inválida.' }
       req.view = view
+      if (b.countOnly === true && view === 'pending') req.countOnly = true
     }
   } else if (op === 'decide') {
     if (!needTask()) return { ok: false, error: 'Tarefa inválida.' }
@@ -93,7 +96,7 @@ export function parseApprovalRequest(body: unknown): { ok: true; req: ApprovalRe
 /** O comando (já sem o projectId) que vai ao Agente CLI dentro do `data`. */
 export function approvalCommandData(req: ApprovalRequest): Record<string, unknown> {
   switch (req.op) {
-    case 'list': return req.taskId ? { taskId: req.taskId } : { view: req.view || 'pending' }
+    case 'list': return req.taskId ? { taskId: req.taskId } : { view: req.view || 'pending', ...(req.countOnly ? { countOnly: true } : {}) }
     case 'decide': return { taskId: req.taskId, decision: req.decision, comment: req.comment }
     case 'cancel': return { taskId: req.taskId }
     case 'history': return { table: req.table, pk: req.pk }

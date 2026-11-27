@@ -316,6 +316,37 @@ describe('aprovação: listas, histórico e cancelamento', () => {
     await expect(c.approvalOp('approval_cancel', { taskId: db.tasks[0].id }, owner)).rejects.toThrow(/pendentes/)
   })
 
+  it('quem pediu cancela o próprio pedido; outra pessoa não; o dono cancela qualquer um', async () => {
+    const { c, db } = await two()
+    await expect(c.approvalOp('approval_cancel', { taskId: db.tasks[0].id }, intruso)).rejects.toThrow(/Só quem pediu/)
+    await expect(c.approvalOp('approval_cancel', { taskId: db.tasks[0].id }, gerente)).rejects.toThrow(/Só quem pediu/)
+    await expect(c.approvalOp('approval_cancel', { taskId: db.tasks[0].id }, null)).rejects.toThrow(/Só quem pediu/)
+    expect(db.tasks[0].status).toBe('pending')
+    await c.approvalOp('approval_cancel', { taskId: db.tasks[0].id }, solic)
+    expect(db.tasks[0]).toMatchObject({ status: 'cancelled', decided_by: '10' })
+    expect(db.history.at(-1)).toMatchObject({ event: 'cancelled', actor_id: '10', actor_name: 'Ana' })
+    // o pedido cancelado some de "A decidir" do aprovador e o fluxo não continua
+    expect((await c.approvalOp('approval_list', { view: 'pending' }, gerente)).tasks.map((t: any) => t.title)).toEqual(['Pedido 8 de 600'])
+    await expect(c.decideApproval({ taskId: db.tasks[0].id, decision: 'approved', actor: gerente })).rejects.toThrow(/já foi decidida/)
+    // o dono cancela o pedido de outra pessoa
+    await c.approvalOp('approval_cancel', { taskId: db.tasks[1].id }, { id: 'member:abc', name: 'Administrador do projeto' })
+    expect(db.tasks[1].status).toBe('cancelled')
+  })
+
+  it('o contador devolve só a quantidade de tarefas a decidir de cada pessoa', async () => {
+    const { c, db } = await two()
+    expect(await c.approvalOp('approval_list', { view: 'pending', countOnly: true }, gerente)).toEqual({ count: 2 })
+    expect(await c.approvalOp('approval_list', { view: 'pending', countOnly: true }, intruso)).toEqual({ count: 0 })
+    expect(await c.approvalOp('approval_list', { view: 'pending', countOnly: true }, solic)).toEqual({ count: 0 })
+    await c.approvalOp('approval_decide', { taskId: db.tasks[0].id, decision: 'approved' }, gerente)
+    expect(await c.approvalOp('approval_list', { view: 'pending', countOnly: true }, gerente)).toEqual({ count: 1 })
+  })
+
+  it('o contador sem as tabelas criadas é zero', async () => {
+    const ports = { db: { dialect: 'postgres', query: async () => { const e: any = new Error('relation "mb_approval_tasks" does not exist'); e.code = '42P01'; throw e } }, models: { tableOf: async () => 'pedidos' }, features: { approvals: true }, verbose: false }
+    expect(await new BpmCore(ports).approvalOp('approval_list', { view: 'pending', countOnly: true }, gerente)).toEqual({ count: 0 })
+  })
+
   it('ação desconhecida é recusada', async () => {
     const { c } = await two()
     await expect(c.approvalOp('approval_x', {}, gerente)).rejects.toThrow(/desconhecida/)

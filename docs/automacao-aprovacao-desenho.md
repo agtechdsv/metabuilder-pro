@@ -165,3 +165,9 @@ Achados que mudam o que foi dito antes:
 - Dois agentes no mesmo banco mandam um lembrete só (gravação condicionada ao `due_at` e marca única; um teste pegou uma falha da primeira versão dessa conferência).
 - Só avisa: **não escala** nem decide. Se todos os fluxos com o bloco forem removidos, tarefas pendentes antigas deixam de receber lembrete (o varredor não é agendado).
 - `reminded_at` ficou mais largo no DDL (Oracle: 60) por causa da marca; `scripts/mb-approvals.sql` foi regenerado.
+
+### Atualização: cancelamento pelo solicitante e contador (2026-11-27)
+
+- **Cancelar:** quem pediu a aprovação cancela o próprio pedido enquanto estiver pendente (aba "Meus pedidos" de "Minhas tarefas"); o dono do projeto continua cancelando qualquer tarefa (aba "Todas"). O Agente confere: dono (id `member:...`, que só o servidor monta) ou `requested_by` igual ao ator. O fluxo não continua e o histórico registra `cancelled` com o nome de quem cancelou. Isto responde a pergunta aberta da seção 10 ("o solicitante pode cancelar?": sim).
+- **Contador:** o atalho "Minhas tarefas" do cabeçalho mostra a quantidade a decidir (`list` com `countOnly`, tempo limite de 8 s). Só roda em app com o bloco de aprovação em fluxo ativo; atualiza ao abrir, ao voltar para a aba e a cada 2 minutos; falha (CLI desligado) só some com o número. Isto fecha o item "com contador de pendentes" da seção 6.
+- Continuam fora: a lista de todas as tarefas **no Studio** (hoje é a aba "Todas" no app) e o registro de erro de execução quando o fluxo foi alterado depois do pedido (a decisão fica gravada e a tela avisa).

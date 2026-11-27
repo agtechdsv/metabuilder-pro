@@ -5,9 +5,9 @@ Marque cada item e me mande o que falhar, com a tela e o terminal do CLI.
 
 ## O que já foi verificado por mim (sem navegador seu, sem CLI real)
 
-- `tsc`, `npm test` (2096 testes) e `npm run build` limpos.
+- `tsc`, `npm test` (2100 testes) e `npm run build` limpos.
 - Motor com banco de mentira: pausa do fluxo, decisão e retomada pelas duas saídas, só a primeira decisão vale, perfil só vale se assinado pelo servidor, quem pediu não aprova o próprio pedido (salvo opção), fluxo apagado depois do pedido, listas e histórico, cancelamento, prazo e lembretes (até 3, dois agentes ao mesmo tempo mandam um só), agendamento do varredor.
-- Servidor: validação do pedido, ator e perfis vindos só da sessão (o corpo é ignorado), anônimo recusado, operações de administração só do membro, histórico só de tabela cadastrada e aberta.
+- Servidor: validação do pedido, ator e perfis vindos só da sessão (o corpo é ignorado), anônimo recusado, ver todas só do membro, cancelar só pelo solicitante ou pelo dono, contador (só a quantidade, com tempo limite curto), histórico só de tabela cadastrada e aberta.
 - Os testes antigos do motor (75 de conformidade) continuam passando sem mudança.
 
 ## O que **não** foi testado (é o objetivo deste roteiro)
@@ -46,6 +46,8 @@ CLI real contra um banco, as telas no navegador, e-mail pelo SMTP, **Oracle** (o
 | 1.9 | Criar outro pedido como Vendas e **rejeitar** como Gerente, com motivo | Só o e-mail de **Rejeitado** sai, com o motivo | ☐ |
 | 1.10 | Abrir o pedido (formulário) e clicar em **Histórico de aprovações** | Mostra *Aprovação pedida* e *Aprovado* (ou *Rejeitado*) com nome, data e comentário | ☐ |
 | 1.11 | Em um app **sem** o bloco de aprovação (ou despublicando o fluxo de teste) | O atalho "Minhas tarefas" e o botão de histórico **não** aparecem | ☐ |
+| 1.12 | Como Gerente, com 2 tarefas pendentes, olhar o cabeçalho | O atalho mostra a **bolinha com 2**; ao aprovar uma e abrir outra tela, passa a **1** (o número atualiza ao abrir, ao voltar para a aba e a cada 2 minutos); zerando, a bolinha some. Logo depois de publicar o fluxo, o atalho pode levar até 30 s para aparecer | ☐ |
+| 1.13 | Com o **CLI desligado**, abrir qualquer tela do app como Gerente | As telas abrem normalmente (sem travar); o contador só não aparece | ☐ |
 
 ## Parte 2: regras e segurança
 
@@ -60,6 +62,9 @@ CLI real contra um banco, as telas no navegador, e-mail pelo SMTP, **Oracle** (o
 | 2.7 | Sem login (janela anônima) abrir `/approvals` | Não mostra tarefa alguma (pede entrada no app) | ☐ |
 | 2.8 | Fluxo com **Antes de criar** + bloco de aprovação | O pedido é salvo; o terminal/histórico de execuções registra o erro "não funciona em Antes de salvar"; nenhuma tarefa criada | ☐ |
 | 2.9 | Bloco sem aprovador escolhido | Execução com erro "sem aprovador definido"; nenhuma tarefa criada | ☐ |
+| 2.10 | Como **Vendas** (solicitante), abrir "Meus pedidos", clicar num pedido **pendente** e usar **Cancelar tarefa** | O pedido vira Cancelado; some de "A decidir" do Gerente (e o contador dele diminui); aprovar depois dá "já foi decidida"; o fluxo **não** continua; o histórico mostra *Cancelado* com o nome do solicitante | ☐ |
+| 2.11 | Como Vendas, abrir um pedido **já decidido** em "Meus pedidos" | **Não** aparece o botão de cancelar | ☐ |
+| 2.12 | Como o **terceiro usuário de Vendas** (que não pediu), tentar cancelar o pedido do colega (só é possível por chamada direta; pela tela ele nem vê o pedido) | Recusado: "Só quem pediu a aprovação, ou o dono do projeto, pode cancelá-la" (opcional, para quem quiser conferir pela rede) | ☐ |
 
 ## Parte 3: prazo e lembretes (Etapa C)
 

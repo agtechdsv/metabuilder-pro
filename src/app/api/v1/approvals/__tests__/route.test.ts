@@ -76,15 +76,24 @@ describe('POST /api/v1/approvals', () => {
     expect(await res.json()).toEqual({ success: true, data: { tasks: [{ id: TASK }] } })
   })
 
-  it('ver todas e cancelar são só do membro do projeto', async () => {
+  it('ver todas é só do membro do projeto', async () => {
     authorize.mockResolvedValue(gerente)
     expect((await call({ projectId: PID, op: 'admin_list' })).status).toBe(403)
-    expect((await call({ projectId: PID, op: 'cancel', taskId: TASK })).status).toBe(403)
     expect(tunnelCall).not.toHaveBeenCalled()
     authorize.mockResolvedValue({ kind: 'member', userId: 'u1' })
     expect((await call({ projectId: PID, op: 'admin_list' })).status).toBe(200)
     expect(tunnelCall.mock.calls[0][2]).toMatchObject({ action: 'approval_admin_list', actor: { id: 'member:u1' } })
     expect(groups).not.toHaveBeenCalled() // membro não tem perfis de usuário final
+  })
+
+  it('cancelar: o usuário final vai como ele mesmo (o Agente confere se o pedido é dele); o contador pede só a quantidade', async () => {
+    authorize.mockResolvedValue(gerente)
+    expect((await call({ projectId: PID, op: 'cancel', taskId: TASK })).status).toBe(200)
+    expect(tunnelCall.mock.calls[0][2]).toMatchObject({ action: 'approval_cancel', actor: { id: '20' } })
+    tunnelCall.mockClear()
+    await call({ projectId: PID, op: 'list', view: 'pending', countOnly: true })
+    expect(tunnelCall.mock.calls[0][2]).toMatchObject({ action: 'approval_list', data: { view: 'pending', countOnly: true } })
+    expect(tunnelCall.mock.calls[0][3].timeoutMs).toBe(8000)
   })
 
   it('dono que entrou no app como usuário final também administra (vale como membro só nessas operações)', async () => {
