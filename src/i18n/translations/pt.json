@@ -121,6 +121,12 @@
     "clean_not_app": "A pasta tem outros arquivos e não parece um app exportado (sem package.json nem backend/pom.xml). Não limpei nem exportei: escolha uma pasta vazia ou a de um app exportado.",
     "clean_failed": "Não foi possível limpar a pasta. Nada foi exportado."
   },
+  "workspace_combo": {
+    "home": "Início",
+    "navigate_to": "Navegue para...",
+    "no_workspace": "Nenhum workspace encontrado.",
+    "no_projects": "Sem projetos"
+  },
   "access_admin": {
     "workspace_note": "Aplicada aos projetos do workspace que usam o login por banco de dados. ",
     "login_mode": "Login do app gerado",

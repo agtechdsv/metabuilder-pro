@@ -121,6 +121,12 @@
     "clean_not_app": "The folder has other files and does not look like an exported app (no package.json or backend/pom.xml). I neither cleaned nor exported: choose an empty folder or an exported app folder.",
     "clean_failed": "The folder could not be cleaned. Nothing was exported."
   },
+  "workspace_combo": {
+    "home": "Home",
+    "navigate_to": "Navigate to...",
+    "no_workspace": "No workspace found.",
+    "no_projects": "No projects"
+  },
   "access_admin": {
     "workspace_note": "Applied to the workspace projects that use database sign-in. ",
     "login_mode": "Generated app sign-in",

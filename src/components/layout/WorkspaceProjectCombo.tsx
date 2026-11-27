@@ -6,6 +6,7 @@ import { ChevronDown, Briefcase, Folder, Boxes, Loader2, Check } from 'lucide-re
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface Workspace {
   id: string
@@ -21,6 +22,7 @@ interface Project {
 }
 
 export function WorkspaceProjectCombo({ user }: { user: any }) {
+  const { t } = useI18n()
   const [isOpen, setIsOpen] = useState(false)
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [projects, setProjects] = useState<Project[]>([])
@@ -93,12 +95,12 @@ export function WorkspaceProjectCombo({ user }: { user: any }) {
         <div className="flex flex-col items-start mr-2">
           <div className="flex items-center gap-1.5 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest leading-none mb-0.5">
             <Briefcase className="w-3 h-3" />
-            {currentWorkspace?.name || 'Home'}
+            {currentWorkspace?.name || t('workspace_combo.home', 'Início')}
           </div>
           <div className="flex items-center gap-1.5 text-sm font-black text-neutral-800 dark:text-neutral-200 leading-none">
             <Boxes className="w-3.5 h-3.5 text-indigo-500" />
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent truncate max-w-[300px]">
-              {currentProject?.name || 'Navegue para...'}
+              {currentProject?.name || t('workspace_combo.navigate_to', 'Navegue para...')}
             </span>
           </div>
         </div>
@@ -115,7 +117,7 @@ export function WorkspaceProjectCombo({ user }: { user: any }) {
               <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" />
             </div>
           ) : workspaces.length === 0 ? (
-            <div className="p-4 text-xs text-center text-neutral-500">Nenhum workspace encontrado.</div>
+            <div className="p-4 text-xs text-center text-neutral-500">{t('workspace_combo.no_workspace', 'Nenhum workspace encontrado.')}</div>
           ) : (
             <div className="flex flex-col gap-3">
               {workspaces.map(ws => {
@@ -170,7 +172,7 @@ export function WorkspaceProjectCombo({ user }: { user: any }) {
                       </div>
                     ) : (
                       <div className="pl-8 py-1.5 text-[10px] font-medium text-neutral-400 italic">
-                        Sem projetos
+                        {t('workspace_combo.no_projects', 'Sem projetos')}
                       </div>
                     )}
                   </div>
