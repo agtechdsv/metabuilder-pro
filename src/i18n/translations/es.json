@@ -1451,7 +1451,9 @@
       "continue": "Continuar donde lo dejé",
       "reset_progress": "Reiniciar progreso",
       "summary_move": "Arrastra una tarjeta a otra columna."
-    }
+    },
+    "automations_denied_title": "Acceso denegado",
+    "automations_denied_desc": "No tiene permiso para abrir las Automatizaciones. Pida al administrador del sistema."
   },
   "bi_editor": {
     "title_placeholder": "Ej.: Total de Ventas",

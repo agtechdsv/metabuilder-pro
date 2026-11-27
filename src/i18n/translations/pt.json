@@ -1364,7 +1364,9 @@
       "continue": "Continuar de onde parei",
       "reset_progress": "Zerar progresso",
       "summary_move": "Arrasta um cartão para outra coluna."
-    }
+    },
+    "automations_denied_title": "Acesso negado",
+    "automations_denied_desc": "Você não tem permissão para abrir as Automações. Peça ao administrador do sistema."
   },
   "bi_editor": {
     "title_placeholder": "Ex: Total de Vendas",

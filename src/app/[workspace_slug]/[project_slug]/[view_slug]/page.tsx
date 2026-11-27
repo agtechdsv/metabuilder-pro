@@ -15,6 +15,7 @@ import { RuntimeBreadcrumbs } from '@/components/runtime/RuntimeBreadcrumbs'
 import { AIGeneratedViewRenderer } from '@/components/runtime/AIGeneratedViewRenderer'
 import { clientSessionCookie, publicProject, browserToken } from '@/lib/tunnel/runtimeServer'
 import { projectHasApprovals } from '@/lib/approvalsFlag'
+import { endUserMayOpenAutomations } from '@/lib/automationsAccess'
 import { accessLevelOf, readOnlyButtons, type AccessLevel } from '@/lib/viewAccess'
 
 interface PageProps {
@@ -350,67 +351,12 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
     .maybeSingle()
 
   if (automationsView && automationsView.layout_config?.is_active !== false) {
-    // Se não tiver auth configurado ou o auth for 'none', todo mundo tem acesso.
-    const rawAuthConfig = await supabase
-      .from('project_auth_config')
-      .select('*')
-      .eq('project_id', project.id)
-      .maybeSingle()
-      .then(res => res.data)
-
-    const uiConfig = rawAuthConfig?.ui_config as any || {}
-    const authConfig = {
-      ...(rawAuthConfig as any || {}),
-      sync_legacy_groups: uiConfig.sync_legacy_groups || false,
-      db_user_role_column: uiConfig.db_user_role_column || '',
-    }
-
-    const isNoAuth = !rawAuthConfig || rawAuthConfig.auth_type === 'none'
-    if (isNoAuth) {
-      isAutomationsEnabled = true
-    } else {
-      const cookieStore = await cookies()
-      const sessionCookie = clientSessionCookie(cookieStore, project.id)
-      if (sessionCookie) {
-        try {
-          const clientUser = JSON.parse(decodeURIComponent(sessionCookie || ''))
-          let roleId = null
-          
-          if (authConfig?.sync_legacy_groups) {
-            const roleKey = authConfig.db_user_role_column || 'role_id'
-            roleId = clientUser[roleKey]
-          }
-          
-          if (!roleId) {
-            const { data: userRole } = await supabase
-              .from('project_user_roles')
-              .select('role_id')
-              .eq('project_id', project.id)
-              .eq('external_user_id', clientUser.id?.toString())
-              .maybeSingle()
-            roleId = userRole?.role_id
-          }
-
-          if (roleId) {
-            // Módulo Automações tem Default Deny: requer can_read = true explícito
-            const { data: allowedPermission } = await supabase
-              .from('project_role_permissions')
-              .select('id')
-              .eq('role_id', roleId)
-              .eq('view_id', automationsView.id)
-              .eq('can_read', true)
-              .limit(1)
-              .maybeSingle()
-
-            if (allowedPermission) {
-              isAutomationsEnabled = true
-            }
-          }
-        } catch (e) {
-          // Ignores error, defaults to false
-        }
-      }
-    }
+    // regra única (também usada pela própria página /automations): ver src/lib/automationsAccess.ts
+    isAutomationsEnabled = await endUserMayOpenAutomations(supabase, {
+      projectId: project.id,
+      viewId: automationsView.id,
+      sessionCookie: clientSessionCookie(await cookies(), project.id),
+    })
   }
 
   // ─── AI Builder: Advanced Use Case (renderiza component_code diretamente) ───

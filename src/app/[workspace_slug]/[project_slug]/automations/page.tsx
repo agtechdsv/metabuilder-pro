@@ -5,7 +5,10 @@ import { notFound } from 'next/navigation'
 import { AlertCircle } from 'lucide-react'
 import { getLocale } from '@/i18n/get-locale'
 import { getTranslations } from '@/i18n/get-translations'
-import { publicProject } from '@/lib/tunnel/runtimeServer'
+import { cookies } from 'next/headers'
+import { clientSessionCookie, publicProject } from '@/lib/tunnel/runtimeServer'
+import { authorizeProjectMember } from '@/lib/tunnel/authorize'
+import { endUserMayOpenAutomations } from '@/lib/automationsAccess'
 
 export const metadata: Metadata = {
   title: 'Automação de processos | MetaBuilder PRO',
@@ -79,7 +82,7 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
   // 3. Verifica se a view de Automations está ativa
   const { data: automationsView } = await supabase
     .from('ui_views')
-    .select('name, layout_config')
+    .select('id, name, layout_config')
     .eq('slug', 'automations')
     .eq('project_id', project.id)
     .maybeSingle()
@@ -108,6 +111,40 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
     )
   }
 
+  // 3.5. Quem pode abrir o editor: o dono do projeto (login do MetaBuilder) ou o usuário final cujo perfil tem a permissão da tela
+  // "Automações" (negado por padrão; sem login configurado, todos). ANTES de ler qualquer dado: o servidor monta a página com a
+  // chave de serviço, então o que for lido aqui vai no HTML mesmo que a tela seja escondida depois.
+  const cookieStore = await cookies()
+  const mayOpen =
+    !!(await authorizeProjectMember(project.id)) ||
+    (!!automationsView &&
+      (await endUserMayOpenAutomations(supabase, {
+        projectId: project.id,
+        viewId: automationsView.id,
+        sessionCookie: clientSessionCookie(cookieStore, project.id),
+      })))
+  if (!mayOpen) {
+    return (
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 rounded-[2.5rem] bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center mb-6 shadow-lg shadow-red-500/5">
+          <AlertCircle className="w-10 h-10" />
+        </div>
+        <h2 className="text-2xl font-black text-neutral-900 dark:text-white mb-2 tracking-tight">
+          {t('runtime.automations_denied_title')}
+        </h2>
+        <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mb-8 leading-relaxed font-bold">
+          {t('runtime.automations_denied_desc')}
+        </p>
+        <a
+          href={`/${workspace_slug}/${project_slug}`}
+          className="px-6 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-[0.98] shadow-lg shadow-indigo-500/20 flex items-center justify-center"
+        >
+          {t('runtime.downloads_back_home')}
+        </a>
+      </div>
+    )
+  }
+
   // 4. Busca o caso de uso se estiver no contexto
   let useCaseName = ''
   if (useCaseId) {
@@ -115,6 +152,7 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
       .from('ui_views')
       .select('name')
       .eq('id', useCaseId)
+      .eq('project_id', project.id)
       .maybeSingle()
     if (viewData?.name) {
       useCaseName = viewData.name

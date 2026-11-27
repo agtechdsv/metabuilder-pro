@@ -1364,7 +1364,9 @@
       "continue": "Continue where I left off",
       "reset_progress": "Reset progress",
       "summary_move": "Drags a card to another column."
-    }
+    },
+    "automations_denied_title": "Access denied",
+    "automations_denied_desc": "You do not have permission to open Automations. Ask the system administrator."
   },
   "bi_editor": {
     "title_placeholder": "E.g.: Total Sales",
