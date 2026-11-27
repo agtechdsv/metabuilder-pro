@@ -2,9 +2,18 @@
  * Escopo dos fluxos de automação: um fluxo é da TABELA (o motor dispara por tabela + evento), ou "Geral" quando nenhum gatilho tem
  * tabela (agendado e webhook). O caso de uso (`use_case_id`) não entra: ele só dizia em qual tela o fluxo foi desenhado.
  *
- * Regra: o fluxo pertence a cada tabela que algum gatilho seu escolheu como "tabela alvo"; sem nenhuma, é Geral. Vale para o desenho
- * publicado e para o rascunho (um fluxo cuja tabela mudou no rascunho aparece nas duas listas até ser publicado).
+ * Regra: o fluxo pertence a cada tabela que algum gatilho DE TABELA escolheu como "tabela alvo"; sem nenhuma, é Geral. Agendado e webhook
+ * nunca usam a tabela (o webhook roda sempre com a tabela "webhook"; o agendado, sem registro nenhum), então um gatilho só deles é Geral
+ * mesmo que traga uma tabela esquecida. Vale para o desenho publicado e para o rascunho (um fluxo cuja tabela mudou no rascunho aparece
+ * nas duas listas até ser publicado).
  */
+
+/** Gatilho que só tem agendado e/ou webhook (sem evento de tabela e sem botão): não pertence a tabela. */
+export function isNonTableTrigger(data: any): boolean {
+  const raw = data?.triggerType
+  const types: string[] = typeof raw === 'string' ? [raw] : Array.isArray(raw) ? raw.map(String) : []
+  return types.length > 0 && types.every(t => t.toLowerCase() === 'scheduled' || t.toLowerCase() === 'webhook')
+}
 
 export type FlowScope = { kind: 'general' } | { kind: 'table'; modelId: string }
 
@@ -20,7 +29,7 @@ export function triggerModelIds(flow: FlowLike): string[] {
   const ids = new Set<string>()
   for (const data of [flow?.flow_data, flow?.draft_flow_data]) {
     for (const n of nodesOf(data)) {
-      if (n?.type !== 'trigger') continue
+      if (n?.type !== 'trigger' || isNonTableTrigger(n?.data)) continue
       const id = n?.data?.triggerModelId
       if (typeof id === 'string' && id) ids.add(id)
     }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { automationsHref, filterFlowsByScope, flowInScope, isGeneralFlow, parseScopeParams, primaryScopeOf, scopeCounts, triggerModelIds } from '../flowScope'
+import { automationsHref, filterFlowsByScope, flowInScope, isGeneralFlow, isNonTableTrigger, parseScopeParams, primaryScopeOf, scopeCounts, triggerModelIds } from '../flowScope'
 import { AUTOMATIONS_MENU_LABELS, withAutomationsMenu } from '../../automationsMenu'
 
 const A = '11111111-1111-4111-8111-111111111111'
@@ -34,6 +34,19 @@ describe('escopo dos fluxos (tabela ou Geral)', () => {
     expect(filterFlowsByScope(flows, { kind: 'table', modelId: B })).toHaveLength(2)
     expect(filterFlowsByScope(flows, { kind: 'general' })).toHaveLength(1)
     expect(scopeCounts(flows)).toEqual({ general: 1, byModel: { [A]: 3, [B]: 2 } })
+  })
+
+  it('agendado e webhook nunca são da tabela, mesmo com uma tabela esquecida no gatilho', () => {
+    expect(isGeneralFlow(flow([trig(A, ['scheduled'])]))).toBe(true)
+    expect(isGeneralFlow(flow([trig(A, ['webhook'])]))).toBe(true)
+    expect(isGeneralFlow(flow([trig(A, ['scheduled', 'webhook'])]))).toBe(true)
+    expect(isNonTableTrigger({ triggerType: 'SCHEDULED' })).toBe(true)
+    // evento de tabela ou botão junto: é da tabela
+    expect(triggerModelIds(flow([trig(A, ['scheduled', 'insert'])]))).toEqual([A])
+    expect(triggerModelIds(flow([trig(A, ['manual'])]))).toEqual([A])
+    // gatilho novo, ainda sem evento marcado, já com a tabela do escopo: fica na tabela (senão o fluxo recém-criado sumiria da lista)
+    expect(triggerModelIds(flow([trig(A, [])]))).toEqual([A])
+    expect(isNonTableTrigger({})).toBe(false)
   })
 
   it('ignora nós que não são gatilho e valores que não são texto', () => {

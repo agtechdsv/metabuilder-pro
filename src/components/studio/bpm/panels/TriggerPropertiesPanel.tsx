@@ -66,8 +66,16 @@ export function TriggerPropertiesPanel(props: any) {
                           { id: 'scheduled', label: t('bpm.canvas.scheduled_cron') },
                           { id: 'webhook', label: t('bpm.canvas.webhook_inbound', 'Webhook Inbound') }
                         ]
-                        // em "Geral" (sem tabela) só agendado e webhook; o que já estiver marcado continua visível
-                        .filter(evt => !isGeneral || evt.id === 'scheduled' || evt.id === 'webhook' || (evt.id === 'manual' ? buttonOn : triggerTypes.includes(evt.id)))
+                        // "Geral" (sem tabela) só tem agendado e webhook; numa tabela só os eventos de tabela e o botão (agendado e webhook não usam
+                        // a tabela). O que já estiver marcado continua visível, para nada sumir em silêncio.
+                        .filter(evt => {
+                          const isNonTable = evt.id === 'scheduled' || evt.id === 'webhook';
+                          const on = evt.id === 'manual' ? buttonOn : triggerTypes.includes(evt.id);
+                          if (on) return true;
+                          if (isGeneral) return isNonTable;
+                          if (scopeModelId) return !isNonTable;
+                          return true;
+                        })
                         .map(evt => {
                           const isButton = evt.id === 'manual';
                           const isChecked = isButton ? buttonOn : triggerTypes.includes(evt.id);

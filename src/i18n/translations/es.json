@@ -3766,7 +3766,19 @@
       "flows_count": "{count} flujo(s)",
       "status_published": "Publicado",
       "status_pending": "Cambios sin publicar",
-      "status_draft": "Borrador"
+      "status_draft": "Borrador",
+      "search_tables": "Buscar tabla",
+      "search_flows": "Buscar flujo o tabla",
+      "group_general": "General (sin tabla)",
+      "sort_name_asc": "Nombre A-Z",
+      "sort_name_desc": "Nombre Z-A",
+      "sort_count_desc": "Más flujos primero",
+      "sort_count_asc": "Menos flujos primero",
+      "sort_by_label": "Ordenar por",
+      "sort_by_table": "Tabla y nombre",
+      "sort_by_name": "Solo nombre",
+      "expand": "Expandir",
+      "collapse": "Contraer"
     }
   },
   "auth": {

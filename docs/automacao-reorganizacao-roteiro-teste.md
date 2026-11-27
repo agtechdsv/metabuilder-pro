@@ -5,8 +5,8 @@ Marque cada item e me mande o que falhar, com a tela. **Não muda protocolo do C
 
 ## O que já foi verificado por mim (sem navegador seu)
 
-- `tsc`, `npm test` (2116 testes) e `npm run build` limpos.
-- Classificação dos fluxos: pela regra "tem tabela alvo = é da tabela; não tem = Geral", os seus 10 fluxos reais ficam assim: **7 em `pedidos`** (Aviso Pedido Enviado, Confirmação de Pedido, Edição de Entregue, Exclusão de enviado, Exclusão de Pedido, Negar - Novo - Cancelado, Novo - Status Pendente) e **3 em Geral** (Agendaddo, Pedidos Aprovados, webhook).
+- `tsc`, `npm test` (2125 testes) e `npm run build` limpos.
+- Classificação dos fluxos: pela regra "tem tabela alvo e algum evento de tabela ou botão = é da tabela; senão = Geral" (agendado e webhook nunca usam a tabela), os seus 10 fluxos reais ficam assim: **7 em `pedidos`** (Aviso Pedido Enviado, Confirmação de Pedido, Edição de Entregue, Exclusão de enviado, Exclusão de Pedido, Negar - Novo - Cancelado, Novo - Status Pendente) e **3 em Geral** (Agendaddo, Pedidos Aprovados, webhook).
 - Item de menu injetado (primeiro, só com permissão, nunca duplicado), leitura do escopo da URL (só aceita id de tabela bem formado) e montagem dos endereços, com testes.
 
 ## O que **não** foi testado
@@ -36,8 +36,13 @@ As telas no navegador (card, painel, editor, cadastro do botão), o clique real 
 | # | O que fazer | Esperado | ✔ |
 |---|---|---|---|
 | 2.1 | Abrir o painel | Mostra **Geral (sem tabela)** com 3 fluxos e as tabelas, **pedidos com 7**; as demais com 0 | ☐ |
-| 2.2 | Digitar "ped" na busca | Filtra tabelas e fluxos pelo nome; buscar o nome de uma tabela também acha os fluxos dela | ☐ |
-| 2.3 | Em "Todos os fluxos", conferir cada linha | Nome, tabela (ou "Geral") e situação (Publicado / Alterações não publicadas / Rascunho) | ☐ |
+| 2.2 | Em **Por tabela**, digitar "ped" no campo de busca da seção | Filtra só as tabelas, na hora (sem acento e sem diferenciar maiúsculas) | ☐ |
+| 2.3 | Em **Por tabela**, clicar nos 4 ícones de ordem (A-Z, Z-A, mais fluxos primeiro, menos fluxos primeiro) | A ordem muda a cada clique; em quantidade, o empate fica em A-Z; o ícone ativo fica destacado | ☐ |
+| 2.3a | Em **Todos os fluxos**, conferir os dois grupos | **Geral (sem tabela) (3)** e **Por tabela (7)**, cada um com a seta de expandir/recolher; cada linha mostra o nome, a tabela (só em Por tabela) e a situação (Publicado / Alterações não publicadas / Rascunho) | ☐ |
+| 2.3b | Recolher e expandir cada grupo | A lista some e volta; os ícones de ordem do grupo só aparecem com ele aberto | ☐ |
+| 2.3c | Em **Geral**, trocar A-Z e Z-A | Ordena os 3 fluxos pelo nome | ☐ |
+| 2.3d | Em **Por tabela**, alternar "Tabela e nome" e "Só nome", e A-Z / Z-A | "Tabela e nome" ordena pela tabela e depois pelo nome; "Só nome" ignora a tabela | ☐ |
+| 2.3e | No campo de busca de **Todos os fluxos**, digitar parte do nome de um fluxo e depois o nome de uma tabela | Filtra na hora pelos dois; um grupo sem resultado some e os que têm resultado ficam abertos mesmo se estavam recolhidos | ☐ |
 | 2.4 | Clicar em um fluxo da lista | Abre o editor **já nesse fluxo**, no escopo certo | ☐ |
 | 2.5 | Clicar em "Voltar ao início" | Volta ao dashboard | ☐ |
 
@@ -50,6 +55,7 @@ As telas no navegador (card, painel, editor, cadastro do botão), o clique real 
 | 3.3 | Em pedidos, criar um fluxo novo e abrir o gatilho | A **tabela alvo já vem preenchida e travada** (cinza, com a dica) | ☐ |
 | 3.4 | Salvar o rascunho e publicar | Funciona **sem** caso de uso; o fluxo aparece na lista de pedidos e o CLI recarrega | ☐ |
 | 3.5 | Em Geral, criar um fluxo novo e abrir o gatilho | Só **Agendado** e **Webhook** na lista de eventos; sem campo de tabela | ☐ |
+| 3.5a | Em uma tabela (ex.: pedidos), criar um fluxo novo e abrir o gatilho | **Não** aparecem Agendado nem Webhook (eles não usam a tabela): só os eventos de tabela e o Botão; a tabela alvo vem travada | ☐ |
 | 3.6 | Em Geral, publicar um fluxo agendado | Funciona; ele aparece em "Geral" no painel | ☐ |
 | 3.7 | Abrir "Exclusão de enviado" (pedidos) | Continua igual (gatilho "Antes de Excluir", tabela pedidos), e **continua bloqueando** a exclusão no app como antes | ☐ |
 | 3.8 | Botão de voltar do editor | Volta ao **painel de escolha** | ☐ |

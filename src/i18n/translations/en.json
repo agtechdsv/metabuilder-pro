@@ -3679,7 +3679,19 @@
       "flows_count": "{count} flow(s)",
       "status_published": "Published",
       "status_pending": "Unpublished changes",
-      "status_draft": "Draft"
+      "status_draft": "Draft",
+      "search_tables": "Search table",
+      "search_flows": "Search flow or table",
+      "group_general": "General (no table)",
+      "sort_name_asc": "Name A-Z",
+      "sort_name_desc": "Name Z-A",
+      "sort_count_desc": "Most flows first",
+      "sort_count_asc": "Fewest flows first",
+      "sort_by_label": "Sort by",
+      "sort_by_table": "Table and name",
+      "sort_by_name": "Name only",
+      "expand": "Expand",
+      "collapse": "Collapse"
     }
   },
   "auth": {
