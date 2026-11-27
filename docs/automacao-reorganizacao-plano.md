@@ -38,3 +38,12 @@ Proposta:
 - Tornar **"Botão (ação customizada)" um evento marcável** na lista de eventos (hoje só existe como ícone). A lista de botões aparece só com ele marcado. Fluxos já ligados a botões aparecem marcados sem mudar o comportamento (o vínculo é lido de `linked_bpm_workflows`).
 - Opcional: avisar no editor quando o fluxo está ligado a um botão de uma tabela diferente da tabela alvo.
 - **Pendente:** decidir se um fluxo pode misturar botão e evento de tabela (hoje pode; manter) e se corrigimos o "só o primeiro gatilho" no mesmo passo.
+
+## Decisão (2026-11-27, noite): opção A para os fluxos de botão
+
+- **A nova tela tem só Geral e Tabelas.** Não há nível "Casos de uso" (a opção de acrescentá-lo foi descartada: reintroduz a ideia de que o fluxo pertence a um caso de uso).
+- **O botão do cabeçalho "Automações" dos casos de uso sai** (fase 3). Motivo concreto: "Pedidos - Timeline" abria o editor com a lista de fluxos vazia, embora os fluxos da tabela `pedidos` rodem nessa tela do mesmo jeito.
+- **Fluxo de botão:** ao marcar o evento "Botão (ação customizada)", o painel lista os botões **das telas da tabela do fluxo**, agrupados pelo nome do caso de uso (Pedidos, Pedidos - Timeline...). O caso de uso é um detalhe da escolha, não o lugar onde o fluxo mora.
+- **Atalho no cadastro do botão** ("Criar ou editar fluxo deste botão"): abre a tela nova já na tabela certa, com o botão marcado. **Antes de prometer, verificar no código do cadastro de botões** (`ActionModalTriggerTab.tsx` e passos de ações do construtor de casos de uso) onde ele encaixa.
+- **Condição para a fase 3:** só remover o botão do cabeçalho depois que esse atalho existir, para o analista que acaba de criar um botão não ficar sem caminho até o fluxo.
+- Rejeitada a opção B (manter o botão como "Automações da tabela X"); pode voltar se o atalho do cadastro do botão não bastar.
