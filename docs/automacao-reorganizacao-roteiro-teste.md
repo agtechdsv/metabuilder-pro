@@ -29,6 +29,7 @@ As telas no navegador (card, painel, editor, cadastro do botão), o clique real 
 | 1.5 | Como Gerente, digitar a URL `/{workspace}/{projeto}/automations` | "Acesso negado", sem dados do projeto | ☐ |
 | 1.6 | Trocar o idioma (PT/EN/ES) | O nome do card muda: Automação de processos / Process Automation / Automatización de procesos | ☐ |
 | 1.7 | Desligar o módulo de Automações no Studio | O card e o item **somem** para todos | ☐ |
+| 1.8 | Como **dono do projeto** (login do MetaBuilder), abrir "Automações" pelo **Studio** (o card de Automação de processos do Studio, que abre a visualização) | Abre o **painel de escolha** normalmente, mesmo sem ser um usuário do app com a permissão ligada | ☐ |
 
 ## Parte 2: painel de escolha
 
