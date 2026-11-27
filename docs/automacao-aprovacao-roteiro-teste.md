@@ -19,7 +19,7 @@ CLI real contra um banco, as telas no navegador, e-mail pelo SMTP, **Oracle** (o
 ## Preparação
 
 1. Use um projeto de teste **PostgreSQL** com login de usuários do app e pelo menos **dois perfis** (ex.: *Vendas* e *Gerente*), com um usuário em cada, **mais um terceiro usuário de *Vendas***.
-2. Rode o CLI do código novo: `cd cli; node index.js` (o `.exe` só pega a mudança depois de `npm run build` dentro de `cli/`). Acompanhe as linhas `[BPM] ...` e `[ OK ] approval_...`.
+2. Rode o CLI do código novo: `cd cli; node index.js` (o `.exe` só pega a mudança depois de `npm run build` dentro de `cli/`; ele é testado à parte, no item 4.5). Acompanhe as linhas `[BPM] ...` e `[ OK ] approval_...`.
 3. No Studio (Automação de processos), monte e **publique** este fluxo de teste na tabela *Pedidos*:
 
 ```
@@ -87,6 +87,9 @@ No bloco, coloque **Lembrar após = 1 hora** e **Repetir a cada = 1 hora**, repu
 | 4.2 | Usuário do banco **sem permissão de criar tabela** (se tiver como simular) | A execução registra erro com a instrução de rodar o script; o **script aparece no console do Agente**; `scripts/mb-approvals.sql` é o mesmo | ☐ |
 | 4.3 | Rodar os itens de gatilhos, consulta, e-mail e agendamento de `bpm-roteiro-testes.md` (1.1 a 1.13) | Continuam como estavam (nada mudou fora do bloco novo) | ☐ |
 | 4.4 | Exportar um app que tenha fluxo com o bloco de aprovação | O app ejetado gera e roda; o bloco **não** funciona lá (para com aviso). Isso é esperado | ☐ |
+| 4.5 | **CLI empacotado (`.exe`)**: dentro de `cli/` rode `npm run build` e use o `.exe` gerado no lugar do `node index.js` (ele traz o **Node 18 do `pkg`**, diferente do Node da sua máquina). Repita pelo menos 1.1, 1.8, 2.10 e 3.1 | Tudo funciona igual ao `node index.js`; nenhum erro de sintaxe ou de função inexistente no terminal do `.exe`. Se algo só falhar no `.exe`, me mande o terminal | ☐ |
+| 4.6 | **Domínio próprio**: abrir o app publicado pelo domínio personalizado do projeto (o mesmo teste vale para domínio de workspace, se usar) e entrar como Gerente | O atalho **Minhas tarefas** aparece e leva a `/approvals` **no próprio domínio** (sem `/{workspace}/{projeto}` na frente se o domínio é do projeto); a tela lista as tarefas, aprova e cancela normalmente; "Voltar ao início" volta para a raiz do domínio | ☐ |
+| 4.7 | **Domínio próprio, e-mail**: criar um pedido pelo domínio próprio | O e-mail de aviso ao Gerente chega normalmente (o aviso não traz link; ele manda abrir "Minhas tarefas" no aplicativo) | ☐ |
 
 ## Sobre a ordem de publicação
 
