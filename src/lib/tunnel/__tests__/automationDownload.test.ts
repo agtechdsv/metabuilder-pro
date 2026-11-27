@@ -43,6 +43,23 @@ describe('servidor: registra o arquivo da ação Download na Central de cada des
     }
   })
 
+  it('depois de gravar, avisa as telas abertas só com os ids dos destinatários; se o aviso falhar, a entrega continua ok', async () => {
+    const { client } = fakeClient()
+    const sent: any[] = []
+    const ok = await run(signCommand(SECRET, AUTOMATION_DOWNLOAD_EVENT, PID, payload()), { client, notify: async (p: string, ids: string[]) => { sent.push([p, ids]) } })
+    expect(ok).toEqual({ ok: true, delivered: 2 })
+    expect(sent).toEqual([[PID, [U1, U2]]])
+
+    const failing = await run(signCommand(SECRET, AUTOMATION_DOWNLOAD_EVENT, PID, payload({ fileName: 'Outro.xlsx' })), { client, notify: async () => { throw new Error('canal fora do ar') } })
+    expect(failing).toEqual({ ok: true, delivered: 2 })
+
+    // erro ao gravar: ninguém é avisado
+    const bad = fakeClient({ insertError: true })
+    const none: any[] = []
+    expect(await run(signCommand(SECRET, AUTOMATION_DOWNLOAD_EVENT, PID, payload({ fileName: 'Terceiro.xlsx' })), { client: bad.client, notify: async () => { none.push(1) } })).toMatchObject({ ok: false, status: 502 })
+    expect(none).toHaveLength(0)
+  })
+
   it('o CLI e o servidor concordam no formato da assinatura e no evento', () => {
     expect(EVENT).toBe(AUTOMATION_DOWNLOAD_EVENT)
     const cmd = req('../../../../cli/security.js').signCommand(SECRET, AUTOMATION_DOWNLOAD_EVENT, PID, payload())

@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { 
-  Download, 
+import React, { useState, useEffect, useRef } from 'react'
+import {
+  RefreshCw,
+  Download,
   FileSpreadsheet, 
   FileText, 
   FileJson, 
@@ -64,6 +65,7 @@ export function DownloadsManagerClient({
   const [isLoadingJobs, setIsLoadingJobs] = useState(true)
   const [filter, setFilter] = useState<'all' | 'completed' | 'processing' | 'failed'>('all')
   const [isClearing, setIsClearing] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [isDeletingConfirm, setIsDeletingConfirm] = useState(false)
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean
@@ -116,6 +118,21 @@ export function DownloadsManagerClient({
       return 0
     }
   }
+
+  // sempre a versão mais recente da busca, para os avisos em tempo real e o retorno à aba (que ficam registrados uma vez só)
+  const fetchJobsRef = useRef(fetchJobs)
+  fetchJobsRef.current = fetchJobs
+
+  // ao voltar para a aba (ou para a janela) a lista é buscada de novo: cobre um aviso perdido sem nenhuma consulta em loop
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchJobsRef.current() }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
+  }, [])
 
   useEffect(() => {
     if (userId && projectId) {
@@ -177,6 +194,11 @@ export function DownloadsManagerClient({
             }
           })
         }
+      })
+      // arquivo novo da ação Download das automações: o servidor só avisa quem deve recarregar (sem dados do arquivo)
+      .on('broadcast', { event: 'download_refresh' }, (envelope: any) => {
+        const ids = envelope?.payload?.userIds
+        if (Array.isArray(ids) && ids.includes(userId)) fetchJobsRef.current()
       })
       .subscribe()
 
@@ -351,20 +373,30 @@ export function DownloadsManagerClient({
           </div>
         </div>
 
-        {totalCount > 0 && (
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setConfirmDialog({ isOpen: true, type: 'clear_all' })}
-            disabled={isClearing}
-            className="flex items-center gap-2 px-5 py-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:text-red-600 dark:hover:text-red-400 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+            onClick={async () => { setIsRefreshing(true); await fetchJobs(); setIsRefreshing(false) }}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-5 py-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
           >
-            {isClearing ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Trash2 className="w-4 h-4" />
-            )}
-            {t('runtime.downloads_clear_history')}
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {t('runtime.downloads_refresh', 'Atualizar')}
           </button>
-        )}
+          {totalCount > 0 && (
+            <button
+              onClick={() => setConfirmDialog({ isOpen: true, type: 'clear_all' })}
+              disabled={isClearing}
+              className="flex items-center gap-2 px-5 py-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:text-red-600 dark:hover:text-red-400 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+            >
+              {isClearing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+              {t('runtime.downloads_clear_history')}
+            </button>
+          )}
+        </div>
       </div>
 
       <main className="px-10 pb-12 space-y-8 animate-in fade-in duration-1000 delay-200">

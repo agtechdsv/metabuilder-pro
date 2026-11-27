@@ -19,11 +19,28 @@ const seen = new Map<string, number>()
 
 export type DeliverResult = { ok: true; delivered: number } | { ok: false; status: number; error: string }
 
+export const DOWNLOAD_REFRESH_EVENT = 'download_refresh'
+
 export interface DeliverDeps {
   client?: Pick<SupabaseClient, 'from'>
   token?: (projectId: string) => Promise<string | null>
   now?: () => number
   seen?: Map<string, number>
+  /** Avisa as Centrais de Downloads abertas (padrão: broadcast em tempo real). */
+  notify?: (projectId: string, userIds: string[]) => Promise<void>
+}
+
+/**
+ * Avisa as telas abertas que há arquivo novo. O aviso NÃO leva dados do arquivo: só os ids de quem deve recarregar a lista (a lista em si
+ * vem da API, com a autorização de sempre). Nunca derruba a entrega: se o aviso falhar, o arquivo já está gravado e aparece ao abrir a tela.
+ */
+async function notifyDownloadsScreens(projectId: string, userIds: string[]): Promise<void> {
+  const channel = serviceClient().channel(`tunnel_manager:${projectId}`)
+  try {
+    await channel.httpSend(DOWNLOAD_REFRESH_EVENT, { userIds })
+  } finally {
+    void channel.unsubscribe()
+  }
 }
 
 const text = (v: unknown, max: number): string => (typeof v === 'string' ? v.slice(0, max) : '')
@@ -73,5 +90,10 @@ export async function applyAutomationDownload(projectId: unknown, command: unkno
   }))
   const { data, error } = await (client as any).from('download_jobs').insert(rows).select('id')
   if (error) return { ok: false, status: 502, error: 'Não foi possível registrar o arquivo.' }
+  try {
+    await (deps.notify ?? notifyDownloadsScreens)(projectId, recipients)
+  } catch (e: any) {
+    console.warn('[automationDownload] aviso às telas falhou (o arquivo já foi gravado):', e?.message)
+  }
   return { ok: true, delivered: Array.isArray(data) ? data.length : rows.length }
 }

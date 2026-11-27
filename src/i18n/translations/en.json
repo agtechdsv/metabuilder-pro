@@ -1148,6 +1148,7 @@
     "downloads_title": "Downloads Manager",
     "downloads_subtitle": "Async Exports Center",
     "downloads_clear_history": "Clear History",
+    "downloads_refresh": "Refresh",
     "downloads_retention_title": "Automatic File Retention Policy",
     "downloads_retention_desc": "For privacy and compliance reasons, generated files will be kept for the time defined in the retention policy configured by the project administrator. After this period (e.g. 24 hours), they will be automatically deleted from the local server. If no cleanup is configured, files must be managed manually.",
     "downloads_autoclean": "Auto-Cleanup Active",

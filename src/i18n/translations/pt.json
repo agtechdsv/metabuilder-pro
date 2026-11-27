@@ -1148,6 +1148,7 @@
     "downloads_title": "Gerenciador de Downloads",
     "downloads_subtitle": "Central de Exportações Assíncronas",
     "downloads_clear_history": "Limpar Histórico",
+    "downloads_refresh": "Atualizar",
     "downloads_retention_title": "Política de Retenção de Arquivos Automática",
     "downloads_retention_desc": "Por razões de privacidade e conformidade, os arquivos gerados serão mantidos pelo tempo definido na política de retenção configurada pelo administrador do projeto. Após esse prazo (ex: 24 horas), eles serão excluídos automaticamente de forma física do servidor local. Se nenhuma limpeza estiver configurada, os arquivos devem ser geridos manualmente.",
     "downloads_autoclean": "Autolimpeza Ativa",
