@@ -11,6 +11,10 @@ describe('filtros vindos da URL', () => {
     for (const k of ['mb_demo', 'mb_seed', 'preview', 'embedded', 'return_to', 'edit_id', 'standalone', 'mode']) expect(NON_FILTER_URL_PARAMS).toContain(k)
   })
 
+  it('os parâmetros do editor de Automações (table, flow, scope, use_case) não viram filtro (o erro "coluna pedidos.table não existe")', () => {
+    expect(filtersFromSearch('?table=34b747ef-aebb-43eb-a352-89ace0a5cc8f&flow=f1&scope=general&use_case=u1&status=ativo')).toEqual({ status: 'ativo' })
+  })
+
   it('URL sem parâmetros não gera filtro', () => {
     expect(filtersFromSearch('')).toEqual({})
   })

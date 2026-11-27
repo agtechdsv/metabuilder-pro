@@ -8,6 +8,9 @@ export const NON_FILTER_URL_PARAMS: readonly string[] = [
   'embedded', 'preview', 'return_to', 'edit_id', 'standalone', 'mode',
   // Ajuda Interativa: modo demonstração e linha sintética
   'mb_demo', 'mb_seed',
+  // Automação de processos: endereço do editor (/automations?table=<id>&flow=<id>). Ao clicar numa tela do menu logo depois, o app ainda
+  // lê a URL antiga e esses parâmetros viravam filtro ("coluna pedidos.table não existe")
+  'table', 'flow', 'scope', 'use_case',
 ]
 
 export function filtersFromSearch(search: string): Record<string, string> {

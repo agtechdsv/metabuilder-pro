@@ -190,8 +190,13 @@ export function ConditionPropertiesPanel(props: any) {
                                         <option value="<">{t('bpm.canvas.op_less')}</option>
                                         <option value="<=">{t('bpm.canvas.op_less_equal')}</option>
                                         <option value="contains">{t('bpm.canvas.op_contains')}</option>
+                                        <option value="empty">{t('bpm.canvas.op_empty', 'Está vazio')}</option>
+                                        <option value="notEmpty">{t('bpm.canvas.op_not_empty', 'Não está vazio')}</option>
                                       </select>
 
+                                      {rule.operator === 'empty' || rule.operator === 'notEmpty' ? (
+                                        <p className="text-[9px] text-neutral-400 self-center leading-relaxed">{t('bpm.canvas.op_empty_hint', 'Vale para campo ausente (registro novo), nulo ou em branco. Não precisa de valor.')}</p>
+                                      ) : (
                                       <div className="space-y-2">
                                         <div className="flex items-center gap-2 justify-end mb-1">
                                           <span className="text-[9px] text-neutral-400">{t('bpm.canvas.use_enum')}</span>
@@ -254,6 +259,7 @@ export function ConditionPropertiesPanel(props: any) {
                                           />
                                         )}
                                       </div>
+                                      )}
                                     </div>
                                   </div>
                                 </div>

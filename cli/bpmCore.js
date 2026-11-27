@@ -685,7 +685,12 @@ class BpmCore {
 
       const actualStr = String(actualValue)
 
+      // "está vazio": campo ausente (registro novo ainda sem id), nulo ou só com espaços; dispensa o valor esperado
+      const isEmptyValue = actualValue === undefined || actualValue === null || (typeof actualValue === 'string' && actualValue.trim() === '')
+
       switch (operator) {
+        case 'empty': isRuleTrue = isEmptyValue; break
+        case 'notEmpty': isRuleTrue = !isEmptyValue; break
         case '==': isRuleTrue = actualStr == String(expectedValue); break
         case '!=': isRuleTrue = actualStr != String(expectedValue); break
         case '>': isRuleTrue = Number(actualValue) > Number(expectedValue); break
