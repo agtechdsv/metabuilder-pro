@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
-import { Zap, Play, CheckCircle2, GitMerge, Trash2, Mail, Edit, PlusCircle, Clock, MousePointer2, Webhook, ShieldAlert, Database } from 'lucide-react';
+import { Zap, Play, CheckCircle2, GitMerge, Trash2, Mail, Edit, PlusCircle, Clock, MousePointer2, Webhook, ShieldAlert, Database, UserCheck } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nContext';
 
 // Common style for node wrappers
@@ -184,6 +184,65 @@ export const ConditionNode = memo(({ id, data, selected }: NodeProps) => {
       >
         <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] font-black text-red-600 dark:text-red-500 uppercase tracking-widest">
           {t('bpm.nodes.no')}
+        </div>
+      </Handle>
+    </div>
+  );
+});
+
+/** "Aguardar aprovação": o fluxo para aqui e continua pela saída da decisão (Aprovado ou Rejeitado). */
+export const ApprovalNode = memo(({ id, data, selected }: NodeProps) => {
+  const { t } = useI18n();
+  const sel: Record<string, any> = (data.emailGroupsUsers as any) || {};
+  const groups = Object.entries(sel).filter(([, v]) => v === 'all').map(([k]) => k);
+  const users = Object.values(sel).reduce((n: number, v: any) => n + (Array.isArray(v) ? v.length : 0), 0);
+  const configured = groups.length > 0 || users > 0;
+  const who = [
+    ...groups,
+    ...(users > 0 ? [t('bpm.nodes.approval_users', '{count} usuário(s)').replace('{count}', String(users))] : []),
+  ].join(', ');
+
+  return (
+    <div className={`${nodeStyle} ${selected ? 'border-violet-500 shadow-violet-500/20 ring-2 ring-violet-500/20' : 'border-violet-500/50 shadow-violet-500/10'} ${!configured && 'border-red-500 border-dashed'}`}>
+      <DeleteButton id={id} selected={!!selected} />
+      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-violet-500" />
+      <div className="flex items-center gap-3">
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${configured ? 'bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400' : 'bg-red-100 text-red-600'}`}>
+          <UserCheck className="w-4 h-4" />
+        </div>
+        <div>
+          <h3 className={`text-sm font-bold ${configured ? 'text-neutral-900 dark:text-white' : 'text-red-500'}`}>
+            {(data.label as string) || t('bpm.nodes.approval', 'Aguardar aprovação')}
+          </h3>
+          <p className="text-[10px] text-neutral-500 uppercase tracking-widest">
+            {configured ? who : t('bpm.nodes.approval_unset', 'Escolha o aprovador')}
+          </p>
+        </div>
+      </div>
+
+      {/* Aprovado */}
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="approved"
+        className="w-4 h-4 bg-emerald-500 border-2 border-white dark:border-neutral-900"
+        style={{ left: '30%' }}
+      >
+        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest whitespace-nowrap">
+          {t('bpm.nodes.approved', 'Aprovado')}
+        </div>
+      </Handle>
+
+      {/* Rejeitado */}
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="rejected"
+        className="w-4 h-4 bg-red-500 border-2 border-white dark:border-neutral-900"
+        style={{ left: '70%' }}
+      >
+        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] font-black text-red-600 dark:text-red-500 uppercase tracking-widest whitespace-nowrap">
+          {t('bpm.nodes.rejected', 'Rejeitado')}
         </div>
       </Handle>
     </div>

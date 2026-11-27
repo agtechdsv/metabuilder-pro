@@ -16,7 +16,10 @@ const DEVELOPER_ONLY_ACTIONS = new Set([
 ])
 
 /** O login do usuário final passa pelo servidor (que vê a resposta); nunca por este relay. */
-const SERVER_ONLY_ACTIONS = new Set(['validate_login', 'trigger_webhook', 'help_feedback'])
+// As ações de aprovação (Aguardar aprovação) também: quem decide vem da sessão que o SERVIDOR conferiu e assinou (com os perfis dela);
+// o navegador nunca as envia, nem um membro pelo relay.
+export const APPROVAL_ACTIONS = ['approval_list', 'approval_decide', 'approval_history', 'approval_admin_list', 'approval_cancel'] as const
+const SERVER_ONLY_ACTIONS = new Set<string>(['validate_login', 'trigger_webhook', 'help_feedback', ...APPROVAL_ACTIONS])
 
 export const MAX_RELAY_BYTES = 4 * 1024 * 1024
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -24,7 +27,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export type RelayActorKind = 'member' | 'end_user'
 
 /** Quem agiu, tirado da sessão assinada (as variáveis {{usuario.*}} do BPM). Nunca vem do corpo do pedido. */
-export interface ActorIdentity { id: string; email?: string; name?: string }
+export interface ActorIdentity { id: string; email?: string; name?: string; /** nomes dos grupos do usuário (só o servidor os define; servem à aprovação por perfil) */ roles?: string[] }
 
 /** Identidade enxuta e segura (textos curtos) a partir da sessão do usuário final; null se a sessão não tiver identificador. */
 export function actorFromSession(session: { sub?: unknown; email?: unknown; name?: unknown } | null | undefined): ActorIdentity | undefined {

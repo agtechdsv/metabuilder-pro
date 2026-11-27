@@ -59,6 +59,9 @@ class BpmEngine {
         fallbackTo: () => process.env.SMTP_USER || 'contato@metabuilderpro.com',
       },
       recipients: { resolveSystem: (data) => this.resolveSystemRecipients(data) },
+      // "Aguardar aprovação": as tarefas moram no banco do cliente, que só o Agente alcança (o app exportado não liga isto)
+      features: { approvals: true },
+      ids: { next: () => require('crypto').randomUUID() },
       scheduler: { schedule: (expr, fn) => cron.schedule(expr, fn) },
       runs: {
         report: async (run) => {
@@ -192,6 +195,7 @@ class BpmEngine {
   needsOldRow(tableName) { return this.core.needsOldRow(tableName); }
   processWebhook(workflowId, data) { return this.core.processWebhook(workflowId, data); }
   processCustomAction(workflowIds, tableName, rowData, actor) { return this.core.processCustomAction(workflowIds, tableName, rowData, actor); }
+  approvalOp(action, data, actor) { return this.core.approvalOp(action, data, actor); }
 }
 
 module.exports = { BpmEngine };

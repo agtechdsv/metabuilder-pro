@@ -29,7 +29,7 @@ import { useBpmEmailActions } from './hooks/useBpmEmailActions';
 
 
 import { FlowSidebar } from './FlowSidebar';
-import { TriggerNode, ActionNode, ConditionNode, ResponseNode } from './nodes/CustomNodes';
+import { TriggerNode, ActionNode, ConditionNode, ResponseNode, ApprovalNode } from './nodes/CustomNodes';
 import RichTextEditor from './RichTextEditor';
 import { Save, Play, Wand2, X, ArrowLeft, Loader2, Plus, Trash2, Check, Edit2, Box, Minimize2, Maximize2, ZoomIn, LayoutGrid } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -49,6 +49,7 @@ const nodeTypes = {
   action: ActionNode,
   condition: ConditionNode,
   response: ResponseNode,
+  approval: ApprovalNode,
 };
 
 const edgeTypes = {
@@ -335,6 +336,7 @@ function BpmCanvasContent({
               nodeColor={(node) => {
                 if (node.type === 'trigger') return '#10b981';
                 if (node.type === 'condition') return '#f59e0b';
+                if (node.type === 'approval') return '#8b5cf6';
                 return '#6366f1';
               }}
             />

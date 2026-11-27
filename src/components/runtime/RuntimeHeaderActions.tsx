@@ -6,6 +6,9 @@ import { EndUserMenu } from '@/components/auth/EndUserMenu'
 import { ReleaseNotes } from '@/components/tauri/ReleaseNotes'
 import { ContextAutoUpdater } from '@/components/tauri/ContextAutoUpdater'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { UserCheck } from 'lucide-react'
+import { useI18n } from '@/i18n/I18nContext'
 
 interface RuntimeHeaderActionsProps {
   projectId: string
@@ -13,6 +16,7 @@ interface RuntimeHeaderActionsProps {
 }
 
 export function RuntimeHeaderActions({ projectId, project }: RuntimeHeaderActionsProps) {
+  const { t } = useI18n()
   const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
@@ -50,6 +54,17 @@ export function RuntimeHeaderActions({ projectId, project }: RuntimeHeaderAction
         <ThemeToggle />
         <LanguageSelector />
       </div>
+
+      {user && project?.approvalsHref && (
+        <Link
+          href={project.approvalsHref}
+          title={t('approvals.title', 'Minhas tarefas')}
+          className="flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-bold text-violet-600 dark:text-violet-400 bg-violet-500/10 hover:bg-violet-500/20 transition-colors"
+        >
+          <UserCheck className="w-4 h-4" />
+          <span className="hidden md:inline">{t('approvals.title', 'Minhas tarefas')}</span>
+        </Link>
+      )}
 
       {user && (
         <EndUserMenu user={user} projectId={projectId} />

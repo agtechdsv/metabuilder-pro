@@ -3280,7 +3280,8 @@
       "actions": "Ações (Actions)",
       "generic_action": "Ação Genérica",
       "drag_to_panel": "Arraste para o painel",
-      "response_node": "Resposta / Bloqueio"
+      "response_node": "Resposta / Bloqueio",
+      "approval": "Aguardar aprovação"
     },
     "nodes": {
       "delete_node": "Excluir Nó",
@@ -3326,7 +3327,12 @@
       "response_block": "Bloquear Ação",
       "silent": "Silencioso",
       "webhook_inbound": "Webhook Inbound",
-      "with_message": "Com Mensagem"
+      "with_message": "Com Mensagem",
+      "approval": "Aguardar aprovação",
+      "approval_unset": "Escolha o aprovador",
+      "approval_users": "{count} usuário(s)",
+      "approved": "Aprovado",
+      "rejected": "Rejeitado"
     },
     "canvas": {
       "automations_title": "Automações",
@@ -3627,7 +3633,22 @@
         "button_unlinked": "Botão desvinculado do fluxo!",
         "link_button_error": "Erro ao vincular botão: ",
         "save_flow_first": "Salve o fluxo primeiro antes de vincular botões."
-      }
+      },
+      "var_group_approval": "Decisão da aprovação",
+      "var_approval_decision": "Decisão (aprovado ou rejeitado)",
+      "var_approval_comment": "Comentário do aprovador",
+      "var_approval_by": "Quem decidiu"
+    },
+    "approval": {
+      "panel_title": "Aguardar aprovação",
+      "intro": "O fluxo para aqui e espera uma pessoa decidir. Se aprovar, segue pela saída verde; se rejeitar, pela vermelha.",
+      "approvers": "Quem pode aprovar",
+      "approvers_desc": "Escolha um perfil inteiro (qualquer pessoa do perfil pode aprovar) ou usuários específicos. Eles também recebem um e-mail de aviso.",
+      "title_label": "Título da tarefa",
+      "title_placeholder": "Ex.: Pedido {{pedidos.id}} aguarda aprovação",
+      "allow_self": "Quem pediu também pode aprovar o próprio pedido",
+      "after_save_only": "Use um gatilho de depois de salvar, agendado ou botão. Não funciona em \"Antes de salvar\", que precisa responder na hora.",
+      "vars_hint": "Depois da decisão, os textos das ações seguintes aceitam {{aprovacao.decisao}}, {{aprovacao.comentario}} e {{aprovacao.por}}."
     }
   },
   "auth": {
@@ -7148,5 +7169,43 @@
     "n_body_b": " foi compilado e está disponível para download no Supabase e no Github.",
     "n_view": "Ver no Github",
     "n_dismiss": "Dispensar"
+  },
+  "approvals": {
+    "title": "Minhas tarefas",
+    "subtitle": "Aprovações que dependem de você e o andamento dos seus pedidos.",
+    "back": "Voltar ao início",
+    "tab_pending": "A decidir",
+    "tab_requested": "Meus pedidos",
+    "tab_decided": "Que decidi",
+    "tab_all": "Todas (administrador)",
+    "empty_pending": "Nenhuma aprovação aguardando você.",
+    "empty_other": "Nada por aqui.",
+    "loading": "Carregando...",
+    "load_error": "Não foi possível concluir. Tente novamente.",
+    "requested_by": "Pedido por",
+    "decided_by": "Decidido por",
+    "status_pending": "Pendente",
+    "status_approved": "Aprovada",
+    "status_rejected": "Rejeitada",
+    "status_cancelled": "Cancelada",
+    "record": "Registro",
+    "history": "Histórico",
+    "history_button": "Histórico de aprovações",
+    "no_history": "Sem histórico.",
+    "event_requested": "Aprovação pedida",
+    "event_approved": "Aprovado",
+    "event_rejected": "Rejeitado",
+    "event_cancelled": "Cancelado",
+    "comment_label": "Comentário",
+    "comment_placeholder": "Escreva um comentário (obrigatório ao rejeitar)",
+    "approve": "Aprovar",
+    "reject": "Rejeitar",
+    "reject_needs_comment": "Explique o motivo da rejeição.",
+    "decided_ok_approved": "Aprovado.",
+    "decided_ok_rejected": "Rejeitado.",
+    "cancel_task": "Cancelar tarefa",
+    "cancel_confirm": "Cancelar esta tarefa? O fluxo não continuará.",
+    "cancelled_ok": "Tarefa cancelada.",
+    "close": "Fechar"
   }
 }

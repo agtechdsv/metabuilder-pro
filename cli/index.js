@@ -354,7 +354,9 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
         const a = payload.payload.actor;
         if (!a || typeof a !== 'object' || typeof a.id !== 'string' || !a.id) return null;
         const clip = (v) => (typeof v === 'string' && v ? v.slice(0, 200) : undefined);
-        return { id: a.id.slice(0, 200), email: clip(a.email), name: clip(a.name) };
+        // perfis (nomes de grupo) que o servidor assinou: servem ao "Aguardar aprovação" por perfil
+        const roles = Array.isArray(a.roles) ? a.roles.filter(r => typeof r === 'string' && r).slice(0, 50).map(r => r.slice(0, 200)) : undefined;
+        return { id: a.id.slice(0, 200), email: clip(a.email), name: clip(a.name), ...(roles && roles.length ? { roles } : {}) };
       })();
       const endUser = access !== undefined;
       
@@ -1579,6 +1581,12 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
           if (endUser) throw new Error('Ação não permitida para usuário final.');
           if (dbType === 'oracle' || !pgClient) throw new Error('O feedback da ajuda só existe em PostgreSQL.');
           result = { rows: [await readHelpFeedback(pgClient)] };
+        } else if (['approval_list', 'approval_decide', 'approval_history', 'approval_admin_list', 'approval_cancel'].includes(action)) {
+          // Aguardar aprovação: só o servidor envia (ele conferiu a sessão e assinou quem agiu e seus perfis); nunca o navegador
+          if (endUser) throw new Error('Ação não permitida para usuário final.');
+          if (!bpmEngine) throw new Error('O motor de automações não está ativo neste agente (as aprovações exigem PostgreSQL).');
+          result = { rows: [await bpmEngine.approvalOp(action, payload.payload.data || {}, bpmActor)] };
+          console.log(chalk.green(`[ OK ] ${action} processada.`));
         } else if (action === 'db_privileges') {
           // diagnóstico do poder do usuário do banco: só para membros do projeto (comando sem `access`)
           if (endUser) throw new Error('Ação não permitida para usuário final.');

@@ -41,6 +41,10 @@ export interface BpmPorts {
   runs?: { report(run: BpmRunReport): Promise<void> }
   log?: Partial<Record<'debug' | 'info' | 'ok' | 'warn' | 'error' | 'sql' | 'danger' | 'mail', (msg: string) => void>>
   verbose?: boolean
+  /** Recursos que só alguns ambientes têm: `approvals` liga o bloco "Aguardar aprovação" (só o Agente CLI; o app exportado não o tem). */
+  features?: { approvals?: boolean }
+  /** Gerador de ids (uuid) das tarefas de aprovação; sem ele o núcleo usa um id aleatório próprio. */
+  ids?: { next(): string }
 }
 
 export interface BpmSyncResult {
@@ -51,7 +55,7 @@ export interface BpmSyncResult {
 }
 
 /** Quem agiu (vem da sessão assinada do usuário final). */
-export interface BpmActor { id: string; email?: string; name?: string }
+export interface BpmActor { id: string; email?: string; name?: string; /** nomes dos grupos (o servidor assina); servem à aprovação por perfil */ roles?: string[] }
 
 /** Mensagem da aba Mensagem de uma ação: texto pronto e o tipo do aviso. */
 export interface BpmUserMessage { text: string; type: 'success' | 'info' | 'warning' }
@@ -69,7 +73,15 @@ export class BpmCore {
   needsOldRow(table: string): Promise<boolean>
   processWebhook(workflowId: string, data: Record<string, any>): Promise<void>
   processCustomAction(workflowIds: string[], table: string, row: Record<string, any>, actor?: BpmActor | null): Promise<BpmUserMessage[]>
+  /** Ações approval_* do Agente CLI (aprovações): o `actor` vem da sessão assinada pelo servidor. */
+  approvalOp(action: string, data: Record<string, any>, actor?: BpmActor | null): Promise<any>
+  decideApproval(args: { taskId: string; decision: 'approved' | 'rejected'; comment?: string; actor: BpmActor | null }): Promise<{ ok: boolean; resumed: boolean; messages: BpmUserMessage[]; warning?: string }>
 }
+
+export function approvalDdl(dialect: 'postgres' | 'oracle'): string[]
+export function approvalAssignees(data: Record<string, any>): { users: string[]; groups: string[] }
+export function approvalAllows(assignees: { users: string[]; groups: string[] }, actor: BpmActor | null | undefined): boolean
+export function approvalSnapshot(row: Record<string, any>): string
 
 export const MAX_STEPS: number
 export const WEBHOOK_TIMEOUT_MS: number

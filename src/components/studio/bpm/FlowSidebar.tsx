@@ -1,6 +1,6 @@
 'use client';
 
-import { Zap, Play, GitMerge } from 'lucide-react';
+import { Zap, Play, GitMerge, UserCheck } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nContext';
 
 export function FlowSidebar() {
@@ -52,6 +52,15 @@ export function FlowSidebar() {
           >
             <Play className="w-4 h-4 text-indigo-500" />
             <span className="text-sm font-bold">{t('bpm.sidebar.generic_action')}</span>
+          </div>
+
+          <div
+            className="p-3 border border-neutral-200 dark:border-neutral-800 rounded-xl cursor-grab hover:border-violet-500 transition-colors flex items-center gap-3 bg-neutral-50 dark:bg-neutral-950"
+            onDragStart={(event) => onDragStart(event, 'approval', 'Aguardar aprovação')}
+            draggable
+          >
+            <UserCheck className="w-4 h-4 text-violet-500" />
+            <span className="text-sm font-bold">{t('bpm.sidebar.approval', 'Aguardar aprovação')}</span>
           </div>
 
           <div

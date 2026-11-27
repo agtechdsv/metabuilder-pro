@@ -7,6 +7,7 @@ import { clientSessionCookie, publicProject } from '@/lib/tunnel/runtimeServer'
 import { relayEnabled } from '@/lib/tunnel/server'
 import { signingEnabled } from '@/lib/tunnel/commandSigning'
 import { collectHelpCenter, withHelpCenterMenu } from '@/lib/helpText'
+import { projectHasApprovals } from '@/lib/approvalsFlag'
 
 export async function generateMetadata({ params }: { params: Promise<{ project_slug: string; workspace_slug: string }> }): Promise<Metadata> {
   const { project_slug, workspace_slug } = await params
@@ -311,10 +312,14 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
     ? (customDomainType === 'workspace' ? `/${project_slug}` : '')
     : `/${workspace_slug}/${project_slug}`
 
+  // "Minhas tarefas" só aparece no cabeçalho quando algum fluxo ativo tem o bloco "Aguardar aprovação" (nos demais apps nada muda)
+  const hasApprovals = sessionCookie ? await projectHasApprovals(supabase, project.id) : false
+  const approvalsHref = hasApprovals ? `${baseNavUrl}/approvals` : null
+
   return (
     <I18nProvider initialLocale={locale as any}>
       <RuntimeLayoutClient
-        project={publicProject(project)}
+        project={{ ...publicProject(project), approvalsHref }}
         relay={relayEnabled()}
         privateTunnel={relayEnabled() && signingEnabled()}
         serverSession={!!sessionCookie}

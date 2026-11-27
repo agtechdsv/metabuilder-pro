@@ -12,6 +12,8 @@ const OPTION_CLASS = "text-left text-neutral-900 dark:text-neutral-100 normal-ca
 export const SYSTEM_VARIABLES = {
   sistema: ['data', 'hora', 'data_hora'],
   usuario: ['nome', 'email', 'id'],
+  // só têm valor depois de um bloco "Aguardar aprovação" (a decisão que retomou o fluxo)
+  aprovacao: ['decisao', 'comentario', 'por'],
 } as const;
 
 /** Nomes dos resultados das ações Consultar Dados do fluxo, normalizados como o motor faz (inválido ou vazio vira consulta). */
@@ -44,6 +46,11 @@ export function SystemVariableOptions({ t, queryNames }: { t: (key: string, fall
           <option value={`${name}.total`} className={OPTION_CLASS}>{t('bpm.canvas.var_query_total', 'Quantidade de linhas')}</option>
         </optgroup>
       ))}
+      <optgroup label={t('bpm.canvas.var_group_approval', 'Decisão da aprovação')} className={GROUP_CLASS}>
+        <option value="aprovacao.decisao" className={OPTION_CLASS}>{t('bpm.canvas.var_approval_decision', 'Decisão (aprovado ou rejeitado)')}</option>
+        <option value="aprovacao.comentario" className={OPTION_CLASS}>{t('bpm.canvas.var_approval_comment', 'Comentário do aprovador')}</option>
+        <option value="aprovacao.por" className={OPTION_CLASS}>{t('bpm.canvas.var_approval_by', 'Quem decidiu')}</option>
+      </optgroup>
     </>
   );
 }

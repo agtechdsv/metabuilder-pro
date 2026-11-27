@@ -14,6 +14,7 @@ import { findBreadcrumbPath, findNavigationItem } from '@/lib/navigation-utils'
 import { RuntimeBreadcrumbs } from '@/components/runtime/RuntimeBreadcrumbs'
 import { AIGeneratedViewRenderer } from '@/components/runtime/AIGeneratedViewRenderer'
 import { clientSessionCookie, publicProject, browserToken } from '@/lib/tunnel/runtimeServer'
+import { projectHasApprovals } from '@/lib/approvalsFlag'
 import { accessLevelOf, readOnlyButtons, type AccessLevel } from '@/lib/viewAccess'
 
 interface PageProps {
@@ -105,6 +106,9 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
   const isDownloadsEnabled =
     downloadsViewRow?.layout_config?.is_active !== false &&
     (project as any).theme_config?.enable_downloads !== false
+
+  // mostra o histórico de aprovações no registro só nos apps que têm o bloco "Aguardar aprovação" em algum fluxo ativo
+  const hasApprovals = await projectHasApprovals(supabase, project.id)
 
   const navigation = project.navigation || []
   const headersList = await headers()
@@ -1095,7 +1099,7 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
         <ViewPageContent 
           isCustomDomain={isCustomDomain}
           workspace={workspace}
-          project={{ ...publicProject(project), theme_config: { ...((project as any).theme_config || {}), enable_downloads: isDownloadsEnabled }, models: allModels }}
+          project={{ ...publicProject(project), theme_config: { ...((project as any).theme_config || {}), enable_downloads: isDownloadsEnabled }, models: allModels, hasApprovals }}
           canExport={canExport}
           viewName={viewName}
           modelName={modelName}

@@ -102,7 +102,7 @@ export function useBpmCanvasNodes({
       ...params, 
       type: 'buttonedge',
       animated: true,
-      style: { strokeWidth: 2, stroke: params.sourceHandle === 'false' ? '#ef4444' : (params.sourceHandle === 'true' ? '#10b981' : '#6366f1') }
+      style: { strokeWidth: 2, stroke: (params.sourceHandle === 'false' || params.sourceHandle === 'rejected') ? '#ef4444' : ((params.sourceHandle === 'true' || params.sourceHandle === 'approved') ? '#10b981' : '#6366f1') }
     } as any, eds)),
     [setEdges]
   )

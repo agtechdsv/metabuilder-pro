@@ -4,6 +4,7 @@ import { TriggerPropertiesPanel } from "./panels/TriggerPropertiesPanel";
 import { ActionPropertiesPanel } from "./panels/ActionPropertiesPanel";
 import { ConditionPropertiesPanel } from "./panels/ConditionPropertiesPanel";
 import { ResponsePropertiesPanel } from "./panels/ResponsePropertiesPanel";
+import { ApprovalPropertiesPanel } from "./panels/ApprovalPropertiesPanel";
 
 export function BpmNodePropertiesSidebar(props: any) {
   const {
@@ -98,6 +99,19 @@ export function BpmNodePropertiesSidebar(props: any) {
                 enums={enums}
                 queryNames={props.queryNames || []}
                 relations={props.relations || []}
+              />
+            )}
+
+            {selectedNode.type === 'approval' && (
+              <ApprovalPropertiesPanel
+                selectedNode={selectedNode}
+                updateNodeData={updateNodeData}
+                dbModels={dbModels}
+                dbFields={dbFields}
+                roles={roles}
+                openGroupUsersModal={openGroupUsersModal}
+                queryNames={props.queryNames || []}
+                t={t}
               />
             )}
 

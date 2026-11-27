@@ -16,6 +16,8 @@
  *   recipients { resolveSystem(nodeData) -> Promise<string> }   e-mails (separados por vírgula) dos usuários e grupos do sistema; sem a porta, nenhum
  *   scheduler  { schedule(cron, fn) -> { stop() } }
  *   runs       { report(execução) }                              registro de cada execução; falha aqui nunca derruba nem atrasa o fluxo
+ *   features   { approvals }  liga o bloco "Aguardar aprovação" (só o Agente CLI; as tarefas moram no banco do cliente)
+ *   ids        { next() -> uuid }  gerador de ids das tarefas de aprovação (opcional)
  *   log        { debug, info, ok, warn, error, sql, danger, mail }  (todas opcionais)
  *   verbose    false = registro mínimo: os dados dos registros (dados pessoais) não vão para o log (padrão: true, como no CLI)
  */
@@ -191,8 +193,120 @@ function withTimeout(promise, ms, message) {
 const cleanActor = (a) => {
   if (!a || typeof a !== 'object' || typeof a.id !== 'string' || !a.id) return null
   const clip = (v) => (typeof v === 'string' && v ? v.slice(0, 200) : undefined)
-  return { id: a.id.slice(0, 200), email: clip(a.email), name: clip(a.name) }
+  // perfis (nomes dos grupos) do usuário: o servidor os põe DENTRO do comando assinado; servem ao "Aguardar aprovação" por perfil
+  const roles = Array.isArray(a.roles) ? a.roles.filter(r => typeof r === 'string' && r).slice(0, 50).map(r => r.slice(0, 200)) : undefined
+  return { id: a.id.slice(0, 200), email: clip(a.email), name: clip(a.name), ...(roles && roles.length ? { roles } : {}) }
 }
+
+// ===== Aguardar aprovação (nó "approval"): tarefas humanas =====
+const APPROVAL_SNAPSHOT_BYTES = 40000 // tamanho máximo do registro guardado na tarefa
+const APPROVAL_CTX_BYTES = 60000 // tamanho máximo do que é guardado para retomar o fluxo (resultados de consultas)
+const APPROVAL_SENSITIVE = /(senha|password|passwd|pwd|hash|secret|totp|mfa|token)/i
+const APPROVAL_STATUSES = ['pending', 'approved', 'rejected', 'cancelled']
+
+/**
+ * Tabelas das aprovações, no banco do cliente. Uma instrução por item. Datas em texto ISO-8601 e ids em texto: assim o mesmo SQL de
+ * leitura e gravação serve a PostgreSQL e a Oracle (só o DDL muda). Em Oracle, "comment" é palavra reservada: a coluna é comment_text.
+ */
+function approvalDdl(dialect) {
+  const o = dialect === 'oracle'
+  const id = o ? 'VARCHAR2(64)' : 'TEXT'
+  const s = (n) => (o ? `VARCHAR2(${n})` : 'TEXT')
+  const big = o ? 'CLOB' : 'TEXT'
+  const ts = o ? 'VARCHAR2(30)' : 'TEXT'
+  const flag = o ? 'NUMBER(1) DEFAULT 0 NOT NULL' : 'SMALLINT NOT NULL DEFAULT 0'
+  const count = o ? 'NUMBER(10) DEFAULT 0 NOT NULL' : 'INTEGER NOT NULL DEFAULT 0'
+  const ifNot = o ? '' : 'IF NOT EXISTS '
+  return [
+    `CREATE TABLE ${ifNot}mb_approval_tasks (
+  id ${id} PRIMARY KEY,
+  workflow_id ${s(64)},
+  workflow_name ${s(300)},
+  node_id ${s(100)},
+  table_name ${s(200)},
+  record_pk ${s(200)},
+  record_snapshot ${big},
+  ctx ${big},
+  assignees ${big},
+  status ${s(20)} NOT NULL,
+  title ${s(500)},
+  allow_self ${flag},
+  requested_by ${s(200)},
+  requested_by_name ${s(200)},
+  created_at ${ts} NOT NULL,
+  decided_by ${s(200)},
+  decided_by_name ${s(200)},
+  decided_at ${ts},
+  decision_comment ${s(2000)},
+  due_at ${ts},
+  reminded_at ${ts},
+  reminder_count ${count}
+)`,
+    `CREATE INDEX ${ifNot}idx_mb_apr_tasks_st ON mb_approval_tasks (status, created_at)`,
+    `CREATE TABLE ${ifNot}mb_approval_history (
+  id ${id} PRIMARY KEY,
+  task_id ${id} NOT NULL,
+  table_name ${s(200)},
+  record_pk ${s(200)},
+  event ${s(30)} NOT NULL,
+  actor_id ${s(200)},
+  actor_name ${s(200)},
+  comment_text ${s(2000)},
+  created_at ${ts} NOT NULL
+)`,
+    `CREATE INDEX ${ifNot}idx_mb_apr_hist_rec ON mb_approval_history (table_name, record_pk, created_at)`,
+  ]
+}
+
+/** Quem pode decidir, a partir dos usuários e grupos escolhidos no nó (mesma escolha do e-mail: emailGroupsUsers = { grupo: 'all' | [ids] }). */
+function approvalAssignees(data) {
+  const users = []
+  const groups = []
+  const sel = (data && data.emailGroupsUsers) || {}
+  for (const [groupName, selection] of Object.entries(sel)) {
+    if (Array.isArray(selection)) { for (const u of selection) if (u !== null && u !== undefined && String(u)) users.push(String(u)) }
+    else if (selection === 'all' && groupName) groups.push(String(groupName))
+  }
+  return { users: [...new Set(users)], groups: [...new Set(groups)] }
+}
+
+/** O ator (da sessão assinada) é um dos aprovadores? Pessoa pelo id; perfil pelos nomes de grupo que o servidor assinou. */
+function approvalAllows(assignees, actor) {
+  if (!actor || !actor.id || !assignees) return false
+  if ((assignees.users || []).includes(String(actor.id))) return true
+  const roles = Array.isArray(actor.roles) ? actor.roles : []
+  return (assignees.groups || []).some(g => roles.includes(g))
+}
+
+/** Registro guardado na tarefa: sem colunas sensíveis, binários nem textos enormes, e dentro do limite de tamanho. */
+function approvalSnapshot(row) {
+  const out = {}
+  let size = 2
+  for (const [k, v] of Object.entries(row || {})) {
+    if (APPROVAL_SENSITIVE.test(k)) continue
+    if (typeof v === 'bigint') { out[k] = String(v); continue }
+    if (v && typeof v === 'object' && !(v instanceof Date) && (Buffer.isBuffer(v) || typeof v.getData === 'function')) continue
+    if (typeof v === 'string' && v.length > 2000) continue
+    const piece = JSON.stringify(v === undefined ? null : v)
+    size += k.length + (piece ? piece.length : 4) + 6
+    if (size > APPROVAL_SNAPSHOT_BYTES) break
+    out[k] = v
+  }
+  return JSON.stringify(out)
+}
+
+const parseJson = (text, fallback) => {
+  if (text && typeof text === 'object') return text
+  try { const v = JSON.parse(String(text)); return v === null ? fallback : v } catch (e) { return fallback }
+}
+
+const pkOfRow = (row) => {
+  const v = row && (row.id !== undefined ? row.id : (row.ID !== undefined ? row.ID : row.Id))
+  return v === undefined || v === null ? null : String(v)
+}
+
+/** Resumo curto do registro para a lista de tarefas (a lista não leva o registro inteiro). */
+const approvalSummary = (snapshot) => Object.entries(snapshot || {}).slice(0, 6).map(([k, v]) => [k, v === null || v === undefined ? '' : String(typeof v === 'object' ? JSON.stringify(v) : v).slice(0, 80)])
 
 class BpmCore {
   constructor(ports) {
@@ -386,6 +500,13 @@ class BpmCore {
       if (field === 'tabela') return buildHtmlTable(dataset, QUERY_BODY_ROWS)
       return undefined
     }
+    if (table === 'aprovacao') {
+      // decisão que retomou o fluxo: {{aprovacao.decisao}} (aprovado/rejeitado), {{aprovacao.comentario}} e {{aprovacao.por}}
+      const ap = store && store.approval
+      if (ap && (field === 'decisao' || field === 'comentario' || field === 'por')) return String(ap[field] || '')
+      if (human && (field === 'decisao' || field === 'comentario' || field === 'por')) return ''
+      return undefined
+    }
     if (table === 'sistema') {
       const now = new Date()
       const p = (n) => String(n).padStart(2, '0')
@@ -423,7 +544,7 @@ class BpmCore {
       const parts = match[1].split('.')
       if (parts.length === 2) {
         const table = parts[0]
-        if (table !== triggerTable && table !== actionTable && table !== 'webhook' && table !== 'sistema' && table !== 'usuario' && !(this.runCtx.getStore() && this.runCtx.getStore().datasets && this.runCtx.getStore().datasets[table])) {
+        if (table !== triggerTable && table !== actionTable && table !== 'webhook' && table !== 'sistema' && table !== 'usuario' && table !== 'aprovacao' && !(this.runCtx.getStore() && this.runCtx.getStore().datasets && this.runCtx.getStore().datasets[table])) {
           extraTables.add(table)
         }
       }
@@ -1082,6 +1203,19 @@ class BpmCore {
           if (targetNode) queue.push(targetNode)
         }
       }
+      else if (currentNode.type === 'approval') {
+        if (currentNode.__resume) {
+          // retomada: segue SÓ pela saída da decisão tomada ("approved" ou "rejected")
+          const edges = flowData.edges.filter(e => e.source === currentNode.id && e.sourceHandle === currentNode.__resume)
+          for (const edge of edges) {
+            const targetNode = flowData.nodes.find(n => n.id === edge.target)
+            if (targetNode) queue.push(targetNode)
+          }
+        } else {
+          // pede a aprovação e PARA: nenhuma saída é seguida agora
+          await this.requestApproval(currentNode, triggerTable, triggerData)
+        }
+      }
       else {
         // trigger node
         const edges = flowData.edges.filter(e => e.source === currentNode.id)
@@ -1116,10 +1250,11 @@ class BpmCore {
     let errorMessage = null
     let extra = { table: tableName, source }
     let messages = []
-    await this.runCtx.run({ issues: [], messages: [], datasets: {} }, async () => {
+    await this.runCtx.run({ issues: [], messages: [], datasets: {}, flow: { id: flow.id, name: flow.name } }, async () => {
       try {
         const result = await fn()
         extra = { ...extra, steps: result?.steps || 0, ...(result?.details || {}) }
+        if (this.runCtx.getStore().waiting) extra.waiting = true // parou em "Aguardar aprovação": continua quando alguém decidir
         if (result?.loop) { status = 'loop'; errorMessage = `O fluxo passou de ${MAX_STEPS} passos (possível laço infinito) e foi interrompido.` }
       } catch (e) {
         status = 'error'
@@ -1160,6 +1295,266 @@ class BpmCore {
       // o registro é um extra: nunca derruba nem atrasa o fluxo
       this.log.debug(`[BPM] Não foi possível registrar a execução: ${err.message}`)
     }
+  }
+
+  // ===== Aguardar aprovação =====
+
+  /** Só o Agente CLI liga as aprovações (as tabelas moram no banco do cliente); o app exportado não as tem e o nó é ignorado com aviso. */
+  approvalsEnabled() { return !!(this.ports.features && this.ports.features.approvals) }
+
+  /** Id novo (uuid). O núcleo só usa módulos nativos mínimos: quem tem `crypto` (o Agente) entrega o gerador pela porta `ids`. */
+  newId() {
+    const ids = this.ports.ids
+    if (ids && typeof ids.next === 'function') return String(ids.next())
+    this._idSeq = (this._idSeq || 0) + 1
+    return `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}${this._idSeq.toString(36)}`
+  }
+
+  ph(i) { return this.dbType === 'oracle' ? `:${i}` : `$${i}` }
+  limitSql(n) { return this.dbType === 'oracle' ? `FETCH FIRST ${Number(n)} ROWS ONLY` : `LIMIT ${Number(n)}` }
+
+  /** Linha do banco com chaves em minúsculas (Oracle devolve MAIÚSCULAS) e CLOB já lido como texto. */
+  async normRow(r) {
+    const o = {}
+    for (const [k, v] of Object.entries(r || {})) o[k.toLowerCase()] = (v && typeof v.getData === 'function') ? await v.getData() : v
+    return o
+  }
+
+  /** Cria as tabelas na primeira vez que são precisas. Sem permissão, o erro traz o caminho do script para o DBA. */
+  async ensureApprovalTables() {
+    if (this._approvalReady) return
+    for (const stmt of approvalDdl(this.dbType)) {
+      try {
+        await this.executeQuery(stmt)
+      } catch (e) {
+        const m = String((e && e.message) || e)
+        if (/ORA-00955|ORA-01408|already exists/i.test(m)) continue // Oracle não tem IF NOT EXISTS
+        // o DBA do cliente não tem o repositório: o script também vai para o console do Agente
+        this.log.warn(`[BPM] Peça ao DBA para executar no banco do cliente:\n${approvalDdl(this.dbType).map(s => s + ';').join('\n\n')}`)
+        throw new Error(`Não foi possível criar as tabelas de aprovação (${m}). Peça ao DBA para executar o script mostrado no console do Agente (ou scripts/mb-approvals.sql).`)
+      }
+    }
+    this._approvalReady = true
+  }
+
+  /** Leitura que não cria nada: sem as tabelas ainda (ninguém pediu aprovação), o resultado é vazio. */
+  async approvalRead(fn, empty) {
+    try { return await fn() } catch (e) {
+      if (/42P01|ORA-00942|does not exist|não existe/i.test(String((e && (e.code || e.message)) || e) + ' ' + String((e && e.message) || ''))) return empty
+      throw e
+    }
+  }
+
+  async addApprovalHistory(task, event, actor, comment) {
+    const id = this.newId()
+    await this.executeQuery(
+      `INSERT INTO mb_approval_history (id, task_id, table_name, record_pk, event, actor_id, actor_name, comment_text, created_at) VALUES (${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => this.ph(i)).join(', ')})`,
+      [id, task.id, task.table_name, task.record_pk || null, event, actor && actor.id ? String(actor.id).slice(0, 200) : null, actor && actor.name ? String(actor.name).slice(0, 200) : null, comment ? String(comment).slice(0, 2000) : null, new Date().toISOString()],
+    )
+  }
+
+  /**
+   * Chegou no nó "Aguardar aprovação": grava a tarefa, avisa os aprovadores e ENCERRA esta execução (o fluxo continua em decideApproval).
+   */
+  async requestApproval(node, table, data) {
+    const d = node.data || {}
+    const store = this.runCtx.getStore() || {}
+    if (!this.approvalsEnabled()) {
+      this.log.warn('[BPM] "Aguardar aprovação" não é suportado neste ambiente: o fluxo parou neste passo.')
+      this.noteIssue('Aguardar aprovação não é suportado neste ambiente (o fluxo foi interrompido neste passo).')
+      return
+    }
+    const assignees = approvalAssignees(d)
+    if (assignees.users.length === 0 && assignees.groups.length === 0) {
+      this.noteIssue('Aguardar aprovação sem aprovador definido (escolha um perfil ou usuários no bloco).')
+      return
+    }
+    await this.ensureApprovalTables()
+    const actor = this.actorCtx.getStore()
+    const rawTitle = await this.replaceVariables(String(d.approvalTitle || ''), table, data, null, null, true)
+    const title = String(htmlToText(rawTitle) || d.label || `Aprovação em ${table}`).slice(0, 500)
+    const flow = store.flow || {}
+    const hours = Number(d.approvalDueHours)
+    const dueAt = Number.isFinite(hours) && hours > 0 ? new Date(Date.now() + hours * 3600 * 1000).toISOString() : null
+    let ctx = JSON.stringify({ datasets: store.datasets || {} })
+    if (Buffer.byteLength(ctx) > APPROVAL_CTX_BYTES) ctx = '{}' // consulta grande demais para guardar: o fluxo retoma sem ela
+    const task = {
+      id: this.newId(), table_name: table, record_pk: pkOfRow(data),
+    }
+    await this.executeQuery(
+      `INSERT INTO mb_approval_tasks (id, workflow_id, workflow_name, node_id, table_name, record_pk, record_snapshot, ctx, assignees, status, title, allow_self, requested_by, requested_by_name, created_at, due_at) VALUES (${Array.from({ length: 16 }, (_, i) => this.ph(i + 1)).join(', ')})`,
+      [task.id, flow.id || null, flow.name || null, node.id, table, task.record_pk, approvalSnapshot(data), ctx, JSON.stringify(assignees), 'pending', title, d.approvalAllowSelf ? 1 : 0,
+        actor ? actor.id : null, actor ? (actor.name || actor.email || null) : null, new Date().toISOString(), dueAt],
+    )
+    await this.addApprovalHistory(task, 'requested', actor, title)
+    store.waiting = true
+    this.log.info(`[BPM] Aprovação pedida: "${title}" (aguardando ${assignees.groups.length} perfil(is) e ${assignees.users.length} usuário(s)).`)
+    await this.notifyApprovers(d, title, actor)
+  }
+
+  /** E-mail aos aprovadores (o mesmo seletor de usuários e grupos do nó de e-mail). Falha no envio não desfaz a tarefa. */
+  async notifyApprovers(d, title, actor) {
+    try {
+      const rec = this.ports.recipients
+      const to = rec && typeof rec.resolveSystem === 'function' ? ((await rec.resolveSystem(d)) || '') : ''
+      if (!to) { this.noteIssue('Aprovação criada, mas nenhum e-mail de aprovador foi encontrado para avisar.'); return }
+      if (!this.ports.mail || typeof this.ports.mail.send !== 'function') { this.noteIssue('Aprovação criada, mas o envio de e-mail não está configurado.'); return }
+      const who = actor && (actor.name || actor.email) ? ` Pedido por ${actor.name || actor.email}.` : ''
+      const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      await this.ports.mail.send({
+        to,
+        subject: `Aprovação pendente: ${title}`.slice(0, 200),
+        body: `Há uma aprovação aguardando você: <b>${esc(title)}</b>.${esc(who)}<br/>Abra "Minhas tarefas" no aplicativo para aprovar ou rejeitar.`,
+        template: 'free',
+      })
+    } catch (e) {
+      this.log.error(`[BPM] Erro ao avisar os aprovadores: ${e.message}`)
+      this.noteIssue(`Aviso de aprovação por e-mail: ${e.message}`)
+    }
+  }
+
+  /** Tarefa do banco → o que vai para a tela (a lista leva só um resumo do registro; o detalhe leva o registro todo). */
+  taskView(r, full) {
+    const snapshot = parseJson(r.record_snapshot, {})
+    return {
+      id: r.id, title: r.title, status: r.status, table: r.table_name, recordPk: r.record_pk, workflow: r.workflow_name,
+      requestedBy: r.requested_by_name || r.requested_by || '', requestedById: r.requested_by || '', createdAt: r.created_at,
+      decidedBy: r.decided_by_name || r.decided_by || '', decidedAt: r.decided_at || null, comment: r.decision_comment || '',
+      dueAt: r.due_at || null, allowSelf: !!Number(r.allow_self),
+      summary: approvalSummary(snapshot), ...(full ? { record: snapshot } : {}),
+    }
+  }
+
+  /** Despacha as ações approval_* do Agente CLI. `actor` vem SEMPRE da sessão assinada pelo servidor, nunca do corpo do pedido. */
+  async approvalOp(action, data, actor) {
+    const a = cleanActor(actor)
+    switch (action) {
+      case 'approval_list': return await this.listApprovals(data || {}, a)
+      case 'approval_decide': return await this.decideApproval({ ...(data || {}), actor: a })
+      case 'approval_history': return await this.approvalHistory(data || {})
+      case 'approval_admin_list': return await this.adminListApprovals(data || {})
+      case 'approval_cancel': return await this.cancelApproval(data || {}, a)
+      default: throw new Error('Ação de aprovação desconhecida.')
+    }
+  }
+
+  async listApprovals({ view, taskId }, actor) {
+    if (!actor) throw new Error('Usuário não identificado.')
+    return await this.approvalRead(async () => {
+      if (taskId) {
+        const rows = await this.executeQuery(`SELECT * FROM mb_approval_tasks WHERE id = ${this.ph(1)}`, [String(taskId)])
+        if (!rows.length) return { tasks: [] }
+        const t = await this.normRow(rows[0])
+        const mine = approvalAllows(parseJson(t.assignees, {}), actor) || t.requested_by === actor.id || t.decided_by === actor.id
+        return { tasks: mine ? [this.taskView(t, true)] : [] }
+      }
+      if (view === 'requested' || view === 'decided') {
+        const col = view === 'requested' ? 'requested_by' : 'decided_by'
+        const order = view === 'requested' ? 'created_at' : 'decided_at'
+        const rows = await this.executeQuery(`SELECT * FROM mb_approval_tasks WHERE ${col} = ${this.ph(1)} ORDER BY ${order} DESC ${this.limitSql(100)}`, [actor.id])
+        return { tasks: await Promise.all(rows.map(async r => this.taskView(await this.normRow(r), false))) }
+      }
+      const rows = await this.executeQuery(`SELECT * FROM mb_approval_tasks WHERE status = 'pending' ORDER BY created_at DESC ${this.limitSql(300)}`)
+      const out = []
+      for (const r of rows) {
+        const t = await this.normRow(r)
+        if (!approvalAllows(parseJson(t.assignees, {}), actor)) continue
+        if (!Number(t.allow_self) && t.requested_by && t.requested_by === actor.id) continue // quem pediu não decide (sem a opção do bloco)
+        out.push(this.taskView(t, false))
+      }
+      return { tasks: out }
+    }, { tasks: [] })
+  }
+
+  async approvalHistory({ table, pk }) {
+    if (!table || pk === undefined || pk === null) return { events: [] }
+    return await this.approvalRead(async () => {
+      const rows = await this.executeQuery(
+        `SELECT event, actor_name, comment_text, created_at FROM mb_approval_history WHERE table_name = ${this.ph(1)} AND record_pk = ${this.ph(2)} ORDER BY created_at ASC ${this.limitSql(200)}`,
+        [String(table), String(pk)],
+      )
+      return { events: await Promise.all(rows.map(async r => { const h = await this.normRow(r); return { event: h.event, by: h.actor_name || '', comment: h.comment_text || '', at: h.created_at } })) }
+    }, { events: [] })
+  }
+
+  async adminListApprovals({ status }) {
+    return await this.approvalRead(async () => {
+      const where = APPROVAL_STATUSES.includes(status) ? `WHERE status = '${status}'` : ''
+      const rows = await this.executeQuery(`SELECT * FROM mb_approval_tasks ${where} ORDER BY created_at DESC ${this.limitSql(300)}`)
+      return { tasks: await Promise.all(rows.map(async r => this.taskView(await this.normRow(r), false))) }
+    }, { tasks: [] })
+  }
+
+  async cancelApproval({ taskId }, actor) {
+    await this.ensureApprovalTables()
+    const rows = await this.executeQuery(`SELECT * FROM mb_approval_tasks WHERE id = ${this.ph(1)}`, [String(taskId || '')])
+    if (!rows.length) throw new Error('Tarefa não encontrada.')
+    const t = await this.normRow(rows[0])
+    if (t.status !== 'pending') throw new Error('Só tarefas pendentes podem ser canceladas.')
+    await this.executeQuery(`UPDATE mb_approval_tasks SET status = 'cancelled', decided_by = ${this.ph(1)}, decided_by_name = ${this.ph(2)}, decided_at = ${this.ph(3)} WHERE id = ${this.ph(4)} AND status = 'pending'`,
+      [actor ? actor.id : null, actor ? (actor.name || null) : null, new Date().toISOString(), t.id])
+    await this.addApprovalHistory(t, 'cancelled', actor, null)
+    return { ok: true }
+  }
+
+  /**
+   * Decisão do aprovador: confere quem é (sessão assinada), grava de forma atômica (só a primeira decisão vale) e RETOMA o fluxo
+   * pela saída "approved" ou "rejected" do bloco.
+   */
+  async decideApproval({ taskId, decision, comment, actor }) {
+    const a = cleanActor(actor)
+    if (!a) throw new Error('Usuário não identificado.')
+    if (decision !== 'approved' && decision !== 'rejected') throw new Error('Decisão inválida.')
+    await this.ensureApprovalTables()
+    const rows = await this.executeQuery(`SELECT * FROM mb_approval_tasks WHERE id = ${this.ph(1)}`, [String(taskId || '')])
+    if (!rows.length) throw new Error('Tarefa não encontrada.')
+    const task = await this.normRow(rows[0])
+    if (task.status !== 'pending') throw new Error('Esta tarefa já foi decidida.')
+    if (!approvalAllows(parseJson(task.assignees, {}), a)) throw new Error('Você não é aprovador desta tarefa.')
+    if (!Number(task.allow_self) && task.requested_by && task.requested_by === a.id) throw new Error('Quem pediu a aprovação não pode aprová-la.')
+
+    const note = comment ? String(comment).slice(0, 1000) : null
+    const at = new Date().toISOString()
+    await this.executeQuery(
+      `UPDATE mb_approval_tasks SET status = ${this.ph(1)}, decided_by = ${this.ph(2)}, decided_by_name = ${this.ph(3)}, decided_at = ${this.ph(4)}, decision_comment = ${this.ph(5)} WHERE id = ${this.ph(6)} AND status = 'pending'`,
+      [decision, a.id, a.name || a.email || null, at, note, task.id],
+    )
+    // gravação atômica: se outra pessoa decidiu no mesmo instante, a linha não é a nossa
+    const check = await this.normRow((await this.executeQuery(`SELECT decided_by, decided_at FROM mb_approval_tasks WHERE id = ${this.ph(1)}`, [task.id]))[0])
+    if (check.decided_by !== a.id || check.decided_at !== at) throw new Error('Esta tarefa já foi decidida por outra pessoa.')
+    await this.addApprovalHistory(task, decision, a, note)
+
+    const flow = (this.workflows || []).find(w => w.id === task.workflow_id)
+    const node = flow && flow.flow_data && Array.isArray(flow.flow_data.nodes) ? flow.flow_data.nodes.find(n => n.id === task.node_id && n.type === 'approval') : null
+    if (!node) {
+      this.log.warn('[BPM] Decisão registrada, mas o fluxo (ou o bloco de aprovação) não existe mais ou está inativo.')
+      return { ok: true, resumed: false, messages: [], warning: 'A decisão foi registrada, mas o fluxo foi alterado ou desativado e não continuou.' }
+    }
+    let record = parseJson(task.record_snapshot, {})
+    try { // registro como está hoje (pode ter mudado desde o pedido); sem o registro, vale o guardado
+      const pk = task.record_pk
+      if (pk && task.table_name) {
+        const cur = await this.executeQuery(`SELECT * FROM "${safeIdent(task.table_name)}" WHERE "id" = ${this.ph(1)} ${this.limitSql(1)}`, [pk])
+        if (cur.length) record = { ...record, ...(await this.normRowKeepCase(cur[0])) }
+      }
+    } catch (e) { /* segue com o registro guardado */ }
+    const ctx = parseJson(task.ctx, {})
+    const requester = task.requested_by ? { id: task.requested_by, name: task.requested_by_name || undefined } : null
+    const messages = await this.actorCtx.run(requester, () => this.runReported(flow, task.table_name, 'aprovação', async () => {
+      const store = this.runCtx.getStore()
+      store.datasets = ctx.datasets || {}
+      store.approval = { decisao: decision === 'approved' ? 'aprovado' : 'rejeitado', comentario: note || '', por: a.name || a.email || a.id }
+      const result = await this.traverseGraph(flow.flow_data, { ...node, __resume: decision }, task.table_name, record)
+      return { steps: result?.steps || 0, loop: !!result?.loop }
+    }))
+    return { ok: true, resumed: true, messages: messages || [] }
+  }
+
+  /** Como normRow, mas mantém o caso das chaves (o registro do app usa os nomes de coluna como estão). */
+  async normRowKeepCase(r) {
+    const o = {}
+    for (const [k, v] of Object.entries(r || {})) o[k] = (v && typeof v.getData === 'function') ? await v.getData() : v
+    return o
   }
 
   /** `actor` = quem agiu (sessão assinada): habilita {{usuario.*}} nos fluxos deste evento. */
@@ -1351,6 +1746,11 @@ class BpmCore {
           if (targetNode) queue.push(targetNode)
         }
       }
+      else if (currentNode.type === 'approval') {
+        // a tela espera a resposta na hora: não há como aguardar uma pessoa aqui
+        this.noteIssue('"Aguardar aprovação" não funciona em fluxos "antes de salvar": use um gatilho depois de salvar.')
+        continue
+      }
       else {
         const edges = flowData.edges.filter(e => e.source === currentNode.id)
         for (const edge of edges) {
@@ -1418,4 +1818,4 @@ class BpmCore {
   }
 }
 
-module.exports = { BpmCore, MAX_STEPS, WEBHOOK_TIMEOUT_MS, relativeDate, buildHtmlTable, formatCell, intervalCron }
+module.exports = { BpmCore, MAX_STEPS, WEBHOOK_TIMEOUT_MS, relativeDate, buildHtmlTable, formatCell, intervalCron, approvalDdl, approvalAssignees, approvalAllows, approvalSnapshot }

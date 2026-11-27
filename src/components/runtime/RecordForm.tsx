@@ -12,6 +12,7 @@ import { createClient } from '@/utils/supabase/client'
 import DynamicIcon from '@/components/runtime/DynamicIcon'
 import { FileUploaderInput } from '@/components/runtime/FileUploaderInput'
 import { getActionContexts, getActionGroupFields } from '@/lib/customActionsHelper'
+import { ApprovalHistoryButton } from '@/components/runtime/ApprovalHistoryButton'
 
 import { useRecordFormLogic } from './hooks/useRecordFormLogic';
 import { RecordFormField } from './record-form/RecordFormField';
@@ -278,6 +279,11 @@ export default function RecordForm({
                 {action.label}
               </button>
             ))}
+
+            {mode !== 'create' && project?.hasApprovals && projectId && initialData?.id !== undefined && initialData?.id !== null && (() => {
+              const histTable = (project.models || []).find((m: any) => m.id === masterModelId)?.db_table_name || masterModelName
+              return histTable ? <ApprovalHistoryButton projectId={projectId} table={String(histTable)} pk={initialData.id} /> : null
+            })()}
 
             {isPageMode && (
               <button

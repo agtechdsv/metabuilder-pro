@@ -3280,7 +3280,8 @@
       "actions": "Actions",
       "generic_action": "Generic Action",
       "drag_to_panel": "Drag to panel",
-      "response_node": "Response / Block"
+      "response_node": "Response / Block",
+      "approval": "Wait for approval"
     },
     "nodes": {
       "delete_node": "Delete Node",
@@ -3326,7 +3327,12 @@
       "response_block": "Block Action",
       "silent": "Silent",
       "webhook_inbound": "Webhook Inbound",
-      "with_message": "With Message"
+      "with_message": "With Message",
+      "approval": "Wait for approval",
+      "approval_unset": "Choose the approver",
+      "approval_users": "{count} user(s)",
+      "approved": "Approved",
+      "rejected": "Rejected"
     },
     "canvas": {
       "automations_title": "Automations",
@@ -3627,7 +3633,22 @@
         "link_button_error": "Error linking button: ",
         "save_flow_first": "Save the flow first before linking buttons."
       },
-      "webhook_inbound": "Webhook Inbound"
+      "webhook_inbound": "Webhook Inbound",
+      "var_group_approval": "Approval decision",
+      "var_approval_decision": "Decision (approved or rejected)",
+      "var_approval_comment": "Approver comment",
+      "var_approval_by": "Who decided"
+    },
+    "approval": {
+      "panel_title": "Wait for approval",
+      "intro": "The flow stops here and waits for a person to decide. If approved, it continues through the green exit; if rejected, through the red one.",
+      "approvers": "Who can approve",
+      "approvers_desc": "Choose a whole profile (anyone in the profile can approve) or specific users. They also get a notice email.",
+      "title_label": "Task title",
+      "title_placeholder": "E.g.: Order {{pedidos.id}} awaits approval",
+      "allow_self": "The requester can also approve their own request",
+      "after_save_only": "Use an after-save, scheduled or button trigger. It does not work in \"Before saving\", which must answer right away.",
+      "vars_hint": "After the decision, the texts of the next actions accept {{aprovacao.decisao}}, {{aprovacao.comentario}} and {{aprovacao.por}}."
     }
   },
   "auth": {
@@ -7148,5 +7169,43 @@
     "n_body_b": " was built and is available for download on Supabase and GitHub.",
     "n_view": "View on GitHub",
     "n_dismiss": "Dismiss"
+  },
+  "approvals": {
+    "title": "My tasks",
+    "subtitle": "Approvals waiting for you and the progress of your requests.",
+    "back": "Back to home",
+    "tab_pending": "To decide",
+    "tab_requested": "My requests",
+    "tab_decided": "Decided by me",
+    "tab_all": "All (administrator)",
+    "empty_pending": "No approvals waiting for you.",
+    "empty_other": "Nothing here.",
+    "loading": "Loading...",
+    "load_error": "Could not complete. Please try again.",
+    "requested_by": "Requested by",
+    "decided_by": "Decided by",
+    "status_pending": "Pending",
+    "status_approved": "Approved",
+    "status_rejected": "Rejected",
+    "status_cancelled": "Cancelled",
+    "record": "Record",
+    "history": "History",
+    "history_button": "Approval history",
+    "no_history": "No history.",
+    "event_requested": "Approval requested",
+    "event_approved": "Approved",
+    "event_rejected": "Rejected",
+    "event_cancelled": "Cancelled",
+    "comment_label": "Comment",
+    "comment_placeholder": "Write a comment (required to reject)",
+    "approve": "Approve",
+    "reject": "Reject",
+    "reject_needs_comment": "Explain the reason for rejecting.",
+    "decided_ok_approved": "Approved.",
+    "decided_ok_rejected": "Rejected.",
+    "cancel_task": "Cancel task",
+    "cancel_confirm": "Cancel this task? The flow will not continue.",
+    "cancelled_ok": "Task cancelled.",
+    "close": "Close"
   }
 }
