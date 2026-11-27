@@ -1,7 +1,7 @@
 import { BpmCanvas } from '@/components/studio/bpm/BpmCanvas';
 import { Metadata } from 'next';
 import { createClient } from '@supabase/supabase-js'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { AlertCircle } from 'lucide-react'
 import { getLocale } from '@/i18n/get-locale'
 import { getTranslations } from '@/i18n/get-translations'
@@ -9,6 +9,8 @@ import { cookies } from 'next/headers'
 import { clientSessionCookie, publicProject } from '@/lib/tunnel/runtimeServer'
 import { authorizeProjectMember } from '@/lib/tunnel/authorize'
 import { endUserMayOpenAutomations } from '@/lib/automationsAccess'
+import { AutomationsHub } from '@/components/runtime/AutomationsHub'
+import { automationsHref, filterFlowsByScope, parseScopeParams, primaryScopeOf, scopeCounts, triggerModelIds } from '@/lib/bpm/flowScope'
 
 export const metadata: Metadata = {
   title: 'Automação de processos | MetaBuilder PRO',
@@ -145,52 +147,84 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
     )
   }
 
-  // 4. Busca o caso de uso se estiver no contexto
-  let useCaseName = ''
-  if (useCaseId) {
-    const { data: viewData } = await supabase
+  // 4. Escopo: o fluxo é da TABELA (ou "Geral", sem tabela), não do caso de uso. Sem escopo na URL, mostra o painel de escolha.
+  const base = `/${workspace_slug}/${project_slug}`
+  const scope = parseScopeParams(resolvedSearchParams)
+
+  // Endereço antigo (/automations?use_case=<id>, do botão que morava nos casos de uso): leva para a tabela do caso de uso
+  if (useCaseId && !scope) {
+    const { data: useCase } = await supabase
       .from('ui_views')
-      .select('name')
+      .select('model_id')
       .eq('id', useCaseId)
       .eq('project_id', project.id)
       .maybeSingle()
-    if (viewData?.name) {
-      useCaseName = viewData.name
-    }
+    redirect(automationsHref(base, useCase?.model_id ? { kind: 'table', modelId: String(useCase.model_id) } : null))
   }
 
-  // 5. Busca dados de workflows e models (com campos) para o BpmCanvas (evita problemas de RLS no cliente)
-  const [workflowsRes, modelsRes, viewsRes] = await Promise.all([
-    supabase
-      .from('bpm_workflows')
-      .select('*')
+  // Todos os fluxos do projeto (o filtro por escopo é feito aqui, no servidor: a coluna use_case_id não decide mais nada)
+  const { data: workflowsData } = await supabase
+    .from('bpm_workflows')
+    .select('*')
+    .eq('project_id', project.id)
+    .order('created_at', { ascending: false })
+  const allWorkflows = workflowsData || []
+
+  if (!scope) {
+    const { data: tables } = await supabase
+      .from('models')
+      .select('id, display_name, db_table_name')
       .eq('project_id', project.id)
-      .eq('use_case_id', useCaseId || '')
-      .order('created_at', { ascending: false }),
+    const nameOf = new Map<string, string>((tables || []).map((m: any) => [m.id, m.display_name || m.db_table_name || m.id]))
+    const counts = scopeCounts(allWorkflows)
+    const statusOf = (w: any): 'published' | 'pending' | 'draft' =>
+      w.is_active && w.flow_data ? (w.draft_flow_data ? 'pending' : 'published') : 'draft'
+    return (
+      <AutomationsHub
+        general={counts.general}
+        tables={(tables || [])
+          .map((m: any) => ({ id: m.id as string, name: nameOf.get(m.id) as string, count: counts.byModel[m.id] || 0, href: automationsHref(base, { kind: 'table', modelId: m.id }) }))
+          .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))}
+        generalHref={automationsHref(base, { kind: 'general' })}
+        flows={allWorkflows.map((w: any) => {
+          const open = primaryScopeOf(w)
+          return {
+            id: w.id as string,
+            name: w.name as string,
+            status: statusOf(w),
+            scopes: triggerModelIds(w).map(id => nameOf.get(id) || id),
+            href: automationsHref(base, open, w.id),
+          }
+        })}
+        backHref={`${base}/dashboard`}
+      />
+    )
+  }
+
+  // 5. Dados para o editor (modelos com campos e casos de uso com botões; pelo servidor, para evitar o RLS no navegador)
+  const [modelsRes, viewsRes] = await Promise.all([
     supabase
       .from('models')
       .select('*, fields(*)')
       .eq('project_id', project.id),
     supabase
       .from('ui_views')
-      .select('id, name, layout_config, view_type')
+      .select('id, name, layout_config, view_type, model_id')
       .eq('project_id', project.id)
       .eq('view_type', 'advanced_use_case')
   ]);
 
-  const initialWorkflows = workflowsRes.data || [];
   const initialModels = modelsRes.data || [];
   const initialViews = viewsRes.data || [];
-  
-  if (viewsRes.error) {
-    console.error("=== VIEWS RES ERROR ===", viewsRes.error);
-  } else {
-    console.log("=== VIEWS RES DATA LENGTH ===", initialViews.length);
-  }
+  const scopeModel = scope.kind === 'table' ? initialModels.find((m: any) => m.id === scope.modelId) : null
+  if (scope.kind === 'table' && !scopeModel) redirect(automationsHref(base)) // tabela que não existe mais
 
-  const canvasTitle = useCaseName 
-    ? `${t('bpm.canvas.automations_title')}: ${useCaseName}` 
-    : (automationsView?.name || 'Aprovação de Pedidos');
+  const initialWorkflows = filterFlowsByScope(allWorkflows, scope)
+  const wantedFlow = typeof resolvedSearchParams?.flow === 'string' ? resolvedSearchParams.flow : ''
+  const scopeName = scope.kind === 'general'
+    ? t('bpm.scope.general')
+    : String((scopeModel as any)?.display_name || (scopeModel as any)?.db_table_name || '')
+  const canvasTitle = `${t('bpm.canvas.automations_title')}: ${scopeName}`
 
   return (
     <div className="h-screen w-full bg-white dark:bg-neutral-950 overflow-hidden">
@@ -198,7 +232,9 @@ export default async function AutomationsPage({ params, searchParams }: PageProp
         title={canvasTitle} 
         defaultAutoAlign={automationsView?.layout_config?.default_auto_align}
         project={publicProject(project)}
-        useCaseId={useCaseId || ''}
+        scope={scope}
+        hubHref={automationsHref(base)}
+        initialWorkflowId={initialWorkflows.some((w: any) => w.id === wantedFlow) ? wantedFlow : undefined}
         initialWorkflows={initialWorkflows}
         initialModels={initialModels}
         initialViews={initialViews}

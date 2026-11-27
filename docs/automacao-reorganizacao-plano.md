@@ -1,6 +1,15 @@
 # Automação de processos: reorganização por tabela (plano para 2026-11-28)
 
-Status: **combinado com o dono em 2026-11-27, nada codado** (só a troca do nome na matriz de permissões, que já foi feita). Para fazer em fases, uma por vez.
+Status: combinado com o dono em 2026-11-27. **Implementado em 2026-11-28 (as três fases), verificado (tsc, 2116 testes, build), ainda sem teste do dono no navegador.** Roteiro: `docs/automacao-reorganizacao-roteiro-teste.md`.
+
+## O que foi feito (2026-11-28)
+
+- **Fase 1:** item "Automação de processos" injetado na hora no menu e no dashboard (`src/lib/automationsMenu.ts`, usado em `[project_slug]/layout.tsx` e `dashboard/[[...folder_id]]/page.tsx`), primeiro item, só com o módulo ativo e a permissão (`automationsAccess`). Nada é gravado no menu do projeto, então vale para todos os projetos já.
+- **Fase 2:** `/automations` agora tem painel de escolha (`AutomationsHub`: Geral, tabelas com contagem, todos os fluxos com busca) e editor por escopo (`?table=<id>` ou `?scope=general`, `&flow=<id>` abre um fluxo). Classificação em `src/lib/bpm/flowScope.ts` (tem tabela alvo = da tabela; sem = Geral; vale para publicado e rascunho). Em tabela o gatilho nasce com a tabela travada; em Geral só agendado e webhook. O editor **não exige mais caso de uso** para salvar (`use_case_id` fica nulo nos fluxos novos). Evento **"Botão (ação customizada)"** marcável; a lista de botões mostra só os casos de uso da tabela do fluxo (mais os que já ligam o fluxo, com aviso "de outra tabela"); fluxo já ligado a botão aparece marcado.
+- **Fase 3:** botão "Automações" removido do cabeçalho dos casos de uso (prop `isAutomationsEnabled` mantida opcional e sem efeito, por causa do app exportado). O cadastro do botão de ação mostra primeiro os fluxos da tabela do caso de uso e tem o atalho "Abrir os fluxos desta tabela" (abre o editor na tabela certa). Endereço antigo `/automations?use_case=<id>` redireciona para a tabela do caso de uso.
+- **SQL a rodar pelo dono:** `scripts/bpm-workflows-use-case-set-null.sql` (a chave `fk_bpm_workflows_use_case` era `ON DELETE CASCADE`: apagar um caso de uso apagava os fluxos da tabela; passa a `SET NULL`).
+- **Sem mudança de motor, protocolo ou CLI:** não precisa de release da IDE.
+- **Ainda pendente (decisões do dono):** o nome "Geral"; se um fluxo pode misturar botão e evento de tabela (hoje pode); e o "só o primeiro gatilho" dos fluxos de botão (não mexido).
 
 ## Decisões já tomadas
 

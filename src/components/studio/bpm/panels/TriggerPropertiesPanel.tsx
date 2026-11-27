@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Check, Box, X } from "lucide-react";
 
 const sha256Hex = async (text: string) => {
@@ -24,6 +24,26 @@ export function TriggerPropertiesPanel(props: any) {
                   const requiresModel = triggerTypes.some(t => ['insert', 'before_insert', 'update', 'before_update', 'delete', 'before_delete', 'on_load'].includes(t));
   const hasUpdate = triggerTypes.includes('update') || triggerTypes.includes('before_update');
 
+  // Escopo da tela: o fluxo é da TABELA (o gatilho já vem com ela, travada) ou "Geral" (só agendado e webhook, sem tabela).
+  const scope = props.scope as { kind: 'general' } | { kind: 'table'; modelId: string } | undefined;
+  const isGeneral = scope?.kind === 'general';
+  const scopeModelId = scope?.kind === 'table' ? scope.modelId : '';
+  const nodeModelId = (selectedNode.data?.triggerModelId as string) || '';
+  const tableLocked = !!scopeModelId && (!nodeModelId || nodeModelId === scopeModelId);
+  const flowModelId = nodeModelId || scopeModelId;
+  const actionsOf = (v: any): any[] => {
+    const cfg = typeof v.layout_config === 'string' ? (() => { try { return JSON.parse(v.layout_config); } catch { return {}; } })() : (v.layout_config || {});
+    return Array.isArray(cfg?.custom_actions) ? cfg.custom_actions : [];
+  };
+  // "Botão (ação customizada)" é um evento do fluxo; fluxo já ligado a algum botão conta como marcado (o vínculo vem dos botões)
+  const linkedToButton = (localViews || []).some((v: any) => actionsOf(v).some((a: any) => (a.linked_bpm_workflows || []).includes(currentWorkflowId)));
+  const buttonOn = triggerTypes.includes('manual') || linkedToButton;
+
+  useEffect(() => {
+    // tabela do escopo ainda não gravada no gatilho (fluxo aberto de um rascunho antigo): grava
+    if (scopeModelId && requiresModel && !nodeModelId) updateNodeData(selectedNode.id, { triggerModelId: scopeModelId });
+  }, [scopeModelId, requiresModel, nodeModelId, selectedNode.id]);
+
   return (
     <>
                   <div className="space-y-4 p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl">
@@ -42,10 +62,15 @@ export function TriggerPropertiesPanel(props: any) {
                           { id: 'delete', label: t('bpm.nodes.on_delete') },
                           { id: 'before_delete', label: t('bpm.nodes.before_delete', 'Antes de Excluir') },
                           { id: 'on_load', label: t('bpm.nodes.on_load', 'Ao Carregar Formulário') },
+                          { id: 'manual', label: t('bpm.canvas.event_button', 'Botão (ação customizada)') },
                           { id: 'scheduled', label: t('bpm.canvas.scheduled_cron') },
                           { id: 'webhook', label: t('bpm.canvas.webhook_inbound', 'Webhook Inbound') }
-                        ].map(evt => {
-                          const isChecked = triggerTypes.includes(evt.id);
+                        ]
+                        // em "Geral" (sem tabela) só agendado e webhook; o que já estiver marcado continua visível
+                        .filter(evt => !isGeneral || evt.id === 'scheduled' || evt.id === 'webhook' || (evt.id === 'manual' ? buttonOn : triggerTypes.includes(evt.id)))
+                        .map(evt => {
+                          const isButton = evt.id === 'manual';
+                          const isChecked = isButton ? buttonOn : triggerTypes.includes(evt.id);
                           return (
                             <label key={evt.id} className="flex items-center gap-2 cursor-pointer group">
                               <div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${isChecked ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-neutral-300 dark:border-neutral-700 group-hover:border-emerald-500'}`}>
@@ -57,6 +82,7 @@ export function TriggerPropertiesPanel(props: any) {
                                 className="hidden"
                                 checked={isChecked}
                                 onChange={(e) => {
+                                  if (isButton && linkedToButton) return; // desmarcar = desvincular os botões, na lista abaixo
                                   if (e.target.checked) {
                                     updateNodeData(selectedNode.id, { triggerType: [...triggerTypes, evt.id] });
                                   } else {
@@ -76,7 +102,9 @@ export function TriggerPropertiesPanel(props: any) {
                         <select 
                           value={(selectedNode.data?.triggerModelId as string) || ''} 
                           onChange={(e) => updateNodeData(selectedNode.id, { triggerModelId: e.target.value, triggerField: '' })}
-                          className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500"
+                          disabled={tableLocked}
+                          title={tableLocked ? t('bpm.scope.table_locked', 'Tabela do escopo em que você está trabalhando (fixa).') : undefined}
+                          className="w-full disabled:opacity-70 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500"
                         >
                           <option value="">{t('bpm.canvas.select_table')}</option>
                           {dbModels.map((m: any) => (
@@ -202,9 +230,12 @@ export function TriggerPropertiesPanel(props: any) {
                           layout_config: typeof v.layout_config === 'string' ? JSON.parse(v.layout_config) : (v.layout_config || {})
                         }))
                         .filter((v: any) => v.layout_config?.custom_actions && Array.isArray(v.layout_config.custom_actions) && v.layout_config.custom_actions.length > 0)
+                        // só os casos de uso da tabela do fluxo (mais os que já ligam este fluxo, para nada sumir em silêncio)
+                        .filter((v: any) => !flowModelId || v.model_id === flowModelId || v.layout_config.custom_actions.some((a: any) => (a.linked_bpm_workflows || []).includes(currentWorkflowId)))
                         .map((v: any) => ({
                           id: v.id,
                           name: v.name,
+                          otherTable: !!flowModelId && v.model_id !== flowModelId,
                           actions: v.layout_config.custom_actions.map((act: any) => {
                             const activeContexts: string[] = act.contexts
                               ? (Array.isArray(act.contexts) ? act.contexts : [act.contexts])
@@ -279,6 +310,9 @@ export function TriggerPropertiesPanel(props: any) {
                         }
                       };
 
+                      // sem o evento "Botão" marcado (ou em "Geral", onde não há tela nem botão) a lista não aparece
+                      if (isGeneral || !buttonOn) return null;
+
                       return (
                       <div className="space-y-4 pt-4 border-t border-emerald-500/20 mt-4">
                         <h5 className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">{t('bpm.canvas.trigger_custom_actions')}</h5>
@@ -297,6 +331,7 @@ export function TriggerPropertiesPanel(props: any) {
                             <div key={uc.id} className="bg-neutral-50 dark:bg-neutral-900/50 rounded-lg p-2 border border-neutral-100 dark:border-neutral-800">
                               <h6 className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mb-2 px-1 flex items-center gap-1">
                                 <Box className="w-3 h-3" /> {uc.name}
+                                {uc.otherTable && <span className="normal-case tracking-normal text-amber-600 font-semibold">· {t('bpm.canvas.button_other_table', 'de outra tabela')}</span>}
                               </h6>
                               <div className="space-y-1">
                                 {uc.actions.map((act: any) => {

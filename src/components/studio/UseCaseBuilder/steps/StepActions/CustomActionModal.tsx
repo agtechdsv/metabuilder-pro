@@ -1,10 +1,11 @@
 import React from 'react';
-import Link from 'next/link';
 import { Modal } from '@/components/ui/Modal';
 import { cn } from '@/lib/utils';
 import { ActionModalGeneralTab } from './ActionModalGeneralTab';
 import { ActionModalTriggerTab } from './ActionModalTriggerTab';
-import { Workflow } from 'lucide-react';
+import { ExternalLink, Workflow } from 'lucide-react';
+import { flowInScope } from '@/lib/bpm/flowScope';
+import { automationsHref } from '@/lib/bpm/flowScope';
 
 export interface CustomActionModalProps {
   isActionModalOpen: boolean;
@@ -47,6 +48,47 @@ export function CustomActionModal({
   t,
   isDownloadsActive
 }: CustomActionModalProps) {
+  // o fluxo é da TABELA: os fluxos da tabela deste caso de uso vêm primeiro; os de outras tabelas (ou Gerais) ficam em um segundo grupo
+  const masterModelId: string = config?.master_model_id || '';
+  const flowsHref = automationsHref(`/${workspace_slug}/${project_slug}`, masterModelId ? { kind: 'table', modelId: masterModelId } : null);
+
+  const sameTable = masterModelId ? bpmWorkflows.filter((w: any) => flowInScope(w, { kind: 'table', modelId: masterModelId })) : bpmWorkflows;
+  const otherFlows = masterModelId ? bpmWorkflows.filter((w: any) => !sameTable.includes(w)) : [];
+  const renderFlow = (workflow: any) => {
+    const linkedWorkflows = editingAction.linked_bpm_workflows || [];
+    const isChecked = linkedWorkflows.includes(workflow.id);
+    return (
+      <label key={workflow.id} className={cn(
+        "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border-2",
+        isChecked
+          ? "bg-white dark:bg-neutral-800 border-emerald-500 shadow-sm"
+          : "bg-white dark:bg-neutral-800 border-transparent hover:border-emerald-200 dark:hover:border-emerald-800"
+      )}>
+        <div className={cn(
+          "w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-all",
+          isChecked ? "bg-emerald-500 text-white" : "border-2 border-neutral-300 dark:border-neutral-600 bg-neutral-50 dark:bg-neutral-900"
+        )}>
+          {isChecked && <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={cn("text-sm font-bold truncate transition-colors", isChecked ? "text-emerald-700 dark:text-emerald-400" : "text-neutral-700 dark:text-neutral-300")}>
+            {workflow.name}
+          </p>
+        </div>
+        <input
+          type="checkbox"
+          className="hidden"
+          checked={isChecked}
+          onChange={(e) => {
+            const next = e.target.checked
+              ? [...linkedWorkflows, workflow.id]
+              : linkedWorkflows.filter((id: string) => id !== workflow.id);
+            setEditingAction({ ...editingAction, linked_bpm_workflows: next });
+          }}
+        />
+      </label>
+    );
+  };
   return (
     <Modal
       isOpen={isActionModalOpen}
@@ -154,51 +196,34 @@ export function CustomActionModal({
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.available_workflows', 'Workflows Disponíveis')}</label>
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 ml-1">{t('wizard.actions.available_workflows', 'Workflows Disponíveis')}</label>
+                    <a href={flowsHref} target="_blank" rel="noreferrer" className="text-[11px] font-bold text-emerald-600 hover:underline inline-flex items-center gap-1">
+                      <ExternalLink className="w-3 h-3" />
+                      {t('wizard.actions.open_table_flows', 'Abrir os fluxos desta tabela')}
+                    </a>
+                  </div>
                   <div className="grid grid-cols-1 gap-2 p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl max-h-[300px] overflow-y-auto custom-scrollbar">
                     {bpmWorkflows.length === 0 ? (
                       <div className="text-center py-6">
                         <p className="text-xs text-neutral-500">{t('wizard.actions.no_workflows', 'Nenhum fluxo de automação criado neste projeto.')}</p>
-                        <Link href={`/admin/${workspace_slug}/${project_slug}/automations`} target="_blank" className="text-xs text-emerald-600 hover:underline font-bold mt-2 inline-block">
+                        <a href={flowsHref} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 hover:underline font-bold mt-2 inline-block">
                           {t('wizard.actions.create_first_flow', 'Criar Primeiro Fluxo')}
-                        </Link>
+                        </a>
                       </div>
                     ) : (
-                      bpmWorkflows.map((workflow: any) => {
-                        const linkedWorkflows = editingAction.linked_bpm_workflows || [];
-                        const isChecked = linkedWorkflows.includes(workflow.id);
-                        return (
-                          <label key={workflow.id} className={cn(
-                            "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border-2",
-                            isChecked
-                              ? "bg-white dark:bg-neutral-800 border-emerald-500 shadow-sm"
-                              : "bg-white dark:bg-neutral-800 border-transparent hover:border-emerald-200 dark:hover:border-emerald-800"
-                          )}>
-                            <div className={cn(
-                              "w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-all",
-                              isChecked ? "bg-emerald-500 text-white" : "border-2 border-neutral-300 dark:border-neutral-600 bg-neutral-50 dark:bg-neutral-900"
-                            )}>
-                              {isChecked && <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className={cn("text-sm font-bold truncate transition-colors", isChecked ? "text-emerald-700 dark:text-emerald-400" : "text-neutral-700 dark:text-neutral-300")}>
-                                {workflow.name}
-                              </p>
-                            </div>
-                            <input
-                              type="checkbox"
-                              className="hidden"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                const next = e.target.checked
-                                  ? [...linkedWorkflows, workflow.id]
-                                  : linkedWorkflows.filter((id: string) => id !== workflow.id);
-                                setEditingAction({ ...editingAction, linked_bpm_workflows: next });
-                              }}
-                            />
-                          </label>
-                        )
-                      })
+                      <>
+                        {sameTable.map(renderFlow)}
+                        {masterModelId && sameTable.length === 0 && (
+                          <p className="text-xs text-neutral-500 px-1">{t('wizard.actions.no_table_flows', 'Nenhum fluxo desta tabela ainda. Use "Abrir os fluxos desta tabela" para criar um e volte aqui para marcá-lo.')}</p>
+                        )}
+                        {otherFlows.length > 0 && (
+                          <>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 pt-2 px-1">{t('wizard.actions.other_flows', 'Fluxos de outras tabelas ou gerais')}</p>
+                            {otherFlows.map(renderFlow)}
+                          </>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

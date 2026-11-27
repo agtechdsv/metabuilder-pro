@@ -3203,7 +3203,10 @@
         "page_title": "Mesma Tela (Página)",
         "page_desc": "O formulário será exibido na mesma tela, substituindo a lista atual."
       },
-      "cascade": "Em cascata"
+      "cascade": "Em cascata",
+      "open_table_flows": "Abrir os fluxos desta tabela",
+      "no_table_flows": "Nenhum fluxo desta tabela ainda. Use \"Abrir os fluxos desta tabela\" para criar um e volte aqui para marcá-lo.",
+      "other_flows": "Fluxos de outras tabelas ou gerais"
     },
     "status": {
       "draft_pending": "Rascunho Pendente",
@@ -3639,7 +3642,9 @@
       "var_group_approval": "Decisão da aprovação",
       "var_approval_decision": "Decisão (aprovado ou rejeitado)",
       "var_approval_comment": "Comentário do aprovador",
-      "var_approval_by": "Quem decidiu"
+      "var_approval_by": "Quem decidiu",
+      "event_button": "Botão (ação customizada)",
+      "button_other_table": "de outra tabela"
     },
     "approval": {
       "panel_title": "Aguardar aprovação",
@@ -3655,6 +3660,26 @@
       "reminder_desc": "Se ninguém decidir no prazo, os aprovadores recebem um lembrete (no máximo 3). Deixe em branco para não lembrar. A conferência roda a cada 15 minutos.",
       "due_label": "Lembrar após (horas)",
       "repeat_label": "Repetir a cada (horas)"
+    },
+    "scope": {
+      "general": "Geral",
+      "table_locked": "Tabela do escopo em que você está trabalhando (fixa)."
+    },
+    "hub": {
+      "title": "Automação de processos",
+      "subtitle": "Os fluxos são da tabela: valem para qualquer tela que use a tabela. Escolha onde trabalhar.",
+      "search_placeholder": "Buscar tabela ou fluxo",
+      "general_title": "Geral",
+      "general_name": "Geral (sem tabela)",
+      "general_desc": "Fluxos agendados e webhooks de entrada: não dependem de uma tabela.",
+      "tables_title": "Por tabela",
+      "no_tables": "Nenhuma tabela encontrada.",
+      "all_flows": "Todos os fluxos",
+      "no_flows": "Nenhum fluxo encontrado.",
+      "flows_count": "{count} fluxo(s)",
+      "status_published": "Publicado",
+      "status_pending": "Alterações não publicadas",
+      "status_draft": "Rascunho"
     }
   },
   "auth": {

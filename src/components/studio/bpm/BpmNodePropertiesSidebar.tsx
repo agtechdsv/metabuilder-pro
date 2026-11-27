@@ -55,6 +55,7 @@ export function BpmNodePropertiesSidebar(props: any) {
 
             {selectedNode.type === 'trigger' && (
               <TriggerPropertiesPanel
+                scope={props.scope}
                 selectedNode={selectedNode}
                 updateNodeData={updateNodeData}
                 dbModels={dbModels}

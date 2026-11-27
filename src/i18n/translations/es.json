@@ -3290,7 +3290,10 @@
         "page_title": "Misma Pantalla (Página)",
         "page_desc": "El formulario se mostrará en la misma pantalla, reemplazando la lista actual."
       },
-      "cascade": "En cascada"
+      "cascade": "En cascada",
+      "open_table_flows": "Abrir los flujos de esta tabla",
+      "no_table_flows": "Aún no hay flujos de esta tabla. Use \"Abrir los flujos de esta tabla\" para crear uno y vuelva aquí para marcarlo.",
+      "other_flows": "Flujos de otras tablas o generales"
     },
     "status": {
       "draft_pending": "Borrador Pendiente",
@@ -3726,7 +3729,9 @@
       "var_group_approval": "Decisión de la aprobación",
       "var_approval_decision": "Decisión (aprobado o rechazado)",
       "var_approval_comment": "Comentario del aprobador",
-      "var_approval_by": "Quién decidió"
+      "var_approval_by": "Quién decidió",
+      "event_button": "Botón (acción personalizada)",
+      "button_other_table": "de otra tabla"
     },
     "approval": {
       "panel_title": "Esperar aprobación",
@@ -3742,6 +3747,26 @@
       "reminder_desc": "Si nadie decide a tiempo, los aprobadores reciben un recordatorio (máximo 3). Déjelo en blanco para no recordar. La revisión se hace cada 15 minutos.",
       "due_label": "Recordar tras (horas)",
       "repeat_label": "Repetir cada (horas)"
+    },
+    "scope": {
+      "general": "General",
+      "table_locked": "Tabla del ámbito en el que está trabajando (fija)."
+    },
+    "hub": {
+      "title": "Automatización de procesos",
+      "subtitle": "Los flujos son de la tabla: valen para cualquier pantalla que use la tabla. Elija dónde trabajar.",
+      "search_placeholder": "Buscar tabla o flujo",
+      "general_title": "General",
+      "general_name": "General (sin tabla)",
+      "general_desc": "Flujos programados y webhooks de entrada: no dependen de una tabla.",
+      "tables_title": "Por tabla",
+      "no_tables": "No se encontró ninguna tabla.",
+      "all_flows": "Todos los flujos",
+      "no_flows": "No se encontró ningún flujo.",
+      "flows_count": "{count} flujo(s)",
+      "status_published": "Publicado",
+      "status_pending": "Cambios sin publicar",
+      "status_draft": "Borrador"
     }
   },
   "auth": {

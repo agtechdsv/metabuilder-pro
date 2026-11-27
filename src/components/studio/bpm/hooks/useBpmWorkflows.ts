@@ -5,7 +5,10 @@ import { relaySend, replyToFromTopic, tunnelTopicFor } from '@/lib/tunnel/relayC
 interface UseBpmWorkflowsProps {
   initialWorkflows: any[]
   projectId?: string
+  /** legado: fluxos antigos guardam o caso de uso em que foram desenhados; os novos ficam sem (o fluxo é da tabela) */
   useCaseId?: string
+  /** abre já neste fluxo (link vindo do painel de escolha) */
+  initialWorkflowId?: string
   project?: any
   reactFlowInstance: any
   setNodes: (nodes: any[]) => void
@@ -20,6 +23,7 @@ export function useBpmWorkflows({
   initialWorkflows,
   projectId,
   useCaseId,
+  initialWorkflowId,
   project,
   reactFlowInstance,
   setNodes,
@@ -32,7 +36,7 @@ export function useBpmWorkflows({
   const supabase = createClient()
   
   const [workflows, setWorkflows] = useState<any[]>(initialWorkflows)
-  const [currentWorkflowId, setCurrentWorkflowId] = useState<string>('new')
+  const [currentWorkflowId, setCurrentWorkflowId] = useState<string>(initialWorkflowId && initialWorkflows.some(w => w.id === initialWorkflowId) ? initialWorkflowId : 'new')
   const [isSaving, setIsSaving] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -64,7 +68,7 @@ export function useBpmWorkflows({
   }, [currentWorkflowId, workflows, setNodes, setEdges, fitView, initialNodes])
 
   const handleSave = async () => {
-    if (!reactFlowInstance || !projectId || !useCaseId) return
+    if (!reactFlowInstance || !projectId) return
 
     // Fluxo novo: pede o nome num modal; o salvamento continua em saveNewDraft
     if (currentWorkflowId === 'new') {
@@ -98,7 +102,7 @@ export function useBpmWorkflows({
 
   // Cria o rascunho de um fluxo novo com o nome escolhido no modal
   const saveNewDraft = async (name: string) => {
-    if (!reactFlowInstance || !projectId || !useCaseId) return
+    if (!reactFlowInstance || !projectId) return
 
     setIsSaving(true)
     const flow = reactFlowInstance.toObject()
@@ -109,7 +113,7 @@ export function useBpmWorkflows({
         .insert({
           project_id: projectId,
           name: name,
-          use_case_id: useCaseId,
+          use_case_id: useCaseId || null,
           draft_flow_data: flow,
           is_active: false
         })
@@ -145,7 +149,7 @@ export function useBpmWorkflows({
   }
 
   const handlePublish = async () => {
-    if (!reactFlowInstance || !projectId || !useCaseId) return
+    if (!reactFlowInstance || !projectId) return
     
     if (currentWorkflowId === 'new') {
       toast(t('bpm.canvas.toasts.save_draft_before_publish', 'Salve o fluxo como rascunho antes de publicar.'), 'error')

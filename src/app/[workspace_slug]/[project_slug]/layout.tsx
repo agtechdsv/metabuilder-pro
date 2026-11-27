@@ -8,6 +8,8 @@ import { relayEnabled } from '@/lib/tunnel/server'
 import { signingEnabled } from '@/lib/tunnel/commandSigning'
 import { collectHelpCenter, withHelpCenterMenu } from '@/lib/helpText'
 import { projectHasApprovals } from '@/lib/approvalsFlag'
+import { endUserMayOpenAutomations } from '@/lib/automationsAccess'
+import { withAutomationsMenu } from '@/lib/automationsMenu'
 
 export async function generateMetadata({ params }: { params: Promise<{ project_slug: string; workspace_slug: string }> }): Promise<Metadata> {
   const { project_slug, workspace_slug } = await params
@@ -303,7 +305,16 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
 
   // Central de Ajuda: entra no menu sozinha enquanto houver ao menos uma ajuda visível (e sai se todas forem ocultadas)
   const hasVisibleHelp = collectHelpCenter((uiViews || []).filter(v => !deniedForHelpMenu.includes(v.id)), locale).length > 0
-  const navigation = withHelpCenterMenu(filterNavigation(isDownloadsInactive ? stripDownloads(rawNavigation) : rawNavigation), hasVisibleHelp, locale)
+  // "Automação de processos": primeiro item do menu e primeiro card do dashboard, só quando o módulo está ativo e o usuário tem a
+  // permissão (negado por padrão; regra única em automationsAccess). Calculado na hora, nada é gravado no menu do projeto.
+  const automationsRow = uiViews?.find(v => v.slug?.toLowerCase() === 'automations')
+  const showAutomations = !!automationsRow && automationsRow.layout_config?.is_active !== false &&
+    await endUserMayOpenAutomations(supabase, { projectId: project.id, viewId: automationsRow.id, sessionCookie })
+  const navigation = withAutomationsMenu(
+    withHelpCenterMenu(filterNavigation(isDownloadsInactive ? stripDownloads(rawNavigation) : rawNavigation), hasVisibleHelp, locale),
+    showAutomations,
+    locale,
+  )
 
   const headersList = await headers()
   const isCustomDomain = headersList.get('x-custom-domain') === 'true'

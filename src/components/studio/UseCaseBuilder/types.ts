@@ -65,6 +65,9 @@ export interface UseCase {
 export interface BpmWorkflow {
   id: string
   name: string
+  /** desenhos (publicado e rascunho): servem para saber de qual tabela é o fluxo */
+  flow_data?: any
+  draft_flow_data?: any
 }
 
 // ─── Wizard Config ───────────────────────────────────────────────────────────

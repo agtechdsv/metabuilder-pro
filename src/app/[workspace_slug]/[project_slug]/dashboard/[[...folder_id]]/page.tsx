@@ -4,6 +4,8 @@ import { cookies } from 'next/headers'
 import { DynamicDashboard } from '@/components/runtime/DynamicDashboard'
 import { findBreadcrumbPath } from '@/lib/navigation-utils'
 import { clientSessionCookie } from '@/lib/tunnel/runtimeServer'
+import { endUserMayOpenAutomations } from '@/lib/automationsAccess'
+import { withAutomationsMenu } from '@/lib/automationsMenu'
 
 interface WorkspacePageProps {
   params: Promise<{
@@ -214,7 +216,11 @@ export default async function WorkspacePage({ params, searchParams }: WorkspaceP
     }).filter(Boolean)
   }
 
-  const navigation = hideUnpublished(filterNavigation(rawNavigation))
+  // "Automação de processos": primeiro card do dashboard, só com o módulo ativo e a permissão do usuário (mesma regra do menu lateral)
+  const automationsRow = uiViews?.find(v => v.slug?.toLowerCase() === 'automations')
+  const showAutomations = !!automationsRow && automationsRow.layout_config?.is_active !== false &&
+    await endUserMayOpenAutomations(supabase, { projectId: project.id, viewId: automationsRow.id, sessionCookie })
+  const navigation = withAutomationsMenu(hideUnpublished(filterNavigation(rawNavigation)), showAutomations, cookieStore.get('app-language')?.value || 'pt')
   const activeFolderId = folder_id?.[0]
 
   let displayItems = []

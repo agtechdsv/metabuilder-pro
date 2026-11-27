@@ -3203,7 +3203,10 @@
         "page_title": "Same Screen (Page)",
         "page_desc": "The form will be displayed on the same screen, replacing the current list."
       },
-      "cascade": "Cascade"
+      "cascade": "Cascade",
+      "open_table_flows": "Open this table's flows",
+      "no_table_flows": "No flows for this table yet. Use \"Open this table's flows\" to create one and come back here to select it.",
+      "other_flows": "Flows from other tables or general ones"
     },
     "status": {
       "draft_pending": "Draft Pending",
@@ -3639,7 +3642,9 @@
       "var_group_approval": "Approval decision",
       "var_approval_decision": "Decision (approved or rejected)",
       "var_approval_comment": "Approver comment",
-      "var_approval_by": "Who decided"
+      "var_approval_by": "Who decided",
+      "event_button": "Button (custom action)",
+      "button_other_table": "from another table"
     },
     "approval": {
       "panel_title": "Wait for approval",
@@ -3655,6 +3660,26 @@
       "reminder_desc": "If nobody decides in time, the approvers get a reminder (up to 3). Leave blank for no reminder. The check runs every 15 minutes.",
       "due_label": "Remind after (hours)",
       "repeat_label": "Repeat every (hours)"
+    },
+    "scope": {
+      "general": "General",
+      "table_locked": "Table of the scope you are working in (fixed)."
+    },
+    "hub": {
+      "title": "Process Automation",
+      "subtitle": "Flows belong to the table: they apply to any screen that uses the table. Choose where to work.",
+      "search_placeholder": "Search table or flow",
+      "general_title": "General",
+      "general_name": "General (no table)",
+      "general_desc": "Scheduled flows and inbound webhooks: they do not depend on a table.",
+      "tables_title": "By table",
+      "no_tables": "No tables found.",
+      "all_flows": "All flows",
+      "no_flows": "No flows found.",
+      "flows_count": "{count} flow(s)",
+      "status_published": "Published",
+      "status_pending": "Unpublished changes",
+      "status_draft": "Draft"
     }
   },
   "auth": {

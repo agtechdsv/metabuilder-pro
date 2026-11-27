@@ -15,7 +15,6 @@ import { RuntimeBreadcrumbs } from '@/components/runtime/RuntimeBreadcrumbs'
 import { AIGeneratedViewRenderer } from '@/components/runtime/AIGeneratedViewRenderer'
 import { clientSessionCookie, publicProject, browserToken } from '@/lib/tunnel/runtimeServer'
 import { projectHasApprovals } from '@/lib/approvalsFlag'
-import { endUserMayOpenAutomations } from '@/lib/automationsAccess'
 import { accessLevelOf, readOnlyButtons, type AccessLevel } from '@/lib/viewAccess'
 
 interface PageProps {
@@ -338,25 +337,6 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
         </TranslationProvider>
       )
     }
-  }
-
-  let isAutomationsEnabled = false
-  
-  // 4. Verifica permissão de Automações (Default Deny)
-  const { data: automationsView } = await supabase
-    .from('ui_views')
-    .select('id, layout_config')
-    .eq('slug', 'automations')
-    .eq('project_id', project.id)
-    .maybeSingle()
-
-  if (automationsView && automationsView.layout_config?.is_active !== false) {
-    // regra única (também usada pela própria página /automations): ver src/lib/automationsAccess.ts
-    isAutomationsEnabled = await endUserMayOpenAutomations(supabase, {
-      projectId: project.id,
-      viewId: automationsView.id,
-      sessionCookie: clientSessionCookie(await cookies(), project.id),
-    })
   }
 
   // ─── AI Builder: Advanced Use Case (renderiza component_code diretamente) ───
@@ -1097,7 +1077,6 @@ export default async function SlugPage({ params, searchParams }: PageProps) {
           customSlots={view.layout_config?.custom_slots || []}
           formHeaderTitle={view.layout_config?.form_header_title}
           formHeaderSubtitleField={view.layout_config?.form_header_subtitle_field}
-          isAutomationsEnabled={isAutomationsEnabled}
           baseUrl={`${baseUrl}/dashboard`}
           breadcrumbs={breadcrumbs}
           description={navDescription}

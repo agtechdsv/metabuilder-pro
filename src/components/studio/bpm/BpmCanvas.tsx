@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -43,6 +43,7 @@ import { useToast } from '@/components/ui/Toast';
 import { wrapEmailInTemplate, EmailTemplateType } from '@/utils/emailTemplates';
 import { useI18n } from '@/i18n/I18nContext';
 import { cn } from '@/lib/utils';
+import type { FlowScope } from '@/lib/bpm/flowScope';
 
 const nodeTypes = {
   trigger: TriggerNode,
@@ -70,7 +71,14 @@ interface BpmCanvasProps {
   title?: string;
   defaultAutoAlign?: boolean;
   project?: any;
+  /** legado: caso de uso em que o fluxo foi desenhado (os novos não têm; o fluxo é da tabela) */
   useCaseId?: string;
+  /** escopo da tela: uma tabela (o gatilho já nasce com ela) ou "Geral" (agendado e webhook) */
+  scope?: FlowScope;
+  /** endereço do painel de escolha (o botão voltar leva para lá) */
+  hubHref?: string;
+  /** abre já neste fluxo */
+  initialWorkflowId?: string;
   initialWorkflows?: any[];
   initialModels?: any[];
   initialViews?: any[];
@@ -81,6 +89,9 @@ function BpmCanvasContent({
   defaultAutoAlign = false, 
   project, 
   useCaseId,
+  scope,
+  hubHref,
+  initialWorkflowId,
   initialWorkflows = [],
   initialModels = [],
   initialViews = []
@@ -103,6 +114,12 @@ function BpmCanvasContent({
   ];
 
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+
+  // fluxo novo numa tabela: o gatilho já nasce com a tabela do escopo
+  const startNodes = useMemo(
+    () => (scope?.kind === 'table' ? initialNodes.map(n => (n.type === 'trigger' ? { ...n, data: { ...n.data, triggerModelId: scope.modelId } } : n)) : initialNodes),
+    [scope?.kind, scope?.kind === 'table' ? scope.modelId : '']
+  );
 
   const {
     localViews,
@@ -143,7 +160,7 @@ function BpmCanvasContent({
     onDrop,
     updateNodeData
   } = useBpmCanvasNodes({
-    initialNodes,
+    initialNodes: startNodes,
     defaultAutoAlign,
     toast,
     t,
@@ -171,12 +188,13 @@ function BpmCanvasContent({
     initialWorkflows,
     projectId,
     useCaseId,
+    initialWorkflowId,
     project,
     reactFlowInstance,
     setNodes,
     setEdges,
     fitView,
-    initialNodes,
+    initialNodes: startNodes,
     toast,
     t
   });
@@ -215,7 +233,7 @@ function BpmCanvasContent({
       <div className="h-14 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex items-center justify-between px-6 z-20">
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => router.back()}
+            onClick={() => (hubHref ? router.push(hubHref) : router.back())}
             className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
             title={t('bpm.canvas.back')}
           >
@@ -376,6 +394,7 @@ function BpmCanvasContent({
         </div>
 
         <BpmNodePropertiesSidebar
+          scope={scope}
           selectedNodeId={selectedNodeId}
           setSelectedNodeId={setSelectedNodeId}
           selectedNode={selectedNode}

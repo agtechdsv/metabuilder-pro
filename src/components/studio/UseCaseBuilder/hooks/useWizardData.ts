@@ -131,7 +131,7 @@ export function useWizardData({ projectSlug, workspaceSlug }: UseWizardDataParam
         // 5. Fetch BPM Workflows for automations tab
         const { data: bpmData } = await supabase
           .from('bpm_workflows')
-          .select('id, name')
+          .select('id, name, flow_data, draft_flow_data')
           .eq('project_id', project.id)
           .order('name')
 

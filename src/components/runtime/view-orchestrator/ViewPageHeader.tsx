@@ -1,11 +1,10 @@
 import React from 'react'
-import { Plus, Workflow } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { RuntimeHeader } from '../RuntimeHeader'
 import { ExportDropdown } from '../ExportControls'
 import { HelpPopover } from '../HelpPopover'
 import { InteractiveHelpButton } from '../InteractiveHelp'
 import { useI18n } from '@/i18n/I18nContext'
-import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 export interface ViewPageHeaderProps {
@@ -18,7 +17,8 @@ export interface ViewPageHeaderProps {
   icon?: string
   workspace: any
   project: any
-  isAutomationsEnabled: boolean
+  /** obsoleto: o botão "Automações" saiu dos casos de uso (o fluxo é da tabela; a entrada é o card "Automação de processos"). Mantido opcional por causa do app exportado. */
+  isAutomationsEnabled?: boolean
   viewId: string
   logicType?: string
   canExport: boolean
@@ -51,7 +51,6 @@ export function ViewPageHeader({
   icon,
   workspace,
   project,
-  isAutomationsEnabled,
   viewId,
   logicType,
   canExport,
@@ -75,7 +74,6 @@ export function ViewPageHeader({
   getButtonStyles
 }: ViewPageHeaderProps) {
   const { t } = useI18n()
-  const router = useRouter()
 
   return (
     <RuntimeHeader 
@@ -86,16 +84,6 @@ export function ViewPageHeader({
         <div className="flex items-center gap-3">
           <InteractiveHelpButton config={interactiveHelp} liveHelp={interactiveLiveHelp} projectId={project.id} viewId={viewId} screenName={viewName} modelName={modelName} primaryKeyName={primaryKeyName} />
           <HelpPopover help={screenHelp} variant="screen" feedback={{ projectId: project.id, screen: viewId, zone: 'screen' }} centralHref={`/${workspace.slug}/${project.slug}/help`} />
-          {isAutomationsEnabled && (
-            <button
-              onClick={() => router.push(`/${workspace.slug}/${project.slug}/automations?use_case=${viewId}`)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-full transition-all text-xs font-bold shadow-sm active:scale-95"
-              title={t('runtime.automations')}
-            >
-              <Workflow className="w-4 h-4 text-indigo-500" />
-              <span className="hidden sm:inline">{t('runtime.automations')}</span>
-            </button>
-          )}
           {logicType !== 'analytics' && project.theme_config?.enable_downloads !== false && canExport && (
               <ExportDropdown 
                 projectId={project.id}
