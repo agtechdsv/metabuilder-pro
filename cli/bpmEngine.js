@@ -5,7 +5,8 @@ const cron = require('node-cron');
 const { wrapEmailInTemplate } = require('./emailTemplates');
 const { t } = require('./i18n');
 const { BpmCore } = require('./bpmCore');
-const { resolveSystemRecipientEmails } = require('./recipients');
+const { resolveSystemRecipientEmails, resolveSystemRecipientIds } = require('./recipients');
+const { createDownloadDelivery } = require('./automationDownload');
 const { buildAttachment } = require('./attachments');
 
 /**
@@ -13,7 +14,8 @@ const { buildAttachment } = require('./attachments');
  * aqui só se ligam as PORTAS à plataforma: Supabase (fluxos e modelos), banco do cliente, API de e-mail e de execuções.
  */
 class BpmEngine {
-  constructor(supabase, pgClient, oracleConnection, dbType, project, apiUrl) {
+  /** `options.downloadPath`: pasta de exportações do Agente (onde a ação Download grava os arquivos). */
+  constructor(supabase, pgClient, oracleConnection, dbType, project, apiUrl, options = {}) {
     this.supabase = supabase;
     this.pgClient = pgClient;
     this.oracleConnection = oracleConnection;
@@ -58,7 +60,14 @@ class BpmEngine {
         },
         fallbackTo: () => process.env.SMTP_USER || 'contato@metabuilderpro.com',
       },
-      recipients: { resolveSystem: (data) => this.resolveSystemRecipients(data) },
+      recipients: { resolveSystem: (data) => this.resolveSystemRecipients(data), resolveIds: (data) => this.resolveSystemRecipientIds(data) },
+      // ação "Download": o arquivo fica na pasta de exportações deste Agente e o servidor registra a linha na Central de Downloads de cada destinatário
+      downloads: {
+        deliver: createDownloadDelivery({
+          apiBase: this.apiUrl, projectId: this.project.id, secretToken: this.project.secret_token, downloadPath: options.downloadPath,
+          log: (m) => console.log(chalk.gray('[BPM] ' + m)),
+        }),
+      },
       // "Aguardar aprovação": as tarefas moram no banco do cliente, que só o Agente alcança (o app exportado não liga isto)
       features: { approvals: true },
       ids: { next: () => require('crypto').randomUUID() },
@@ -171,7 +180,8 @@ class BpmEngine {
    * A configuração de login, os grupos e os perfis vêm do SERVIDOR (assinado com o secret_token): as tabelas têm RLS fechado
    * para a chave anon do CLI, e antes disso o grupo resolvia vazio, em silêncio. Os membros dos grupos do cliente vêm do banco do cliente.
    */
-  async resolveSystemRecipients(data) {
+  /** Configuração de login, grupos e perfis do projeto (vem do SERVIDOR; null se não deu para ler). */
+  async fetchRecipientConfig() {
     let config = null;
     try {
       const res = await axios.post(`${this.apiUrl}/api/automations/recipients`, {
@@ -182,9 +192,24 @@ class BpmEngine {
     } catch (err) {
       console.error(chalk.red('[BPM] Erro ao buscar a configuração de destinatários no servidor: ' + (err.response?.data?.error || err.message)));
     }
+    return config;
+  }
+
+  async resolveSystemRecipients(data) {
     return resolveSystemRecipientEmails({
       data,
-      config,
+      config: await this.fetchRecipientConfig(),
+      dialect: this.dbType === 'oracle' ? 'oracle' : 'postgres',
+      query: (sql, params) => this.rawQuery(sql, params),
+      log: { warn: (m) => console.error(chalk.yellow(m)) },
+    });
+  }
+
+  /** Ids (texto) dos usuários e grupos escolhidos no nó, para entregar arquivos na Central de Downloads de cada um. */
+  async resolveSystemRecipientIds(data) {
+    return resolveSystemRecipientIds({
+      data,
+      config: await this.fetchRecipientConfig(),
       dialect: this.dbType === 'oracle' ? 'oracle' : 'postgres',
       query: (sql, params) => this.rawQuery(sql, params),
       log: { warn: (m) => console.error(chalk.yellow(m)) },

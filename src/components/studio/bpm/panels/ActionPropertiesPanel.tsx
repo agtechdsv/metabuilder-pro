@@ -177,6 +177,7 @@ export function ActionPropertiesPanel(props: any) {
                         <option value="query">{t('bpm.nodes.query_data', 'Consultar Dados')}</option>
                         <option value="email">{t('bpm.nodes.send_email')}</option>
                         <option value="webhook">{t('bpm.canvas.webhook_api_call')}</option>
+                        <option value="download">{t('bpm.nodes.download', 'Download (Central de Downloads)')}</option>
                       </select>
                     </div>
 
@@ -548,10 +549,124 @@ export function ActionPropertiesPanel(props: any) {
                                 <option value="xlsx">{t('bpm.canvas.email_attach_xlsx', 'Excel (.xlsx)')}</option>
                                 <option value="csv">{t('bpm.canvas.email_attach_csv', 'CSV (.csv)')}</option>
                                 <option value="pdf">{t('bpm.canvas.email_attach_pdf', 'PDF (.pdf)')}</option>
+                                <option value="json">{t('bpm.canvas.email_attach_json', 'JSON (.json)')}</option>
+                                <option value="ofx">{t('bpm.canvas.email_attach_ofx', 'OFX (.ofx)')}</option>
                               </select>
                             </div>
                           </div>
                         )}
+                        {!!selectedNode.data?.emailAttachDataset && selectedNode.data?.emailAttachFormat === 'ofx' && (
+                          <p className="text-[9px] text-amber-600 leading-relaxed">{t('bpm.canvas.ofx_hint', 'OFX é um extrato bancário: o valor, a data e a descrição são achados pelo nome das colunas (valor, data, nome). Sem coluna de valor, os lançamentos saem com 0,00. Use só com dados financeiros.')}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {selectedNode.data?.actionType === 'download' && (
+                      <div className="space-y-4 pt-4 border-t border-indigo-500/20">
+                        <p className="text-[10px] text-neutral-500 leading-relaxed">
+                          {t('bpm.canvas.download_intro', 'Gera um arquivo com o resultado de uma consulta feita antes neste fluxo e o coloca na Central de Downloads dos usuários escolhidos. Cada pessoa vê só o arquivo dela.')}
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.query_name', 'Nome do resultado')}</label>
+                            {(() => {
+                              const names: string[] = props.queryNames || [];
+                              const current = (selectedNode.data?.downloadDataset as string) || '';
+                              const options = current && !names.includes(current) ? [current, ...names] : names;
+                              return (
+                                <>
+                                  <select
+                                    value={current}
+                                    onChange={(e) => updateNodeData(selectedNode.id, { downloadDataset: e.target.value || 'consulta' })}
+                                    className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 font-mono"
+                                  >
+                                    {!current && <option value="">{t('bpm.canvas.download_select_result', 'Selecione...')}</option>}
+                                    {options.map((n) => <option key={n} value={n}>{n}</option>)}
+                                  </select>
+                                  {names.length === 0 && <p className="text-[9px] text-red-500 mt-1">{t('bpm.canvas.download_no_query', 'Nenhuma ação Consultar Dados neste fluxo (crie uma antes do Download).')}</p>}
+                                </>
+                              );
+                            })()}
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{t('bpm.canvas.email_attach_format', 'Formato')}</label>
+                            <select
+                              value={(selectedNode.data?.downloadFormat as string) || 'xlsx'}
+                              onChange={(e) => updateNodeData(selectedNode.id, { downloadFormat: e.target.value })}
+                              className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
+                            >
+                              <option value="xlsx">{t('bpm.canvas.email_attach_xlsx', 'Excel (.xlsx)')}</option>
+                              <option value="csv">{t('bpm.canvas.email_attach_csv', 'CSV (.csv)')}</option>
+                              <option value="json">{t('bpm.canvas.email_attach_json', 'JSON (.json)')}</option>
+                              <option value="pdf">{t('bpm.canvas.email_attach_pdf', 'PDF (.pdf)')}</option>
+                              <option value="ofx">{t('bpm.canvas.email_attach_ofx', 'OFX (.ofx)')}</option>
+                            </select>
+                          </div>
+                        </div>
+                        {selectedNode.data?.downloadFormat === 'ofx' && (
+                          <p className="text-[9px] text-amber-600 leading-relaxed">{t('bpm.canvas.ofx_hint', 'OFX é um extrato bancário: o valor, a data e a descrição são achados pelo nome das colunas (valor, data, nome). Sem coluna de valor, os lançamentos saem com 0,00. Use só com dados financeiros.')}</p>
+                        )}
+
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest block">{t('bpm.canvas.download_file_name', 'Nome do arquivo')}</label>
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (!val) return;
+                                const cur = (selectedNode.data?.downloadFileName as string) || '';
+                                updateNodeData(selectedNode.id, { downloadFileName: cur ? `${cur}_{{${val}}}` : `{{${val}}}` });
+                                e.target.value = '';
+                              }}
+                              className="bg-transparent border-none text-[9px] text-indigo-500 font-bold uppercase tracking-widest cursor-pointer focus:ring-0 w-28 text-right p-0"
+                            >
+                              <option value="" className="text-left text-neutral-900 dark:text-neutral-100 normal-case tracking-normal text-sm font-normal">{t('bpm.canvas.plus_variable', '+ Variável')}</option>
+                              <SystemVariableOptions t={t} queryNames={props.queryNames} />
+                            </select>
+                          </div>
+                          <input
+                            type="text"
+                            value={(selectedNode.data?.downloadFileName as string) || ''}
+                            onChange={(e) => updateNodeData(selectedNode.id, { downloadFileName: e.target.value })}
+                            placeholder={t('bpm.canvas.download_file_name_placeholder', 'Ex.: Pedidos_{{sistema.data}} (a extensão é colocada sozinha)')}
+                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500"
+                          />
+                        </div>
+
+                        <div className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-xl p-3 space-y-2">
+                          <label className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest block">{t('bpm.canvas.download_recipients', 'Quem recebe o arquivo')}</label>
+                          <div className="text-[10px] text-neutral-500 leading-tight">{t('bpm.canvas.download_recipients_desc', 'Escolha grupos de acesso (todos os usuários do grupo) ou usuários específicos. O arquivo só aparece na Central de Downloads deles, e eles precisam ter acesso a ela. Usuários cujo id não seja UUID não recebem.')}</div>
+                          <div className="flex flex-wrap gap-2">
+                            {roles.length > 0 ? roles.map((grupo: any) => {
+                              const selection = ((selectedNode.data?.emailGroupsUsers as any) || {})[grupo.name];
+                              const isSelected = !!selection;
+                              const statusText = isSelected ? (selection === 'all' ? `(${t('bpm.canvas.send_to_all')})` : `(${selection.length} sel.)`) : '';
+                              return (
+                                <button
+                                  key={grupo.id}
+                                  type="button"
+                                  onClick={() => openGroupUsersModal(grupo)}
+                                  className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all border flex items-center gap-1 ${isSelected ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20' : 'bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-indigo-300'}`}
+                                >
+                                  {grupo.name}
+                                  {statusText && <span className={isSelected ? 'text-indigo-200 font-normal' : 'text-neutral-400 font-normal'}>{statusText}</span>}
+                                </button>
+                              );
+                            }) : <span className="text-[10px] text-neutral-400">{t('bpm.canvas.no_groups_found', 'Nenhum grupo encontrado')}</span>}
+                          </div>
+                        </div>
+
+                        <label className="flex items-start gap-2 text-xs text-neutral-700 dark:text-neutral-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!selectedNode.data?.downloadNotify}
+                            onChange={(e) => updateNodeData(selectedNode.id, { downloadNotify: e.target.checked })}
+                            className="mt-0.5 rounded border-neutral-300 text-indigo-500 focus:ring-indigo-500"
+                          />
+                          <span>{t('bpm.canvas.download_notify', 'Avisar os destinatários por e-mail quando o arquivo chegar na Central de Downloads')}</span>
+                        </label>
                       </div>
                     )}
 

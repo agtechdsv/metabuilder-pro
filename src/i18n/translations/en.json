@@ -3337,7 +3337,9 @@
       "approval_unset": "Choose the approver",
       "approval_users": "{count} user(s)",
       "approved": "Approved",
-      "rejected": "Rejected"
+      "rejected": "Rejected",
+      "download": "Download (Download Center)",
+      "download_desc": "File in the Center"
     },
     "canvas": {
       "automations_title": "Automations",
@@ -3644,7 +3646,20 @@
       "var_approval_comment": "Approver comment",
       "var_approval_by": "Who decided",
       "event_button": "Button (custom action)",
-      "button_other_table": "from another table"
+      "button_other_table": "from another table",
+      "email_attach_json": "JSON (.json)",
+      "email_attach_ofx": "OFX (.ofx)",
+      "ofx_hint": "OFX is a bank statement: the amount, date and description are found by column name (valor, data, nome). Without an amount column, the entries come out as 0.00. Use it only with financial data.",
+      "download_intro": "Creates a file with the result of a query made earlier in this flow and puts it in the Download Center of the chosen users. Each person sees only their own file.",
+      "download_no_query": "No Query Data action in this flow (create one before the Download).",
+      "download_select_result": "Select...",
+      "download_file_name": "File name",
+      "download_file_name_placeholder": "E.g.: Orders_{{sistema.data}} (the extension is added automatically)",
+      "download_recipients": "Who receives the file",
+      "download_recipients_desc": "Choose access groups (all users in the group) or specific users. The file only appears in their Download Center, and they need access to it. Users whose id is not a UUID do not receive it.",
+      "download_notify": "Notify the recipients by email when the file reaches the Download Center",
+      "export_warn_approval": "Wait for approval does not work in the exported app: the flow stops at that step.",
+      "export_warn_download": "Download does not work in the exported app: the flow stops at that step."
     },
     "approval": {
       "panel_title": "Wait for approval",

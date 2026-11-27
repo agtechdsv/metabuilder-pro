@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
-import { Zap, Play, CheckCircle2, GitMerge, Trash2, Mail, Edit, PlusCircle, Clock, MousePointer2, Webhook, ShieldAlert, Database, UserCheck } from 'lucide-react';
+import { Zap, Play, CheckCircle2, GitMerge, Trash2, Mail, Edit, PlusCircle, Clock, MousePointer2, Webhook, ShieldAlert, Database, UserCheck, Download } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nContext';
 
 // Common style for node wrappers
@@ -102,6 +102,11 @@ export const ActionNode = memo(({ id, data, selected }: NodeProps) => {
     title = t('bpm.nodes.delete_record'); 
     desc = filters > 0 ? t('bpm.nodes.filters_count').replace('{count}', String(filters)) : t('bpm.nodes.warning_no_filters'); 
     Icon = Trash2; 
+  }
+  else if (type === 'download') {
+    title = t('bpm.nodes.download', 'Download (Central de Downloads)');
+    desc = (data.downloadFormat as string) ? `.${String(data.downloadFormat)}` : t('bpm.nodes.download_desc', 'Arquivo na Central');
+    Icon = Download;
   }
   else if (type === 'webhook') { 
     const method = data.webhookMethod as string || 'POST';

@@ -16,6 +16,9 @@
  *   recipients { resolveSystem(nodeData) -> Promise<string> }   e-mails (separados por vírgula) dos usuários e grupos do sistema; sem a porta, nenhum
  *   scheduler  { schedule(cron, fn) -> { stop() } }
  *   runs       { report(execução) }                              registro de cada execução; falha aqui nunca derruba nem atrasa o fluxo
+ *   downloads  { deliver({ dataset, format, fileName, recipientIds, title }) -> { delivered } }  ação "Download": gera o arquivo e o põe na
+ *              Central de Downloads de cada usuário (só o Agente CLI tem; sem a porta, a ação para com aviso)
+ *   recipients também pode ter resolveIds(nodeData) -> Promise<string[]>  ids dos usuários e grupos do sistema (para o Download)
  *   features   { approvals }  liga o bloco "Aguardar aprovação" (só o Agente CLI; as tarefas moram no banco do cliente)
  *   ids        { next() -> uuid }  gerador de ids das tarefas de aprovação (opcional)
  *   log        { debug, info, ok, warn, error, sql, danger, mail }  (todas opcionais)
@@ -66,6 +69,17 @@ const datasetNameOf = (name) => {
   const n = String(name || '').trim().toLowerCase()
   return /^[a-z][a-z0-9_]{0,30}$/.test(n) ? n : 'consulta'
 }
+
+// ===== Ação "Download": arquivo do resultado de uma consulta na Central de Downloads dos usuários escolhidos =====
+const DOWNLOAD_FORMATS = ['xlsx', 'csv', 'pdf', 'json', 'ofx']
+const DOWNLOAD_MAX_RECIPIENTS = 200
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Nome de arquivo seguro: sem acento, só letras, números, ponto, hífen e sublinhado; sem ponto no começo; até 80 caracteres. */
+const safeFileBase = (text) => String(text == null ? '' : text)
+  .normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/[^A-Za-z0-9._-]+/g, '_').replace(/_{2,}/g, '_')
+  .replace(/^[._-]+/, '').replace(/\.+$/, '').slice(0, 80)
 
 /**
  * Data relativa de um filtro: "agora menos N horas/dias/semanas/meses" ou o início de hoje, da semana (segunda-feira),
@@ -936,6 +950,83 @@ class BpmCore {
     return undefined
   }
 
+  /**
+   * Ação "Download": gera o arquivo (xlsx, csv, pdf, json ou ofx) do resultado de uma consulta feita antes, no mesmo fluxo, e o entrega
+   * na Central de Downloads dos usuários escolhidos (cada um só vê o seu). O arquivo fica na pasta de exportações do Agente (porta
+   * `downloads`); o app exportado não tem essa pasta, então a ação para com aviso lá.
+   */
+  async runDownloadAction(node, triggerTable, triggerData) {
+    const d = (node && node.data) || {}
+    const dl = this.ports.downloads
+    if (!dl || typeof dl.deliver !== 'function') {
+      this.log.warn('[BPM] "Download" não é suportado neste ambiente: o arquivo vai para a Central de Downloads, que só o Agente CLI alimenta.')
+      this.noteIssue('Download não é suportado neste ambiente (só o Agente CLI entrega arquivos na Central de Downloads).')
+      return
+    }
+    const name = datasetNameOf(d.downloadDataset)
+    const store = this.runCtx.getStore()
+    const dataset = store && store.datasets && store.datasets[name]
+    if (!dataset) {
+      this.log.error(`[BPM] Download: o resultado "${name}" não existe neste fluxo (coloque a ação Consultar dados antes do Download).`)
+      this.noteIssue(`Download: resultado "${name}" não encontrado.`)
+      return
+    }
+    const format = DOWNLOAD_FORMATS.includes(d.downloadFormat) ? d.downloadFormat : 'xlsx'
+
+    // nome do arquivo (aceita variáveis); sem nome, "<consulta>-AAAA-MM-DD"
+    const now = new Date()
+    const p2 = (n) => String(n).padStart(2, '0')
+    const typed = await this.replaceVariables(String(d.downloadFileName || ''), triggerTable, triggerData, null, null, true)
+    const base = safeFileBase(htmlToText(typed)) || `${name}-${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`
+    const fileName = `${base}.${format}`
+
+    // quem recebe: os mesmos usuários e grupos escolhidos no nó. A Central de Downloads identifica o dono por um id UUID.
+    const rec = this.ports.recipients
+    if (!rec || typeof rec.resolveIds !== 'function') {
+      this.noteIssue('Download: não foi possível achar os destinatários neste ambiente.')
+      return
+    }
+    let ids = []
+    try { ids = (await rec.resolveIds(d)) || [] } catch (e) { this.log.error(`[BPM] Download: erro ao resolver os destinatários: ${e.message}`) }
+    const valid = [...new Set(ids.map(String).filter(id => UUID_RE.test(id)))].slice(0, DOWNLOAD_MAX_RECIPIENTS)
+    const skipped = new Set(ids.map(String)).size - valid.length
+    if (skipped > 0) this.log.warn(`[BPM] Download: ${skipped} destinatário(s) sem id UUID (ou além do limite de ${DOWNLOAD_MAX_RECIPIENTS}) não recebem o arquivo: a Central de Downloads exige id UUID.`)
+    if (valid.length === 0) {
+      this.noteIssue('Download: nenhum destinatário válido (escolha perfis ou usuários cujo id seja UUID).')
+      return
+    }
+
+    const title = `Automação: ${(store && store.flow && store.flow.name) || 'fluxo'}`.slice(0, 200)
+    let result
+    try {
+      result = await dl.deliver({ dataset, format, fileName, recipientIds: valid, title })
+    } catch (e) {
+      this.log.error(`[BPM] Download: falha ao entregar "${fileName}": ${e.message}`)
+      this.noteIssue(`Download: ${e.message}`)
+      return
+    }
+    this.log.ok(`[BPM] Download "${fileName}" entregue a ${result && result.delivered != null ? result.delivered : valid.length} usuário(s).`)
+
+    // aviso por e-mail (opcional; desmarcado por padrão): a pessoa só vê o arquivo ao abrir a Central
+    if (d.downloadNotify) {
+      try {
+        const to = typeof rec.resolveSystem === 'function' ? ((await rec.resolveSystem(d)) || '') : ''
+        if (to && this.ports.mail && typeof this.ports.mail.send === 'function') {
+          const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          await this.ports.mail.send({
+            to,
+            subject: `Arquivo disponível: ${fileName}`.slice(0, 200),
+            body: `O arquivo <b>${esc(fileName)}</b> já está na sua Central de Downloads.`,
+            template: 'free',
+          })
+        }
+      } catch (e) {
+        this.log.error(`[BPM] Download: erro ao avisar por e-mail: ${e.message}`)
+        this.noteIssue(`Aviso do download por e-mail: ${e.message}`)
+      }
+    }
+  }
+
   /** Anexos do e-mail: a planilha (ou CSV) do resultado de uma consulta feita antes, no mesmo fluxo. */
   buildEmailAttachments(data) {
     if (!data || !data.emailAttachDataset) return []
@@ -947,7 +1038,7 @@ class BpmCore {
       this.noteIssue(`Anexo: resultado "${name}" não encontrado.`)
       return []
     }
-    const format = ['csv', 'pdf'].includes(data.emailAttachFormat) ? data.emailAttachFormat : 'xlsx'
+    const format = ['csv', 'pdf', 'json', 'ofx'].includes(data.emailAttachFormat) ? data.emailAttachFormat : 'xlsx'
     const now = new Date()
     const p = (n) => String(n).padStart(2, '0')
     return [{ format, filename: `${name}-${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}.${format}`, dataset }]
@@ -1094,6 +1185,9 @@ class BpmCore {
         this.log.error(`[ ERRO ] Falha no Webhook: ${webhookErr.message}`)
         this.noteIssue(`Webhook ${method} ${finalUrl}: ${webhookErr.status ? 'HTTP ' + webhookErr.status : webhookErr.message}`)
       }
+    }
+    else if (data.actionType === 'download') {
+      await this.runDownloadAction(node, triggerTable, triggerData)
     }
     else if (data.actionType === 'email') {
       // 1. Busca os registros alvo para ler o e-mail ou variáveis

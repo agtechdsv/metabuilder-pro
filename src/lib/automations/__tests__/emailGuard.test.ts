@@ -37,6 +37,18 @@ describe('envio de e-mail das automações', () => {
     const b64 = (n: number) => Buffer.alloc(n, 1).toString('base64')
     const att = (over: any = {}) => ({ filename: 'consulta-2026-11-26.xlsx', content: b64(100), ...over })
 
+    it('aceita também pdf, json e ofx (os 5 formatos da exportação), com o tipo vindo da extensão', () => {
+      const r = parseEmailRequest({ ...ok, attachments: [att({ filename: 'a.json' }), att({ filename: 'b.ofx' })] })
+      expect(r.ok).toBe(true)
+      if (r.ok) {
+        expect(r.req.attachments![0].contentType).toBe('application/json; charset=utf-8')
+        expect(r.req.attachments![1].contentType).toBe('application/x-ofx')
+      }
+      expect(parseEmailRequest({ ...ok, attachments: [att({ filename: 'a.pdf' })] }).ok).toBe(true)
+      expect(parseEmailRequest({ ...ok, attachments: [att({ filename: 'a.exe' })] }).ok).toBe(false)
+      expect(parseEmailRequest({ ...ok, attachments: [att({ filename: 'a.json.html' })] }).ok).toBe(false)
+    })
+
     it('aceita xlsx e csv; o tipo vem da extensão, não do pedido', () => {
       const r = parseEmailRequest({ ...ok, attachments: [att({ contentType: 'text/html' }), att({ filename: 'a.csv' })] })
       expect(r.ok).toBe(true)

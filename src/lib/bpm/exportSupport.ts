@@ -15,7 +15,7 @@ export interface ExportSupport {
   /** gatilhos que ficam de fora (ex.: ON_LOAD) */
   unsupported: string[]
   /** avisos sobre partes do fluxo que se comportam diferente no app exportado */
-  warnings: Array<'email_system_recipients'>
+  warnings: Array<'email_system_recipients' | 'approval' | 'download'>
 }
 
 const typesOf = (node: any): string[] => {
@@ -26,11 +26,14 @@ const typesOf = (node: any): string[] => {
 export function bpmExportSupport(nodes: any[] | null | undefined): ExportSupport {
   const supported = new Set<string>()
   const unsupported = new Set<string>()
-  const warnings = new Set<'email_system_recipients'>()
+  const warnings = new Set<'email_system_recipients' | 'approval' | 'download'>()
   for (const node of nodes || []) {
     if (node?.type === 'trigger') {
       for (const t of typesOf(node)) ((EXPORTED_TRIGGER_TYPES as readonly string[]).includes(t) ? supported : unsupported).add(t)
     }
+    // "Aguardar aprovação" e "Download" só existem no Agente CLI (tarefas e Central de Downloads): no app exportado o fluxo para nesse passo, com aviso
+    if (node?.type === 'approval') warnings.add('approval')
+    if (node?.type === 'action' && node.data?.actionType === 'download') warnings.add('download')
     if (node?.type === 'action' && node.data?.actionType === 'email' && (node.data.emailRecipientType || 'system') === 'system') warnings.add('email_system_recipients')
   }
   const level: ExportLevel = supported.size === 0 ? 'none' : unsupported.size > 0 ? 'partial' : 'full'

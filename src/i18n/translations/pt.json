@@ -3337,7 +3337,9 @@
       "approval_unset": "Escolha o aprovador",
       "approval_users": "{count} usuário(s)",
       "approved": "Aprovado",
-      "rejected": "Rejeitado"
+      "rejected": "Rejeitado",
+      "download": "Download (Central de Downloads)",
+      "download_desc": "Arquivo na Central"
     },
     "canvas": {
       "automations_title": "Automações",
@@ -3644,7 +3646,20 @@
       "var_approval_comment": "Comentário do aprovador",
       "var_approval_by": "Quem decidiu",
       "event_button": "Botão (ação customizada)",
-      "button_other_table": "de outra tabela"
+      "button_other_table": "de outra tabela",
+      "email_attach_json": "JSON (.json)",
+      "email_attach_ofx": "OFX (.ofx)",
+      "ofx_hint": "OFX é um extrato bancário: o valor, a data e a descrição são achados pelo nome das colunas (valor, data, nome). Sem coluna de valor, os lançamentos saem com 0,00. Use só com dados financeiros.",
+      "download_intro": "Gera um arquivo com o resultado de uma consulta feita antes neste fluxo e o coloca na Central de Downloads dos usuários escolhidos. Cada pessoa vê só o arquivo dela.",
+      "download_no_query": "Nenhuma ação Consultar Dados neste fluxo (crie uma antes do Download).",
+      "download_select_result": "Selecione...",
+      "download_file_name": "Nome do arquivo",
+      "download_file_name_placeholder": "Ex.: Pedidos_{{sistema.data}} (a extensão é colocada sozinha)",
+      "download_recipients": "Quem recebe o arquivo",
+      "download_recipients_desc": "Escolha grupos de acesso (todos os usuários do grupo) ou usuários específicos. O arquivo só aparece na Central de Downloads deles, e eles precisam ter acesso a ela. Usuários cujo id não seja UUID não recebem.",
+      "download_notify": "Avisar os destinatários por e-mail quando o arquivo chegar na Central de Downloads",
+      "export_warn_approval": "Aguardar aprovação não funciona no app exportado: o fluxo para nesse passo.",
+      "export_warn_download": "Download não funciona no app exportado: o fluxo para nesse passo."
     },
     "approval": {
       "panel_title": "Aguardar aprovação",

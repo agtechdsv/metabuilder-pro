@@ -275,6 +275,8 @@ function BpmCanvasContent({
             const tip = [
               s.unsupported.length > 0 ? t('bpm.canvas.export_unsupported').replace('{list}', s.unsupported.join(', ')) : '',
               s.warnings.includes('email_system_recipients') ? t('bpm.canvas.export_warn_email') : '',
+              s.warnings.includes('approval') ? t('bpm.canvas.export_warn_approval', 'Aguardar aprovação não funciona no app exportado: o fluxo para nesse passo.') : '',
+              s.warnings.includes('download') ? t('bpm.canvas.export_warn_download', 'Download não funciona no app exportado: o fluxo para nesse passo.') : '',
             ].filter(Boolean).join(' ');
             return (
               <span data-testid="bpm-export-badge" title={tip || undefined} className={`px-2.5 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-wider ${tone}`}>

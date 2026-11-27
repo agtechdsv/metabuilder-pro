@@ -36,7 +36,9 @@ export interface BpmPorts {
   models: { tableOf(modelId: string): Promise<string | null>; isKnownTable?(name: string): Promise<boolean> }
   http?: { request(cfg: { method: string; url: string; headers?: Record<string, string>; data?: any; timeout?: number }): Promise<{ status?: number; statusText?: string }> }
   mail?: { send(msg: { to: string; subject: string; body: string; template: string }): Promise<void>; fallbackTo?(): string }
-  recipients?: { resolveSystem(nodeData: Record<string, any>): Promise<string> }
+  recipients?: { resolveSystem(nodeData: Record<string, any>): Promise<string>; resolveIds?(nodeData: Record<string, any>): Promise<string[]> }
+  /** Ação "Download": só o Agente CLI entrega arquivos na Central de Downloads; sem a porta, a ação para com aviso. */
+  downloads?: { deliver(args: { dataset: any; format: string; fileName: string; recipientIds: string[]; title: string }): Promise<{ delivered: number }> }
   scheduler?: { schedule(cron: string, fn: () => Promise<void> | void): { stop(): void } }
   runs?: { report(run: BpmRunReport): Promise<void> }
   log?: Partial<Record<'debug' | 'info' | 'ok' | 'warn' | 'error' | 'sql' | 'danger' | 'mail', (msg: string) => void>>

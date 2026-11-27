@@ -30,10 +30,16 @@ describe('o que do fluxo vai no app exportado', () => {
     expect(bpmExportSupport([trig('INSERT'), email('custom'), email('table')]).warnings).toEqual([])
   })
 
+  it('"Aguardar aprovação" e "Download" só existem no Agente: avisam que no app exportado o fluxo para neles', () => {
+    expect(bpmExportSupport([trig('INSERT'), { type: 'approval', data: {} }]).warnings).toEqual(['approval'])
+    expect(bpmExportSupport([trig('INSERT'), { type: 'action', data: { actionType: 'download' } }]).warnings).toEqual(['download'])
+    expect(bpmExportSupport([trig('INSERT'), { type: 'action', data: { actionType: 'update' } }]).warnings).toEqual([])
+  })
+
   it('o selo do Studio tem textos nos três idiomas', () => {
     for (const l of ['pt', 'en', 'es']) {
       const j = JSON.parse(readFileSync(`src/i18n/translations/${l}.json`, 'utf8')).bpm.canvas
-      for (const k of ['export_full', 'export_partial', 'export_none', 'export_unsupported', 'export_warn_email']) expect(j[k], `${l} ${k}`).toBeTruthy()
+      for (const k of ['export_full', 'export_partial', 'export_none', 'export_unsupported', 'export_warn_email', 'export_warn_approval', 'export_warn_download']) expect(j[k], `${l} ${k}`).toBeTruthy()
     }
   })
 })

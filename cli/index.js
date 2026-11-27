@@ -301,7 +301,7 @@ const supabase = createClient(finalSupabaseUrl, finalSupabaseKey, {
   try {
     if (dbType === 'postgres') {
       const baseApiUrl = configData.apiUrl ? configData.apiUrl.replace('/api/metadata/sync', '') : 'http://localhost:3000';
-      bpmEngine = new BpmEngine(supabase, pgClient, oracleConnection, dbType, { id: projectId, secret_token: secretToken }, baseApiUrl);
+      bpmEngine = new BpmEngine(supabase, pgClient, oracleConnection, dbType, { id: projectId, secret_token: secretToken }, baseApiUrl, { downloadPath: configData.downloadPath });
       await bpmEngine.init();
     }
   } catch (err) {

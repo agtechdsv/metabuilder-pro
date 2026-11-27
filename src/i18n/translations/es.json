@@ -3424,7 +3424,9 @@
       "approval_unset": "Elija el aprobador",
       "approval_users": "{count} usuario(s)",
       "approved": "Aprobado",
-      "rejected": "Rechazado"
+      "rejected": "Rechazado",
+      "download": "Descarga (Central de Descargas)",
+      "download_desc": "Archivo en la Central"
     },
     "canvas": {
       "automations_title": "Automatizaciones",
@@ -3731,7 +3733,20 @@
       "var_approval_comment": "Comentario del aprobador",
       "var_approval_by": "Quién decidió",
       "event_button": "Botón (acción personalizada)",
-      "button_other_table": "de otra tabla"
+      "button_other_table": "de otra tabla",
+      "email_attach_json": "JSON (.json)",
+      "email_attach_ofx": "OFX (.ofx)",
+      "ofx_hint": "OFX es un extracto bancario: el valor, la fecha y la descripción se encuentran por el nombre de las columnas (valor, data, nome). Sin columna de valor, los asientos salen con 0,00. Úselo solo con datos financieros.",
+      "download_intro": "Genera un archivo con el resultado de una consulta hecha antes en este flujo y lo coloca en la Central de Descargas de los usuarios elegidos. Cada persona ve solo su archivo.",
+      "download_no_query": "Ninguna acción Consultar Datos en este flujo (cree una antes de la Descarga).",
+      "download_select_result": "Seleccione...",
+      "download_file_name": "Nombre del archivo",
+      "download_file_name_placeholder": "Ej.: Pedidos_{{sistema.data}} (la extensión se agrega sola)",
+      "download_recipients": "Quién recibe el archivo",
+      "download_recipients_desc": "Elija grupos de acceso (todos los usuarios del grupo) o usuarios específicos. El archivo solo aparece en su Central de Descargas, y necesitan acceso a ella. Los usuarios cuyo id no sea UUID no lo reciben.",
+      "download_notify": "Avisar a los destinatarios por correo cuando el archivo llegue a la Central de Descargas",
+      "export_warn_approval": "Esperar aprobación no funciona en la app exportada: el flujo se detiene en ese paso.",
+      "export_warn_download": "La descarga no funciona en la app exportada: el flujo se detiene en ese paso."
     },
     "approval": {
       "panel_title": "Esperar aprobación",

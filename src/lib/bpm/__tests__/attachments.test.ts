@@ -78,6 +78,61 @@ describe('anexo de planilha das automações', () => {
   })
 })
 
+describe('anexo JSON e OFX (os 5 formatos da exportação)', () => {
+  const ds = {
+    columns: [
+      { key: 'id', label: 'id', type: 'integer' },
+      { key: 'nome', label: 'Nome', type: 'text' },
+      { key: 'valor', label: 'Valor', type: 'numeric' },
+      { key: 'dia', label: 'Data', type: 'timestamp with time zone' },
+      { key: 'ativo', label: 'Ativo', type: 'boolean' },
+      { key: 'obs', label: 'Nome', type: 'text' },
+    ],
+    rows: [
+      { id: 7, nome: 'Ana <b>', valor: '-10.5', dia: new Date(Date.UTC(2026, 10, 2, 15, 0)), ativo: true, obs: 'x' },
+      { id: 8, nome: null, valor: '20', dia: null, ativo: false, obs: null },
+    ],
+  }
+
+  it('json: lista de objetos com o rótulo como chave, tipos preservados e rótulo repetido numerado', () => {
+    const att = buildAttachment({ format: 'json', filename: 'r.json', dataset: ds })
+    expect(att.contentType).toBe('application/json; charset=utf-8')
+    const rows = JSON.parse(Buffer.from(att.content, 'base64').toString('utf8'))
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toEqual({ id: 7, Nome: 'Ana <b>', Valor: -10.5, Data: '2026-11-02T15:00:00.000Z', Ativo: true, 'Nome (2)': 'x' })
+    expect(rows[1]).toEqual({ id: 8, Nome: null, Valor: 20, Data: null, Ativo: false, 'Nome (2)': null })
+  })
+
+  it('json sem linhas é uma lista vazia', () => {
+    const att = buildAttachment({ format: 'json', filename: 'r.json', dataset: { columns: [{ key: 'a', label: 'A', type: 'text' }], rows: [] } })
+    expect(JSON.parse(Buffer.from(att.content, 'base64').toString('utf8'))).toEqual([])
+  })
+
+  it('ofx: acha valor, data, descrição e id pelo nome; débito para negativo, crédito para positivo; texto sem < > &', () => {
+    const att = buildAttachment({ format: 'ofx', filename: 'r.ofx', dataset: ds })
+    expect(att.contentType).toBe('application/x-ofx')
+    const text = Buffer.from(att.content, 'base64').toString('utf8')
+    expect(text.startsWith('OFXHEADER:100')).toBe(true)
+    expect(text).toContain('<TRNTYPE>DEBIT</TRNTYPE>')
+    expect(text).toContain('<TRNTYPE>CREDIT</TRNTYPE>')
+    expect(text).toContain('<TRNAMT>-10.50</TRNAMT>')
+    expect(text).toContain('<TRNAMT>20.00</TRNAMT>')
+    expect(text).toContain('<DTPOSTED>20261102150000</DTPOSTED>')
+    expect(text).toContain('<FITID>7</FITID>')
+    expect(text).toContain('<MEMO>Ana b</MEMO>')
+    for (const m of text.matchAll(new RegExp('<MEMO>(.*?)</MEMO>', 'g'))) expect(m[1]).not.toMatch(/[<>&]/)
+    expect((text.match(/<STMTTRN>/g) || []).length).toBe(2)
+    expect(text.trim().endsWith('</OFX>')).toBe(true)
+  })
+
+  it('ofx sem coluna de valor sai com 0,00 (só serve para dados financeiros)', () => {
+    const att = buildAttachment({ format: 'ofx', filename: 'r.ofx', dataset: { columns: [{ key: 'x', label: 'Produto', type: 'text' }], rows: [{ x: 'a' }] } })
+    const text = Buffer.from(att.content, 'base64').toString('utf8')
+    expect(text).toContain('<TRNAMT>0.00</TRNAMT>')
+    expect(text).toContain('<MEMO>Transacao 1</MEMO>')
+  })
+})
+
 describe('xlsx: datas como número de série (Google Planilhas não lê célula de data tipo "d")', () => {
   it('a data vira número com formato de data e volta igual ao ler a planilha', async () => {
     const XLSX = require('xlsx')

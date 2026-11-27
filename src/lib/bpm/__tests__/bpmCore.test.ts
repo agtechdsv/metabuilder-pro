@@ -312,6 +312,15 @@ describe('núcleo do BPM: comportamento extra', () => {
       expect(ok.mails[0].attachments[0].format).toBe('xlsx')
       expect(ok.mails[0].attachments[0].filename).toMatch(/^consulta-\d{4}-\d{2}-\d{2}\.xlsx$/)
       expect(ok.mails[0].attachments[0].dataset.rows).toEqual(rows)
+      for (const format of ['csv', 'pdf', 'json', 'ofx']) {
+        const f = make(() => rows, [trigger, queryNode(), emailNode({ emailAttachDataset: 'consulta', emailAttachFormat: format })], chain)
+        await f.core.processEvent('orders', 'INSERT', { id: 1 })
+        expect(f.mails[0].attachments[0].format).toBe(format)
+        expect(f.mails[0].attachments[0].filename.endsWith('.' + format)).toBe(true)
+      }
+      const unknown = make(() => rows, [trigger, queryNode(), emailNode({ emailAttachDataset: 'consulta', emailAttachFormat: 'exe' })], chain)
+      await unknown.core.processEvent('orders', 'INSERT', { id: 1 })
+      expect(unknown.mails[0].attachments[0].format).toBe('xlsx')
       const missing = make(() => rows, [trigger, queryNode(), emailNode({ emailAttachDataset: 'outra' })], chain)
       await missing.core.processEvent('orders', 'INSERT', { id: 1 })
       expect(missing.mails[0].attachments).toBeUndefined()

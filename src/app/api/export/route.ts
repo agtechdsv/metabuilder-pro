@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { authenticateCommand } from '@/lib/tunnel/commandSigning'
 import { getProjectSecretToken, tunnelSend } from '@/lib/tunnel/server'
 import { NextResponse, type NextRequest } from 'next/server'
+import { deletableLocalPaths } from '@/lib/downloads/sharedFiles'
 import { resolveDownloadOwner } from '@/lib/tunnel/authorize'
 import { endUserCookieName, verifyEndUserSession } from '@/lib/tunnel/sessionToken'
 import { loadAccessContext } from '@/lib/tunnel/tableAccess'
@@ -217,7 +218,8 @@ export async function DELETE(request: NextRequest) {
         }
 
         if (expiredJobs && expiredJobs.length > 0) {
-          const localPaths = expiredJobs.map((j: any) => j.local_path).filter(Boolean)
+          // o arquivo só sai do disco quando nenhuma outra linha (de outro usuário) ainda aponta para ele
+          const localPaths = await deletableLocalPaths(supabase, project.id, expiredJobs as any[])
           
           if (localPaths.length > 0) {
             await broadcastDelete(project.id, localPaths)
@@ -264,8 +266,10 @@ export async function DELETE(request: NextRequest) {
         )
       }
 
-      if (job.local_path) {
-        await broadcastDelete(job.project_id, [job.local_path])
+      // arquivo compartilhado (ação Download entregue a vários usuários): só apaga do disco se esta era a última linha que o usa
+      const pathsToDelete = await deletableLocalPaths(supabase, job.project_id, [job])
+      if (pathsToDelete.length > 0) {
+        await broadcastDelete(job.project_id, pathsToDelete)
       }
 
       const { error: deleteError } = await supabase
@@ -294,7 +298,7 @@ export async function DELETE(request: NextRequest) {
       }
 
       if (jobsToDelete && jobsToDelete.length > 0) {
-        const localPaths = jobsToDelete.map((j: any) => j.local_path).filter(Boolean)
+        const localPaths = await deletableLocalPaths(supabase, projectId, jobsToDelete as any[])
 
         if (localPaths.length > 0) {
           await broadcastDelete(projectId, localPaths)

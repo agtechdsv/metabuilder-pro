@@ -12,7 +12,8 @@
 
 const safeIdent = (s) => (/^[A-Za-z_][A-Za-z0-9_]*$/.test(String(s || '')) ? String(s) : null)
 
-async function resolveSystemRecipientEmails({ data, config, query, dialect = 'postgres', log = {} }) {
+/** Ids dos usuários escolhidos no nó (grupos inteiros e usuários específicos), sem repetir. */
+async function collectUserIds({ data, config, query, dialect = 'postgres', log = {} }) {
   const auth = (config && config.auth) || {}
   const ph = (i) => (dialect === 'oracle' ? `:${i}` : `$${i}`)
   const limit1 = dialect === 'oracle' ? 'FETCH FIRST 1 ROWS ONLY' : 'LIMIT 1'
@@ -62,7 +63,14 @@ async function resolveSystemRecipientEmails({ data, config, query, dialect = 'po
     }
   }
 
-  const ids = [...new Set(userIds.filter((v) => v !== undefined && v !== null && v !== ''))]
+  return [...new Set(userIds.filter((v) => v !== undefined && v !== null && v !== '').map((v) => String(v)))]
+}
+
+async function resolveSystemRecipientEmails({ data, config, query, dialect = 'postgres', log = {} }) {
+  const auth = (config && config.auth) || {}
+  const ph = (i) => (dialect === 'oracle' ? `:${i}` : `$${i}`)
+  const warn = typeof log.warn === 'function' ? log.warn : () => {}
+  const ids = await collectUserIds({ data, config, query, dialect, log })
   if (ids.length === 0) return ''
 
   const usersTable = safeIdent(auth.db_table_name)
@@ -78,4 +86,4 @@ async function resolveSystemRecipientEmails({ data, config, query, dialect = 'po
   }
 }
 
-module.exports = { resolveSystemRecipientEmails }
+module.exports = { resolveSystemRecipientEmails, resolveSystemRecipientIds: collectUserIds }

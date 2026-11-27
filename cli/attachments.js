@@ -15,6 +15,11 @@ const DATE_TYPE = /date|time/i
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 const CSV_MIME = 'text/csv; charset=utf-8'
 const PDF_MIME = 'application/pdf'
+const JSON_MIME = 'application/json; charset=utf-8'
+const OFX_MIME = 'application/x-ofx'
+
+/** Formatos que o anexo do e-mail e a ação Download sabem gerar (os mesmos 5 da exportação das telas). */
+const ATTACH_FORMATS = ['xlsx', 'csv', 'pdf', 'json', 'ofx']
 
 /** Valor tipado para a planilha: número como número, data como data, o resto como texto. */
 function cellValue(value, type) {
@@ -114,11 +119,84 @@ function buildPdf(dataset, title) {
   return Buffer.from(doc.output('arraybuffer'))
 }
 
+/** Valor para JSON: número como número, data como data (ISO), booleano como booleano, o resto como texto; vazio vira null. */
+function jsonValue(value, type) {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'boolean') return value
+  const v = cellValue(value, type)
+  return v === '' ? null : v
+}
+
+/** JSON do resultado: lista de objetos com o rótulo de cada coluna como chave (rótulo repetido ganha "(2)", "(3)"...). */
+function buildJson(dataset) {
+  const cols = (dataset && dataset.columns) || []
+  const rows = (dataset && dataset.rows) || []
+  const used = new Map()
+  const keys = cols.map((c) => {
+    const base = String(c.label || c.key)
+    const n = (used.get(base) || 0) + 1
+    used.set(base, n)
+    return n === 1 ? base : `${base} (${n})`
+  })
+  return JSON.stringify(rows.map((r) => Object.fromEntries(cols.map((c, i) => [keys[i], jsonValue(r[c.key], c.type)]))), null, 2)
+}
+
 /**
- * Gera o arquivo do anexo. Devolve { filename, content (base64), contentType }.
- * `format`: 'xlsx' (padrão), 'csv' ou 'pdf'.
+ * OFX (extrato bancário) do resultado: valor, data, descrição e identificador são ACHADOS PELO NOME da coluna (valor/total/preço, data,
+ * nome/descrição, id/código), como na exportação das telas. Sem coluna de valor, os lançamentos saem com 0,00: só serve para dados financeiros.
+ */
+function buildOfx(dataset) {
+  const cols = (dataset && dataset.columns) || []
+  const rows = (dataset && dataset.rows) || []
+  const nameOf = (c) => String(c.label || c.key).toLowerCase()
+  const find = (exact, part) => cols.find((c) => exact.includes(nameOf(c)) || part.some((p) => nameOf(c).includes(p)))
+  const amtCol = find(['amount', 'valor', 'total', 'value', 'price', 'preco'], ['valor'])
+  const dateCol = find(['date', 'data', 'created_at', 'timestamp'], ['data'])
+  const descCol = find(['description', 'descricao', 'name', 'nome', 'title', 'titulo', 'memo'], ['nome', 'desc'])
+  const idCol = cols.find((c) => ['id', 'uuid', 'code', 'codigo'].includes(nameOf(c)))
+  const stamp = (d) => d.toISOString().replace(/[-T:.Z]/g, '').substring(0, 14)
+  const dtserver = stamp(new Date())
+  const clean = (s) => String(s).replace(/[<>&]/g, '')
+
+  const transactions = rows.map((r, idx) => {
+    const amt = amtCol ? parseFloat(r[amtCol.key]) || 0 : 0
+    const parsed = new Date(dateCol ? r[dateCol.key] : new Date())
+    const posted = isNaN(parsed.getTime()) ? dtserver : stamp(parsed)
+    const desc = descCol ? String(r[descCol.key] == null ? '' : r[descCol.key]).substring(0, 32) : `Transacao ${idx + 1}`
+    const fitid = idCol && r[idCol.key] != null ? String(r[idCol.key]) : `${dtserver}${idx}`
+    return [
+      '          <STMTTRN>',
+      `            <TRNTYPE>${amt < 0 ? 'DEBIT' : 'CREDIT'}</TRNTYPE>`,
+      `            <DTPOSTED>${posted}</DTPOSTED>`,
+      `            <TRNAMT>${amt.toFixed(2)}</TRNAMT>`,
+      `            <FITID>${clean(fitid)}</FITID>`,
+      `            <MEMO>${clean(desc)}</MEMO>`,
+      '          </STMTTRN>',
+    ].join('\n')
+  })
+
+  return [
+    'OFXHEADER:100', 'DATA:OFXSGML', 'VERSION:102', 'SECURITY:NONE', 'ENCODING:USASCII', 'CHARSET:1252', 'COMPRESSION:NONE', 'OLDFILEUID:NONE', 'NEWFILEUID:NONE', '',
+    '<OFX>',
+    '  <SIGNONMSGSRSV1>', '    <SONRS>', '      <STATUS>', '        <CODE>0</CODE>', '        <SEVERITY>INFO</SEVERITY>', '      </STATUS>',
+    `      <DTSERVER>${dtserver}</DTSERVER>`, '      <LANGUAGE>POR</LANGUAGE>', '    </SONRS>', '  </SIGNONMSGSRSV1>',
+    '  <BANKMSGSRSV1>', '    <STMTTRNRS>', '      <TRNUID>1</TRNUID>', '      <STATUS>', '        <CODE>0</CODE>', '        <SEVERITY>INFO</SEVERITY>', '      </STATUS>',
+    '      <STMTRS>', '        <CURDEF>BRL</CURDEF>', '        <BANKACCTFROM>', '          <BANKID>000</BANKID>', '          <ACCTID>00000</ACCTID>', '          <ACCTTYPE>CHECKING</ACCTTYPE>', '        </BANKACCTFROM>',
+    '        <BANKTRANLIST>', `          <DTSTART>${dtserver}</DTSTART>`, `          <DTEND>${dtserver}</DTEND>`,
+    ...transactions,
+    '        </BANKTRANLIST>', '        <LEDGERBAL>', '          <BALAMT>0.00</BALAMT>', `          <DTASOF>${dtserver}</DTASOF>`, '        </LEDGERBAL>',
+    '      </STMTRS>', '    </STMTTRNRS>', '  </BANKMSGSRSV1>',
+    '</OFX>',
+  ].join('\n')
+}
+
+/**
+ * Gera o arquivo do anexo (e-mail) ou do download. Devolve { filename, content (base64), contentType }.
+ * `format`: 'xlsx' (padrão), 'csv', 'pdf', 'json' ou 'ofx'.
  */
 function buildAttachment({ format, filename, dataset }) {
+  if (format === 'json') return { filename, content: Buffer.from(buildJson(dataset), 'utf8').toString('base64'), contentType: JSON_MIME }
+  if (format === 'ofx') return { filename, content: Buffer.from(buildOfx(dataset), 'utf8').toString('base64'), contentType: OFX_MIME }
   if (format === 'pdf') {
     const title = (dataset && dataset.title) || `Relatório - ${(dataset && dataset.name) || 'consulta'}`
     return { filename, content: buildPdf(dataset, title).toString('base64'), contentType: PDF_MIME }
@@ -155,4 +233,4 @@ function buildAttachment({ format, filename, dataset }) {
   return { filename, content: Buffer.from(buffer).toString('base64'), contentType: XLSX_MIME }
 }
 
-module.exports = { buildAttachment, datasetToRows, cellValue }
+module.exports = { buildAttachment, datasetToRows, cellValue, ATTACH_FORMATS }
