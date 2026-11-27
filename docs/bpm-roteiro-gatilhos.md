@@ -1,5 +1,7 @@
 # Roteiro: 1 teste para cada gatilho do BPM (versão revisada, 24/11/2026)
 
+> **STATUS: CONCLUÍDO (27/11/2026).** Os testes 1 a 9 foram validados em 25 e 26/11. O teste 10 (relatório por e-mail) passou a ser coberto por `docs/automacao-download-roteiro-teste.md`. Os casos de borda A–G ficam como regressão opcional. Atenção: depois da reorganização da Automação, o fluxo é da **tabela** e os caminhos de tela citados abaixo podem ter mudado (veja `docs/automacao-reorganizacao-roteiro-teste.md`). Não é preciso continuar este roteiro.
+
 São 9 gatilhos no painel, e cada um tem um teste abaixo, ligado a um item do seu plano de vídeos. Os nomes de campos e de nós foram tirados do código, mas **nenhum fluxo foi executado**: confira os nomes reais das colunas das suas tabelas (`titulo`, `status` etc.) e faça um ensaio antes de gravar.
 
 Este roteiro cobre **o que cada gatilho faz na plataforma** (com o CLI). O roteiro de conferência técnica, incluindo o **app exportado**, é o `docs/bpm-roteiro-testes.md`. Os testes 1, 2, 3, 4, 5, 6, 8 e 9 abaixo também valem no app exportado (veja "Repetir no app exportado", no fim).
