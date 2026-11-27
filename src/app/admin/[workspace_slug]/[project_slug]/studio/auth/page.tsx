@@ -1925,7 +1925,7 @@ export default function AuthSettingsPage() {
                           return (
                             <tr key={view.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
                               <td className="px-6 py-4">
-                                <p className="text-sm font-bold text-neutral-900 dark:text-white">{view.name}</p>
+                                <p className="text-sm font-bold text-neutral-900 dark:text-white">{isAutomations ? t('dashboard.projects.studio.automations') : view.name}</p>
                                 <p className="text-[10px] text-neutral-500">/{view.slug}</p>
                               </td>
                               {roles.map(role => {
