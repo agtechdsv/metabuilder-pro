@@ -17,7 +17,9 @@ function fakeDb(records: Record<string, any[]> = {}) {
   const tasks: any[] = []
   const history: any[] = []
   const log: string[] = []
-  const insert = (sql: string, params: any[], into: any[]) => {
+  let created = false
+  const preexisting = (records as any).__tablesExist === true
+  const insert =(sql: string, params: any[], into: any[]) => {
     const cols = /\(([^)]+)\) VALUES/.exec(sql)![1].split(',').map(s => s.trim())
     const row: any = {}
     cols.forEach((c, i) => { row[c] = params[i] })
@@ -25,7 +27,12 @@ function fakeDb(records: Record<string, any[]> = {}) {
   }
   async function query(sql: string, params: any[] = []) {
     log.push(sql)
-    if (/^CREATE /.test(sql)) return []
+    if (/^CREATE /.test(sql)) { created = true; return [] }
+    // conferência de existência feita antes de criar as tabelas
+    if (/^SELECT 1 FROM mb_approval_/.test(sql)) {
+      if (!created && !preexisting) { const e: any = new Error('relation "mb_approval_tasks" does not exist'); e.code = '42P01'; throw e }
+      return []
+    }
     if (/^INSERT INTO mb_approval_tasks/.test(sql)) { insert(sql, params, tasks); return [] }
     if (/^INSERT INTO mb_approval_history/.test(sql)) { insert(sql, params, history); return [] }
     if (/^SELECT decided_by, decided_at FROM mb_approval_tasks/.test(sql)) return tasks.filter(t => t.id === params[0]).map(t => ({ decided_by: t.decided_by, decided_at: t.decided_at }))
@@ -357,13 +364,27 @@ describe('aprovação: listas, histórico e cancelamento', () => {
     await s.c.processEvent('pedidos', 'INSERT', { id: 1 }, null, solic)
     await s.c.processEvent('pedidos', 'INSERT', { id: 2 }, null, solic)
     expect(s.db.log.filter(q => /^CREATE TABLE/.test(q))).toHaveLength(2) // tarefas + histórico, uma vez
-    const denied = new BpmCore({ db: { dialect: 'postgres', query: async (sql: string) => { if (/^CREATE/.test(sql)) throw new Error('permission denied'); return [] } }, models: { tableOf: async () => 'pedidos' }, features: { approvals: true }, recipients: { resolveSystem: async () => 'a@a.com' }, verbose: false })
+    const denied = new BpmCore({ db: { dialect: 'postgres', query: async (sql: string) => { if (/^CREATE/.test(sql)) throw new Error('permission denied'); if (/^SELECT 1 FROM mb_approval_/.test(sql)) throw new Error('relation "mb_approval_tasks" does not exist'); return [] } }, models: { tableOf: async () => 'pedidos' }, features: { approvals: true }, recipients: { resolveSystem: async () => 'a@a.com' }, verbose: false })
     denied.setWorkflows([{ id: 'f1', name: 'F', flow_data: { nodes: NODES(), edges: EDGES } } as any])
     const runs: any[] = []
     ;(denied as any).ports.runs = { report: async (r: any) => runs.push(r) }
     await denied.processEvent('pedidos', 'INSERT', { id: 1 }, null, solic)
     expect(runs[0].status).toBe('error')
     expect(runs[0].error_message).toMatch(/scripts\/mb-approvals\.sql/)
+  })
+
+  it('tabelas já criadas pelo DBA: nenhum CREATE é tentado (o usuário do Agente não precisa de permissão no schema)', async () => {
+    const preexisting: any = { __tablesExist: true }
+    const s = setup({ records: preexisting })
+    // mesmo que um CREATE fosse recusado por falta de permissão, o fluxo segue
+    const origQuery = (s.c as any).ports.db.query
+    ;(s.c as any).ports.db.query = async (sql: string, p?: any[]) => { if (/^CREATE/.test(sql)) throw new Error('permissão negada para esquema public'); return origQuery(sql, p) }
+    const runs: any[] = []
+    ;(s.c as any).ports.runs = { report: async (r: any) => runs.push(r) }
+    await s.c.processEvent('pedidos', 'INSERT', { id: 1 }, null, solic)
+    expect(runs[0]?.status).not.toBe('error')
+    expect(s.db.tasks).toHaveLength(1)
+    expect(s.db.log.some((q: string) => /^CREATE/.test(q))).toBe(false)
   })
 })
 

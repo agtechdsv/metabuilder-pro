@@ -1444,6 +1444,14 @@ class BpmCore {
   /** Cria as tabelas na primeira vez que são precisas. Sem permissão, o erro traz o caminho do script para o DBA. */
   async ensureApprovalTables() {
     if (this._approvalReady) return
+    // Já existem (por exemplo, o DBA rodou o script)? Então não tenta criar: o PostgreSQL exige permissão de CRIAR no schema até para
+    // "CREATE TABLE IF NOT EXISTS" numa tabela que já existe, e o usuário do Agente costuma não ter essa permissão.
+    try {
+      await this.executeQuery('SELECT 1 FROM mb_approval_tasks WHERE 1 = 0')
+      await this.executeQuery('SELECT 1 FROM mb_approval_history WHERE 1 = 0')
+      this._approvalReady = true
+      return
+    } catch (e) { /* falta alguma tabela (ou sem acesso): segue para a criação, que explica o que fazer */ }
     for (const stmt of approvalDdl(this.dbType)) {
       try {
         await this.executeQuery(stmt)
