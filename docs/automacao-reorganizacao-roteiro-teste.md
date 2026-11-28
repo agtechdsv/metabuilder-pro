@@ -13,6 +13,8 @@ Marque cada item e me mande o que falhar, com a tela. **Não muda protocolo do C
 
 As telas no navegador (card, painel, editor, cadastro do botão), o clique real nos botões ligados a fluxos e o app exportado (não muda nada nele).
 
+> **Atenção ao testar permissão de usuário final:** faça isso no **Chrome (ou janela anônima)**, nunca no navegador interno da IDE. A IDE guarda o login do MetaBuilder do dono, e a página `/automations` libera o dono do projeto mesmo com um usuário final sem permissão logado no app (de propósito, para o dono abrir as Automações pelo Studio). Um usuário final real nunca tem essa sessão, então no Chrome ele recebe "Acesso negado" (item 1.5).
+
 ## Preparação
 
 1. Rode o script **`scripts/bpm-workflows-use-case-set-null.sql`** no SQL Editor do Supabase da plataforma (muda a regra de exclusão: apagar um caso de uso deixa de apagar os fluxos). Opcional para os testes, mas recomendado.
