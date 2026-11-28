@@ -35,6 +35,23 @@ let hasZone = true;
 /** Cria a tabela e, em tabela antiga, tenta acrescentar a coluna zone. Sem permissão para a coluna, grava sem zona. */
 async function ensureTable(pgClient) {
   if (tableReady) return;
+  // Já existe (o DBA rodou o script)? Então não tenta criar: o PostgreSQL exige permissão de CRIAR no schema até para
+  // "CREATE TABLE IF NOT EXISTS" numa tabela que já existe, e o usuário do Agente costuma não ter essa permissão.
+  let exists = false;
+  try {
+    await pgClient.query('SELECT 1 FROM mb_help_feedback WHERE 1 = 0');
+    exists = true;
+  } catch (_) { /* não existe (ou sem acesso): segue para a criação */ }
+  if (exists) {
+    try {
+      const col = await pgClient.query(
+        `SELECT 1 FROM information_schema.columns WHERE table_name = 'mb_help_feedback' AND column_name = 'zone' AND table_schema = current_schema()`
+      );
+      hasZone = col.rows.length > 0;
+    } catch (_) { hasZone = false; }
+    tableReady = true;
+    return;
+  }
   const [create, alter, index] = CREATE_TABLE_SQL.split(/;\s*\n/).map(s => s.replace(/;\s*$/, ''));
   await pgClient.query(create);
   try {

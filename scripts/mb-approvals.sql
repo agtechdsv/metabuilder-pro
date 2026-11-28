@@ -1,5 +1,8 @@
 -- MetaBuilder PRO: tabelas das aprovações ("Aguardar aprovação" na Automação de processos)
 --
+-- Para passar ao cliente, prefira o script único scripts/cliente-tabelas-metabuilder.sql (aprovações + feedback da Ajuda +
+-- log de banco + permissões). Este arquivo continua válido: é o que o Agente indica quando só as aprovações faltam.
+--
 -- Normalmente o Agente CLI cria estas tabelas sozinho, na primeira vez que um fluxo pede uma aprovação.
 -- Rode este script SOMENTE se o usuário do banco do cliente não tem permissão para criar tabelas:
 -- o Agente avisa isto no console e o fluxo registra o erro.

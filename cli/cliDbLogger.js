@@ -92,8 +92,14 @@ class CliDbLogger {
     }
 
     try {
-      // Cria a tabela se não existir (idempotente) no schema correto (default da conexão)
-      await pgClient.query(getCreateTableSql());
+      // Cria a tabela só se ela não existir. Conferir antes é necessário: o PostgreSQL exige permissão de CRIAR no schema até para
+      // "CREATE TABLE IF NOT EXISTS" numa tabela que já existe (criada pelo DBA, com o usuário do Agente sem essa permissão).
+      let exists = false;
+      try {
+        await pgClient.query('SELECT 1 FROM mb_logs WHERE 1 = 0');
+        exists = true;
+      } catch (_) { /* não existe (ou sem acesso): segue para a criação */ }
+      if (!exists) await pgClient.query(getCreateTableSql());
 
       // Limpa logs antigos baseado na retenção configurada
       const retentionDays = this._logConfig.retention_days || 7;
